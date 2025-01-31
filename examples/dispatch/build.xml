@@ -1,0 +1,4 @@
+<project name="disl-example" basedir="." default="build">
+	<property name="jvmarg.verify" value="-noverify" />
+	<import file="../build-example.xml" />
+</project>

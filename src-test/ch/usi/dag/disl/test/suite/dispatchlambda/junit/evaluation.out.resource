@@ -1,0 +1,21 @@
+0: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$2
+1: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$2
+2: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$2
+3: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$2
+4: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$2
+5: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$2
+6: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$2
+7: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$2
+8: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$2
+9: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$2
+10: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$4
+11: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$4
+12: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$4
+13: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$4
+14: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$4
+15: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$4
+16: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$4
+17: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$4
+18: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$4
+19: ch.usi.dag.disl.test.suite.dispatchlambda.app.TargetClass$$Lambda$4
+Total number of lambda events: 20

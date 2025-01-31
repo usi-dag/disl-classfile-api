@@ -1,0 +1,17 @@
+# Generated dependency files
+src-disl-agent/*.d
+src-disl-agent/linux-*
+src-disl-agent/windows-*
+
+# Compiled shared libraries
+*.so
+
+# Anything in the output
+output/*
+
+# Libraries
+lib/*/*.jar
+
+# Fallout from method uid generator
+methodid.txt
+

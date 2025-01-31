@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" output="output/build/disl" path="src-disl"/>
+	<classpathentry kind="src" output="output/build/shvm" path="src-shvm"/>
+	<classpathentry kind="src" output="output/build/util" path="src-util"/>
+	<classpathentry kind="src" output="output/build/test" path="src-test"/>
+	<classpathentry kind="src" output="output/build/shvm-dispatch" path="src-shvm-dispatch"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="output/lib/disl-bypass.jar"/>
+	<classpathentry kind="lib" path="lib/disl/log4j.jar" sourcepath="lib/devel/log4j-source.jar"/>
+	<classpathentry kind="lib" path="lib/test/junit.jar" sourcepath="lib/devel/junit-source.jar"/>
+	<classpathentry kind="lib" path="lib/test/hamcrest-core.jar"/>
+	<classpathentry kind="lib" path="lib/disl/asm-tree.jar" sourcepath="lib/devel/asm-tree-source.jar"/>
+	<classpathentry kind="lib" path="lib/disl/asm.jar" sourcepath="lib/devel/asm-source.jar"/>
+	<classpathentry kind="lib" path="lib/disl/asm-analysis.jar" sourcepath="lib/devel/asm-analysis-source.jar"/>
+	<classpathentry kind="lib" path="lib/disl/asm-commons.jar" sourcepath="lib/devel/asm-commons-source.jar"/>
+	<classpathentry kind="lib" path="lib/disl/asm-util.jar" sourcepath="lib/devel/asm-util-source.jar"/>
+	<classpathentry kind="lib" path="lib/disl/protobuf-java.jar"/>
+	<classpathentry kind="output" path="output/build/disl"/>
+</classpath>

@@ -1,0 +1,11 @@
+lib/ant/ant-contrib.jar
+lib/ant/ivy.jar
+lib/disl/asm-analysis.jar
+lib/disl/asm-commons.jar
+lib/disl/asm-tree.jar
+lib/disl/asm-util.jar
+lib/disl/asm.jar
+lib/disl/log4j.jar
+lib/disl/protobuf-java.jar
+lib/test/hamcrest-core.jar
+lib/test/junit.jar

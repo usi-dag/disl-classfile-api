@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option java_package = "ch.usi.dag.dislserver";
+option java_outer_classname = "Protocol";
+option optimize_for = LITE_RUNTIME;
+
+message InstrumentClassRequest {
+  int32 flags = 1;
+  string className = 2;
+  bytes classBytes = 3;
+}
+
+enum InstrumentClassResult {
+  CLASS_UNMODIFIED = 0;
+  CLASS_MODIFIED = 1;
+  ERROR = 3;
+}
+
+message InstrumentClassResponse {
+  InstrumentClassResult result = 1;
+  string errorMessage = 2;
+  bytes classBytes = 3;
+}

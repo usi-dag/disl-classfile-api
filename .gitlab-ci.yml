@@ -1,0 +1,192 @@
+image: &image-java-8 gitlab.ow2.org:4567/disl/disl/disl-ci
+image: &image-java-9 mbasso/disl-ci:openjdk-9
+image: &image-java-10 mbasso/disl-ci:openjdk-10
+image: &image-java-11 mbasso/disl-ci:openjdk-11
+image: &image-java-12 mbasso/disl-ci:openjdk-12
+image: &image-java-13 mbasso/disl-ci:openjdk-13
+image: &image-java-14 mbasso/disl-ci:openjdk-14
+image: &image-java-15 mbasso/disl-ci:openjdk-15
+
+# Setup cache to prevent downloading deps and compiling sources in each stage
+cache: &cache
+  # Cache deps and compiled classes
+  paths:
+  - 'output/'
+  - 'lib/'
+  - 'src-disl-agent/linux-x86_64' # Specific architecture of used container
+
+# Caches for different Java versions
+cache: &cache-8
+  <<: *cache
+  key: "${CI_COMMIT_REF_SLUG}-oraclejdk-8"
+
+cache: &cache-9
+  <<: *cache
+  key: "${CI_COMMIT_REF_SLUG}-openjdk-9"
+    
+cache: &cache-10
+  <<: *cache
+  key: "${CI_COMMIT_REF_SLUG}-openjdk-10"
+    
+cache: &cache-11
+  <<: *cache
+  key: "${CI_COMMIT_REF_SLUG}-openjdk-11"
+
+cache: &cache-12
+  <<: *cache
+  key: "${CI_COMMIT_REF_SLUG}-openjdk-12"
+
+cache: &cache-13
+  <<: *cache
+  key: "${CI_COMMIT_REF_SLUG}-openjdk-13"
+
+cache: &cache-14
+  <<: *cache
+  key: "${CI_COMMIT_REF_SLUG}-openjdk-14"
+
+cache: &cache-15
+  <<: *cache
+  key: "${CI_COMMIT_REF_SLUG}-openjdk-15"
+
+# Adjust modification date to prevent recompiling sources in different stages.
+before_script:
+- find . -exec touch -t 200001010000 {} \;
+
+stages:
+- build
+- test
+
+# Jobs definitions
+# The YAML Anchors are used because of Gitlab Issue#2838
+
+# Check whether the build task succeeded
+.build:
+  stage: build
+  script:
+  - ant build
+
+build-8:
+  image: *image-java-8
+  extends: .build
+  cache:
+    <<: *cache-8
+    policy:
+      push
+
+build-9:
+  image: *image-java-9
+  extends: .build
+  cache:
+    <<: *cache-9
+    policy:
+      push
+
+build-10:
+  image: *image-java-10
+  extends: .build
+  cache:
+    <<: *cache-10
+    policy:
+      push
+
+build-11:
+  image: *image-java-11
+  extends: .build
+  cache:
+    <<: *cache-11
+    policy:
+      push
+
+build-12:
+  image: *image-java-12
+  extends: .build
+  cache:
+    <<: *cache-12
+    policy:
+      push
+
+build-13:
+  image: *image-java-13
+  extends: .build
+  cache:
+    <<: *cache-13
+    policy:
+      push
+
+build-14:
+  image: *image-java-14
+  extends: .build
+  cache:
+    <<: *cache-14
+    policy:
+      push
+
+build-15:
+  image: *image-java-15
+  extends: .build
+  cache:
+    <<: *cache-15
+    policy:
+      push
+
+# Run tests
+.test:
+  stage: test
+  script:
+  - ant test
+
+test-8:
+  image: *image-java-8
+  extends: .test
+  cache:
+    <<: *cache-8
+    policy: pull
+
+test-9:
+  image: *image-java-9
+  extends: .test
+  cache:
+    <<: *cache-9
+    policy: pull
+
+test-10:
+  image: *image-java-10
+  extends: .test
+  cache:
+    <<: *cache-10
+    policy: pull
+
+test-11:
+  image: *image-java-11
+  extends: .test
+  cache:
+    <<: *cache-11
+    policy: pull
+
+test-12:
+  image: *image-java-12
+  extends: .test
+  cache:
+    <<: *cache-12
+    policy: pull
+
+test-13:
+  image: *image-java-13
+  extends: .test
+  cache:
+    <<: *cache-13
+    policy: pull
+
+test-14:
+  image: *image-java-14
+  extends: .test
+  cache:
+    <<: *cache-14
+    policy: pull
+
+test-15:
+  image: *image-java-15
+  extends: .test
+  cache:
+    <<: *cache-15
+    policy: pull
