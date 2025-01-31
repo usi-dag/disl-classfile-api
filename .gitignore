@@ -15,3 +15,7 @@ lib/*/*.jar
 # Fallout from method uid generator
 methodid.txt
 
+.idea
+
+disl-classfile-api.iml
+
