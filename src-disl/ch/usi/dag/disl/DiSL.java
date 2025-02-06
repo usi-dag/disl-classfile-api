@@ -16,10 +16,10 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Opcodes;  // Opcode and  AccessFlags
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.ClassNode;     // ClassModel
+import org.objectweb.asm.tree.MethodNode;       // MethodModel
 
 import ch.usi.dag.disl.classparser.DislClasses;
 import ch.usi.dag.disl.exception.DiSLException;
@@ -206,7 +206,7 @@ public final class DiSL {
         final ClassNode classNode, final MethodNode methodNode
     ) throws DiSLException {
 
-        // skip abstract methods
+        // skip abstract methods // TODO refactor could work like methodModel.flags.has(AccessFlag.ABSTRACT)
         if ((methodNode.access & Opcodes.ACC_ABSTRACT) != 0) {
             return false;
         }
@@ -216,9 +216,9 @@ public final class DiSL {
             return false;
         }
 
-        final String className = classNode.name;
-        final String methodName = methodNode.name;
-        final String methodDesc = methodNode.desc;
+        final String className = classNode.name;  // TODO refactor: could be -> classModel.thisClass().name().stringValue()
+        final String methodName = methodNode.name; // TODO refactor: could be -> methodModel.methodName().stringValue()
+        final String methodDesc = methodNode.desc; // TODO refactor: could be -> methodModel.methodType().stringValue()
 
         // evaluate exclusions
         // TODO LB: Add support for inclusion
@@ -419,6 +419,7 @@ public final class DiSL {
         // If the instrumented class is the Thread class, add fields that
         // will provide thread-local variables to the code in the snippets.
         //
+        // TODO refactor: could Thread.class.getSimpleName() work too?
         if (Type.getInternalName (Thread.class).equals (classNode.name)) {
             // get all thread locals in snippets
             final Set <ThreadLocalVar> tlvs = __collectReferencedTLVs (__dislClasses.getSnippets ());
@@ -478,7 +479,9 @@ public final class DiSL {
             __dumpBytesToFile (originalBytes, "err.class");
         }
 
-        final byte [] transformedBytes = __transformers.apply (originalBytes);
+        final byte [] transformedBytes = __transformers.apply (originalBytes); // TODO this is done by the user
+
+        // TODO refactor start here
         final ClassNode inputCN = ClassNodeHelper.FULL.unmarshal (transformedBytes);
         Reflection.systemClassLoader ().notifyClassLoaded (inputCN);
 
