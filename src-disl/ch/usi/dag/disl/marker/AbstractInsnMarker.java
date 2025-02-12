@@ -1,5 +1,7 @@
 package ch.usi.dag.disl.marker;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.MethodModel;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -30,5 +32,22 @@ abstract class AbstractInsnMarker extends AbstractMarker {
 
 
     public abstract List <AbstractInsnNode> markInstruction (MethodNode methodNode);
+
+    public abstract List<CodeElement> markInstruction(MethodModel methodModel);
+
+    @Override
+    public final List<MarkedRegion> mark(final MethodModel methodModel) {
+        final List<MarkedRegion> regions = new LinkedList<>();
+
+        for (final CodeElement instruction: markInstruction(methodModel)) {
+            final MarkedRegion region = new MarkedRegion(instruction, instruction);
+            region.setWeavingRegion(new WeavingRegion(
+                    instruction, new LinkedList<>(region.getEnds()),
+                    instruction, instruction
+            ));
+            regions.add(region);
+        }
+        return regions;
+    }
 
 }

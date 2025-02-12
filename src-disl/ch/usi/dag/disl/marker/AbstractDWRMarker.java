@@ -1,5 +1,6 @@
 package ch.usi.dag.disl.marker;
 
+import java.lang.classfile.MethodModel;
 import java.util.List;
 
 import org.objectweb.asm.tree.MethodNode;
@@ -26,6 +27,15 @@ public abstract class AbstractDWRMarker extends AbstractMarker {
         return mrs;
     }
 
+    public final List<MarkedRegion> mark(MethodModel methodModel) {
+        List<MarkedRegion> markedRegions = markWithDefaultWeavingReg(methodModel);
+
+        for (MarkedRegion markedRegion: markedRegions) {
+            markedRegion.setWeavingRegion(markedRegion.computeDefaultWeavingRegion(methodModel));
+        }
+        return markedRegions;
+    }
+
     /**
      * Implementation of this method should return list of marked regions with
      * filled start and end of the region.
@@ -37,4 +47,6 @@ public abstract class AbstractDWRMarker extends AbstractMarker {
      */
     public abstract List<MarkedRegion> markWithDefaultWeavingReg(
             MethodNode methodNode);
+
+    public abstract List<MarkedRegion> markWithDefaultWeavingReg(MethodModel methodModel);
 }

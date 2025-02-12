@@ -1,10 +1,17 @@
 package ch.usi.dag.disl.marker;
 
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.Label;
+import java.lang.classfile.MethodModel;
+import java.lang.classfile.instruction.ExceptionCatch;
+import java.lang.classfile.instruction.LabelTarget;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import ch.usi.dag.util.classfileAPI.InstructionsWrapper;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.LabelNode;
@@ -32,8 +39,8 @@ public abstract class AbstractMarker implements Marker {
      */
     public static class MarkedRegion {
 
-        private AbstractInsnNode start;
-        private final List <AbstractInsnNode> ends;
+        private CodeElement start;         // TODO -> CodeElement ????
+        private final List <CodeElement> ends;
 
         private WeavingRegion weavingRegion;
 
@@ -41,7 +48,7 @@ public abstract class AbstractMarker implements Marker {
         /**
          * Returns region start.
          */
-        public AbstractInsnNode getStart () {
+        public CodeElement getStart () {
             return start;
         }
 
@@ -49,7 +56,7 @@ public abstract class AbstractMarker implements Marker {
         /**
          * Set region start.
          */
-        public void setStart (final AbstractInsnNode start) {
+        public void setStart (final CodeElement start) {
             this.start = start;
         }
 
@@ -57,7 +64,7 @@ public abstract class AbstractMarker implements Marker {
         /**
          * Returns the list of region ends.
          */
-        public List <AbstractInsnNode> getEnds () {
+        public List <CodeElement> getEnds () {
             return ends;
         }
 
@@ -65,7 +72,7 @@ public abstract class AbstractMarker implements Marker {
         /**
          * Appends a region to the list of region ends.
          */
-        public void addEnd (final AbstractInsnNode exitpoint) {
+        public void addEnd (final CodeElement exitpoint) {
             this.ends.add (exitpoint);
         }
 
@@ -89,9 +96,9 @@ public abstract class AbstractMarker implements Marker {
         /**
          * Creates a {@link MarkedRegion} with start.
          */
-        public MarkedRegion (final AbstractInsnNode start) {
+        public MarkedRegion (final CodeElement start) {
             this.start = start;
-            this.ends = new LinkedList <AbstractInsnNode> ();
+            this.ends = new LinkedList <CodeElement> ();
         }
 
 
@@ -99,10 +106,10 @@ public abstract class AbstractMarker implements Marker {
          * Creates a {@link MarkedRegion} with start and a single end.
          */
         public MarkedRegion (
-            final AbstractInsnNode start, final AbstractInsnNode end
+            final CodeElement start, final CodeElement end
         ) {
             this.start = start;
-            this.ends = new LinkedList <AbstractInsnNode> ();
+            this.ends = new LinkedList<>();
             this.ends.add (end);
         }
 
@@ -111,7 +118,7 @@ public abstract class AbstractMarker implements Marker {
          * Creates a {@link MarkedRegion} with start and a list of ends.
          */
         public MarkedRegion (
-            final AbstractInsnNode start, final List <AbstractInsnNode> ends
+            final CodeElement start, final List <CodeElement> ends
         ) {
             this.start = start;
             this.ends = ends;
@@ -122,8 +129,8 @@ public abstract class AbstractMarker implements Marker {
          * Creates a {@link MarkedRegion} with start, multiple ends, and a
          * weaving region.
          */
-        public MarkedRegion (final AbstractInsnNode start,
-            final List <AbstractInsnNode> ends, final WeavingRegion weavingRegion
+        public MarkedRegion (final CodeElement start,
+            final List <CodeElement> ends, final WeavingRegion weavingRegion
         ) {
             this.start = start;
             this.ends = ends;
@@ -188,6 +195,46 @@ public abstract class AbstractMarker implements Marker {
                 afterThrowStart, afterThrowEnd
             );
         }
+
+        public WeavingRegion computeDefaultWeavingRegion(final MethodModel methodModel) {
+            final CodeElement wStart = start;
+            final CodeElement afterThrowStart = start;
+            InstructionsWrapper.InstructionWrapper afterThrowEndWrapper = null;
+            CodeElement afterThrowEnd = null;
+
+            final Set<CodeElement> endsSet = new HashSet<>(ends);
+            // here I created a wrapper to simulate like if it was asm
+            InstructionsWrapper instructionsWrapper = new InstructionsWrapper(methodModel);
+            InstructionsWrapper.InstructionWrapper instr = instructionsWrapper.getLast();
+            while (instr != null) {
+                if (endsSet.contains(instr.getCodeElement())) {
+                    afterThrowEnd = instr.getCodeElement();
+                    afterThrowEndWrapper = instr;
+                    break;
+                }
+                instr = instr.getPrevious();
+            }
+            // TODO is this equivalent to the functionality of the asm function??????
+            if (afterThrowEnd instanceof LabelTarget) {
+                final Set<Label> tcb_ends = new HashSet<>();
+                if (methodModel.code().isPresent()) {
+                    for (ExceptionCatch exceptionCatch: methodModel.code().get().exceptionHandlers()) {
+                        tcb_ends.add(exceptionCatch.tryEnd());
+                    }
+                }
+
+                while (afterThrowEnd instanceof LabelTarget &&
+                        tcb_ends.contains(((LabelTarget) afterThrowEnd).label())    // a LabelTarget contain a Label, this is why the check and cast are needed
+                ) {
+                    afterThrowEndWrapper = afterThrowEndWrapper.getPrevious();
+                    afterThrowEnd = afterThrowEndWrapper.getCodeElement();
+                }
+            }
+
+            return new WeavingRegion(wStart, null, afterThrowStart, afterThrowEnd); // TODO
+        }
+
+
     }
 
     @Override
@@ -216,6 +263,25 @@ public abstract class AbstractMarker implements Marker {
         return result;
     }
 
+    @Override
+    public List<Shadow> mark(final ClassModel classModel, final MethodModel methodModel, Snippet snippet) throws MarkerException {
+        final List<MarkedRegion> markedRegions = mark(methodModel);
+        final List<Shadow> result = new LinkedList<>();
+
+        for (final MarkedRegion markedRegion: markedRegions) {
+            if (!markedRegion.valid()) {
+                throw new MarkerException("Marker " + this.getClass()
+                        + " produced invalid MarkedRegion (some MarkedRegion" +
+                        " fields where not set)");
+            }
+            result.add(
+                    new Shadow(classModel, methodModel, snippet, markedRegion.getStart(), markedRegion.getEnds(), markedRegion.getWeavingRegion())
+            );
+        }
+
+        return result;
+    }
+
 
     /**
      * Implementation of this method should return list of {@link MarkedRegion}
@@ -226,4 +292,6 @@ public abstract class AbstractMarker implements Marker {
      * @return returns list of MarkedRegion
      */
     public abstract List <MarkedRegion> mark (MethodNode methodNode);
+
+    public abstract List<MarkedRegion> mark(MethodModel methodModel); // TODO refactor all the implementations
 }
