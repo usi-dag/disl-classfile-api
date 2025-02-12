@@ -1,22 +1,21 @@
 package ch.usi.dag.disl;
 
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.MethodModel;
+import java.lang.classfile.constantpool.ClassEntry;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
-
 import ch.usi.dag.disl.util.JavaNames;
+
+import static java.lang.constant.ConstantDescs.*;
 
 
 /**
@@ -34,7 +33,6 @@ public final class Reflection {
 
     //
 
-    @SuppressWarnings ("serial")
     public static class MissingClassException extends RuntimeException {
         final String __internalName;
 
@@ -68,11 +66,10 @@ public final class Reflection {
          */
         private final ConcurrentMap <String, Class> __classes = new ConcurrentHashMap <> ();
 
-        //
-
-        void notifyClassLoaded (final ClassNode cn) {
-            __classes.computeIfAbsent (
-                cn.name, k -> new RegularClass (this, cn)
+        void notifyClassLoaded (final ClassModel cm) {
+            __classes.computeIfAbsent(
+                    // TODO refactor: is this equivalent as cn.name, could also be cm.thisClass().name().stringValue()
+                    cm.thisClass().asInternalName(), k -> new RegularClass(this, cm)
             );
         }
 
@@ -89,7 +86,7 @@ public final class Reflection {
          * <p>
          * <b>Note:</b>This method is only supposed to be used for reference
          * types. Behavior with primitive or array types is undefined. If
-         * necessary, use the {@link #classForType(Type)} method instead.
+         * necessary, use the { #classForType(Type)} method instead.
          *
          * @param internalName
          *        the internal name of the class to look up.
@@ -101,12 +98,9 @@ public final class Reflection {
             return Optional.ofNullable (_lookupName (internalName));
         }
 
-
-        public final Optional <Class> classForType (final Type type) {
-            return Optional.ofNullable (_lookupType (type));
+        public final Optional<Class> classForType(final ClassDesc desc) {
+            return Optional.ofNullable(_lookupType(desc));
         }
-
-        //
 
         /**
          * Looks up a reference type using its internal name and returns the
@@ -124,7 +118,6 @@ public final class Reflection {
             return __classes.get (internalName);
         }
 
-
         /**
          * Looks up the given type and returns the corresponding {@link Class}
          * if the type is known to the class loader.
@@ -133,14 +126,12 @@ public final class Reflection {
          * modified by different class loader implementations. The default
          * implementation only looks up reference types.
          *
-         * @param internalName
-         *        the name of the type to look up
          * @return the {@link Class} corresponding to the given type, or
          *         {@code null} if the type is not known.
          */
-        protected Class _lookupType (final Type type) {
-            return (type.getSort () == Type.OBJECT) ?
-                __classes.get (type.getInternalName ()) : null;
+        protected Class _lookupType(final ClassDesc desc) {
+            return (Objects.equals(desc.descriptorString(), CD_Object.descriptorString())) ?
+                    __classes.get(desc.displayName()) : null;
         }
 
     }
@@ -169,18 +160,14 @@ public final class Reflection {
 
     static final class SystemClassLoader extends ClassLoader {
 
-        private final ConcurrentMap <Type, Class> __primitives =
+        private final ConcurrentMap <ClassDesc, Class> __primitives =
             Arrays.asList (
-                Type.VOID_TYPE,
-                Type.BOOLEAN_TYPE, Type.BYTE_TYPE,
-                Type.CHAR_TYPE, Type.SHORT_TYPE,
-                Type.INT_TYPE, Type.FLOAT_TYPE,
-                Type.LONG_TYPE, Type.DOUBLE_TYPE
+                CD_void, CD_boolean, CD_byte, CD_char, CD_short, CD_int, CD_float, CD_long, CD_double
             ).stream ().collect (Collectors.toConcurrentMap (
                 Function.identity (), PrimitiveClass::new
             ));
 
-        private final ConcurrentMap <Type, Class> __arrays = new ConcurrentHashMap <> ();
+        private final ConcurrentMap <ClassDesc, Class> __arrays = new ConcurrentHashMap <> ();
 
 
         //
@@ -191,12 +178,11 @@ public final class Reflection {
         }
 
         @Override
-        protected Class _lookupType (final Type type) {
-            final int sort = type.getSort ();
-            if (sort == Type.OBJECT) {
-                return super._lookupName (type.getInternalName ());
+        protected Class _lookupType (final ClassDesc type) {
+            if (Objects.equals(type.descriptorString(), CD_Object.descriptorString())) {
+                return super._lookupName (type.displayName());
 
-            } else if (sort == Type.ARRAY) {
+            } else if (type.isArray()) {
                 return __arrays.computeIfAbsent (
                     type, k -> new ArrayClass (k)
                 );
@@ -243,7 +229,7 @@ public final class Reflection {
          * <p>
          * Primitive types do not really have an internal name, but for
          * simplicity, we just use the corresponding keyword. This differs from
-         * {@link Type} in ASM, which does not provide internal name for
+         * {Type} in ASM, which does not provide internal name for
          * primitive types.
          *
          * @return the internal name of this class.
@@ -271,7 +257,7 @@ public final class Reflection {
 
         /**
          * @return an {@link Optional} super class of this class, or an empty
-         *         {@link Optional} if the this class does not have a super
+         *         {@link Optional} if the class does not have a super
          *         class (this only holds for the {@link Object} class).
          * @throws MissingClassException
          *         if the class could not be found.
@@ -293,13 +279,13 @@ public final class Reflection {
          * @throws MissingClassException
          *         if any of the interfaces could not be found.
          */
-        Stream <Type> interfaceTypes ();
+        Stream <ClassDesc> interfaceTypes ();
 
 
         /**
          * Returns an {@link Optional} containing the {@link Method}
          * corresponding to the given signature. The {@link Optional} will be
-         * empty if the could not be found.
+         * empty if they could not be found.
          *
          * @param sig
          *        the method signature to look for
@@ -313,77 +299,60 @@ public final class Reflection {
 
     static final class PrimitiveClass implements Class {
 
-        private final Type __type;
+        private final ClassDesc __type;
 
-        private PrimitiveClass (final Type type) {
+        private PrimitiveClass (final ClassDesc type) {
             __type = type;
         }
-
-        //
 
         @Override
         public ClassLoader classLoader () {
             return __root__;
         }
 
-        //
-
-
         @Override
         public String typeName () {
             return __primitiveTypeKeyword ();
         }
-
 
         @Override
         public String internalName () {
             return __primitiveTypeKeyword ();
         }
 
-
         private String __primitiveTypeKeyword () {
-            return __type.getClassName ();
+            return __type.displayName();
         }
-
-        //
 
         @Override
         public boolean isPrimitive () {
             return true;
         }
 
-
         @Override
         public boolean isArray () {
             return false;
         }
-
 
         @Override
         public boolean isInterface () {
             return false;
         }
 
-        //
-
         @Override
         public Optional <Class> superClass () {
             return Optional.empty ();
         }
-
 
         @Override
         public Stream <Class> interfaces () {
             return Stream.empty ();
         }
 
-
         @Override
-        public Stream <Type> interfaceTypes () {
+        public Stream <ClassDesc> interfaceTypes () {
             return Stream.empty ();
         }
-
-        //
 
         @Override
         public Optional <Method> methodForSignature (final String sig) {
@@ -398,78 +367,72 @@ public final class Reflection {
         protected final String __internalName;
         private final ClassLoader __loader;
         private final int __modifiers;
-        private final Optional <String> __superName;
+        private final Optional<ClassEntry> __superName;
         private final Map <String, Method> __methods;
-        private final List <String> __interfaces;
+        private final List<ClassEntry> __interfaces;
 
-        //
-
-        private RegularClass (final ClassLoader loader, final ClassNode node) {
+        private RegularClass(final ClassLoader loader, final ClassModel classModel) {
             __loader = loader;
-            __internalName = node.name;
-            __modifiers = node.access;
-            __superName = Optional.ofNullable (node.superName);
-            __methods = __createMethods (node.methods);
-            __interfaces = new ArrayList <> (node.interfaces);
+            __internalName = classModel.thisClass().asInternalName();
+            __modifiers = classModel.flags().flagsMask();
+            __superName = classModel.superclass();
+
+            List<MethodModel> methodsList = classModel.elementList()
+                    .stream()
+                    .filter(e -> e instanceof MethodModel)
+                    .map(e -> (MethodModel) e)
+                    .collect(Collectors.toList());
+            __methods = __createMethods(methodsList);
+
+            __interfaces = classModel.interfaces();
+
         }
 
-
-        private ConcurrentMap <String, Method> __createMethods (final List <MethodNode> methods) {
-            return methods.parallelStream ()
-                .map (mn -> new Method (this, mn))
-                .collect (Collectors.toConcurrentMap (
-                    Method::signature, Function.identity()
-                ));
+        private  ConcurrentMap<String, Method> __createMethods(final List<MethodModel> methods) {
+            return methods.parallelStream()
+                    .map(methodModel -> new Method(this, methodModel))
+                    .collect(Collectors.toConcurrentMap(
+                            Method::signature, Function.identity()
+                    ));
         }
-
-        //
 
         @Override
         public ClassLoader classLoader () {
             return __loader;
         }
 
-        //
-
         @Override
         public String typeName () {
             return JavaNames.internalToType (__internalName);
         }
-
 
         @Override
         public String internalName () {
             return __internalName;
         }
 
-        //
-
         @Override
         public boolean isPrimitive() {
             return false;
         }
-
 
         @Override
         public boolean isArray () {
             return false;
         }
 
-
         @Override
         public boolean isInterface () {
             return Modifier.isInterface (__modifiers);
         }
 
-        //
-
         @Override
         public Optional <Class> superClass () {
             if (__superName.isPresent ()) {
-                final Optional <Class> result = classLoader ().classForInternalName (__superName.get ());
+                final Optional <Class> result = classLoader ().classForInternalName (__superName.get ().asInternalName());
                 if (!result.isPresent ()) {
                     throw new MissingClassException (
-                        "super class missing: %s", __superName.get()
+                        "super class missing: %s", __superName.get().asInternalName()
                     );
                 }
 
@@ -481,15 +444,14 @@ public final class Reflection {
             }
         }
 
-
         @Override
         public Stream <Class> interfaces () {
             // Convert interface names to classes lazily.
             return __interfaces.stream ().map (itfName -> {
-                final Optional <Class> result =__loader.classForInternalName (itfName);
+                final Optional <Class> result =__loader.classForInternalName (itfName.asInternalName());
                 if (!result.isPresent ()) {
                     throw new MissingClassException (
-                        "interface missing: %s", itfName
+                        "interface missing: %s", itfName.asInternalName()
                     );
                 }
 
@@ -499,9 +461,9 @@ public final class Reflection {
 
 
         @Override
-        public Stream <Type> interfaceTypes () {
+        public Stream <ClassDesc> interfaceTypes () {
             // Convert interface names to types.
-            return __interfaces.stream ().map (Type::getObjectType);
+            return __interfaces.stream ().map (ClassEntry::asSymbol);
         }
 
         //
@@ -516,64 +478,52 @@ public final class Reflection {
 
     static final class ArrayClass implements Class {
 
-        private final Type __type;
+        private final ClassDesc __type;
 
-        private ArrayClass (final Type type) {
+        private ArrayClass (final ClassDesc type) {
             __type = type;
         }
-
-        //
 
         @Override
         public ClassLoader classLoader () {
             return __root__;
         }
 
-        //
-
-
         @Override
         public String typeName () {
-            return __type.getClassName ();
+            return __type.displayName();
         }
-
 
         @Override
         public String internalName () {
-            return __type.getInternalName ();
-        }
-
-        //
+            return __type.displayName();
+        }// TODO this is not used
 
         @Override
         public boolean isPrimitive () {
             return false;
         }
 
-
         @Override
         public boolean isArray () {
             return true;
         }
-
 
         @Override
         public boolean isInterface () {
             return false;
         }
 
-        //
-
         @Override
         public Optional <Class> superClass () {
-            final Type superType = Type.getType (Object.class);
-            final Optional <Class> result = __root__.classForType (superType);
-            if (!result.isPresent ()) {
+            final ClassDesc classDesc = CD_Object;
+            final Optional <Class> result = __root__.classForType(classDesc);
+            if (!result.isPresent()) {
                 throw new MissingClassException (
-                    "super class missing: %s", superType.getInternalName ()
+                    "super class missing: %s", classDesc.descriptorString()
+                        // TODO: this is not equivalent to superType.getInternalName (), but I believe it should not matter as it is just an info
                 );
             }
-
             return result;
         }
 
@@ -585,11 +535,9 @@ public final class Reflection {
 
 
         @Override
-        public Stream <Type> interfaceTypes () {
+        public Stream <ClassDesc> interfaceTypes () {
             return Stream.empty ();
         }
-
-        //
 
         @Override
         public Optional <Method> methodForSignature (final String sig) {
@@ -599,24 +547,21 @@ public final class Reflection {
     }
 
 
-    //
-
     public static final class Method {
         private final Class __class;
         private final String __sig;
         private final String __name;
-        private final Type __type;
+        private final MethodTypeDesc __type;  // TODO I am not sure what to replace this with????
         private final int __modifiers;
 
-        //
-
-        private Method (final Class cls, final MethodNode mn) {
+        private Method(final Class cls, final MethodModel mm) {
             __class = cls;
-            __name = mn.name;
-            __type = Type.getMethodType (mn.desc);
-            __modifiers = mn.access;
+            __name = mm.methodName().stringValue();
+            __modifiers = mm.flags().flagsMask();
 
-            __sig = mn.name + mn.desc;
+            __type = mm.methodTypeSymbol();
+
+            __sig = mm.methodName().stringValue() + mm.methodType().stringValue();  // TODO is this ok??
         }
 
         //
@@ -625,16 +570,16 @@ public final class Reflection {
             return __name;
         }
 
-        public Type type () {
+        public MethodTypeDesc type () {
             return __type;
         }
 
         public Optional <Class> returnType () {
             final ClassLoader cl = __class.classLoader ();
-            final Optional <Class> result = cl.classForType (__type.getReturnType ());
-            if (!result.isPresent ()) {
+            final Optional <Class> result = cl.classForType (__type.returnType());
+            if (result.isEmpty()) {
                 throw new MissingClassException (
-                    "return type class missing: %s", __type.getInternalName ()
+                    "return type class missing: %s", __type.descriptorString()
                 );
             }
 
@@ -645,15 +590,12 @@ public final class Reflection {
             return __sig;
         }
 
-        //
-
         /**
          * Returns {@code true} if this method is static.
          */
         public boolean isStatic () {
             return Modifier.isStatic (__modifiers);
         }
-
 
         /**
          * Returns {@code true} if this method is native.
