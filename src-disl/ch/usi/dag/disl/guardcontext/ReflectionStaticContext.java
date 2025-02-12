@@ -1,11 +1,10 @@
 package ch.usi.dag.disl.guardcontext;
-
-import org.objectweb.asm.tree.MethodNode;
-
 import ch.usi.dag.disl.Reflection;
 import ch.usi.dag.disl.Reflection.Class;
 import ch.usi.dag.disl.Reflection.Method;
 import ch.usi.dag.disl.staticcontext.AbstractStaticContext;
+
+import java.lang.classfile.MethodModel;
 
 
 /**
@@ -20,13 +19,13 @@ public final class ReflectionStaticContext extends AbstractStaticContext {
 
     public Class thisClass () {
         return Reflection.systemClassLoader ().classForInternalName (
-            staticContextData.getClassNode ().name
+            staticContextData.getClassModel().thisClass().asInternalName()
         ).get ();
     }
 
     public Method thisMethod () {
-        final MethodNode mn = staticContextData.getMethodNode ();
-        return thisClass().methodForSignature (mn.name + mn.desc).get ();
+        final MethodModel mn = staticContextData.getMethodModel();
+        return thisClass().methodForSignature (mn.methodName().stringValue() + mn.methodTypeSymbol().descriptorString()).get ();
     }
 
 }
