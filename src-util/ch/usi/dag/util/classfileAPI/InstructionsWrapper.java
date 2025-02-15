@@ -1,8 +1,10 @@
 package ch.usi.dag.util.classfileAPI;
 
 import java.lang.classfile.CodeElement;
+import java.lang.classfile.Instruction;
 import java.lang.classfile.MethodModel;
 import java.lang.classfile.instruction.ExceptionCatch;
+import java.lang.classfile.instruction.LineNumber;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +51,15 @@ public class InstructionsWrapper {
         return new InstructionWrapper(codeElementList.get(index), codeElementList, index);
     }
 
+    public InstructionWrapper firstRealInstruction() {
+        for (int i = 0; i < codeElementList.size(); i++) {
+            if (codeElementList.get(i) instanceof Instruction) {
+                return new InstructionWrapper(codeElementList.get(i), codeElementList, i);
+            }
+        }
+        return null;
+    }
+
     public class InstructionWrapper {
         private final CodeElement codeElement;
         private final List<CodeElement> codeElementList;
@@ -77,5 +88,42 @@ public class InstructionsWrapper {
             }
             return new InstructionWrapper(codeElementList.get(index-1), codeElementList, index-1);
         }
+
+        public InstructionWrapper nextRealInstruction() {
+            InstructionWrapper instruction = this;
+            while (instruction != null) {
+                instruction = instruction.getNext();
+                if (instruction != null && instruction.getCodeElement() instanceof Instruction) {
+                    return instruction;
+                }
+            }
+            return null;
+        }
+
+        public InstructionWrapper previousRealInstruction() {
+            InstructionWrapper instruction = this;
+            instruction = instruction.getPrevious();
+            if (instruction != null && instruction.getCodeElement() instanceof Instruction) {
+                return instruction;
+            }
+            return null;
+        }
+
+        public boolean isRealInstruction() {
+            return this.codeElement instanceof Instruction;
+        }
+
+        public int getLineNumber() {
+            InstructionWrapper currentIns = this;
+            while (currentIns != null) {
+                currentIns = currentIns.getPrevious();
+                if (currentIns.codeElement instanceof LineNumber) {
+                   return  ((LineNumber) currentIns.codeElement).line();
+                }
+            }
+            return -1;
+        }
+
+
     }
 }
