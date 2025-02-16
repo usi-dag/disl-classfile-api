@@ -1,6 +1,6 @@
 package ch.usi.dag.disl.localvar;
 
-import org.objectweb.asm.Type;
+import java.lang.constant.ClassDesc;
 
 
 public final class ThreadLocalVar extends AbstractLocalVar {
@@ -8,13 +8,10 @@ public final class ThreadLocalVar extends AbstractLocalVar {
     private Object __initialValue;
     private final boolean __inheritable;
 
-    //
-
-    public ThreadLocalVar (
-        final String className, final String fieldName,
-        final Type type, final boolean inheritable
-    ) {
-        super (className, fieldName, type);
+    public ThreadLocalVar(
+            final String className, final String fieldName, final ClassDesc typeDesc, final boolean inheritable
+            ) {
+        super(className, fieldName, typeDesc);
         __inheritable = inheritable;
     }
 

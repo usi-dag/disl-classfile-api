@@ -5,20 +5,22 @@ import org.objectweb.asm.tree.InsnList;
 
 import ch.usi.dag.disl.annotation.SyntheticLocal;
 
+import java.lang.classfile.CodeElement;
+import java.lang.constant.ClassDesc;
+import java.util.List;
+
 
 public class SyntheticLocalVar extends AbstractLocalVar {
 
-    private SyntheticLocal.Initialize initialize;
+    private final SyntheticLocal.Initialize initialize;
 
-    private InsnList initCode;
+    private List<CodeElement> initCodeList; // TODO is a list sufficient to replace InsnList
 
-    //
 
-    public SyntheticLocalVar (
-        String className, String fieldName, Type type,
-        SyntheticLocal.Initialize initialize
-    ) {
-        super (className, fieldName, type);
+    public SyntheticLocalVar(
+            String className, String fieldName, final ClassDesc typeDesc, SyntheticLocal.Initialize initialize
+            ) {
+        super(className, fieldName, typeDesc);
         this.initialize = initialize;
     }
 
@@ -27,16 +29,23 @@ public class SyntheticLocalVar extends AbstractLocalVar {
         return initialize;
     }
 
-
+    // TODO remove later
     public InsnList getInitCode () {
         return initCode;
     }
+
+    public List<CodeElement> getInitCodeList() {return initCodeList;}
 
     public boolean hasInitCode () {
         return initCode != null;
     }
 
+    // TODO remove later
     public void setInitCode (final InsnList initCode) {
         this.initCode = initCode;
+    }
+
+    public void setInitCodeList(List<CodeElement> initCodeList) {
+        this.initCodeList = initCodeList;
     }
 }
