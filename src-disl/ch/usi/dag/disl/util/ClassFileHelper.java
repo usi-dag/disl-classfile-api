@@ -336,6 +336,34 @@ public abstract class ClassFileHelper {
                 .toList();
     }
 
+    Instruction nextRealInstruction(List<CodeElement> instructions, CodeElement start) {
+        int index = instructions.indexOf(start);
+        if (index < 0) {
+            return null;
+        }
+        while (index >= 0 && index < instructions.size()) {
+            index += 1;
+            if (instructions.get(index) instanceof Instruction) {
+                return (Instruction) instructions.get(index);
+            }
+        }
+        return null;
+    }
+
+    Instruction previousRealInstruction(List<CodeElement> instructions, CodeElement start) {
+        int index = instructions.indexOf(start);
+        if (index < 0) {
+            return null;
+        }
+        while (index > 0) {
+            index -= 1;
+            if (instructions.get(index) instanceof Instruction) {
+                return (Instruction) instructions.get(index);
+            }
+        }
+        return null;
+    }
+
     // also accept ClassDesc and I believe ConstDesc too
     public static boolean booleanisReferenceType(TypeDescriptor.OfField<?> desc) {
         return isReferenceType(TypeKind.from(desc));
