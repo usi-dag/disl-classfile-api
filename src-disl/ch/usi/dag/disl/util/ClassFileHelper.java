@@ -329,14 +329,14 @@ public abstract class ClassFileHelper {
     //  list, so different kind of helper functions might be needed
 
 
-    List<Instruction> selectReal(List<CodeElement> instructions) {
+    public static List<Instruction> selectReal(List<CodeElement> instructions) {
         return instructions.stream()
                 .filter(i -> i instanceof Instruction)
                 .map(i -> (Instruction)i)
                 .toList();
     }
 
-    Instruction nextRealInstruction(List<CodeElement> instructions, CodeElement start) {
+    public static Instruction nextRealInstruction(List<CodeElement> instructions, CodeElement start) {
         int index = instructions.indexOf(start);
         if (index < 0) {
             return null;
@@ -350,7 +350,7 @@ public abstract class ClassFileHelper {
         return null;
     }
 
-    Instruction previousRealInstruction(List<CodeElement> instructions, CodeElement start) {
+    public static Instruction previousRealInstruction(List<CodeElement> instructions, CodeElement start) {
         int index = instructions.indexOf(start);
         if (index < 0) {
             return null;
