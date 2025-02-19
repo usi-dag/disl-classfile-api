@@ -3,6 +3,8 @@ package ch.usi.dag.disl.util;
 import ch.usi.dag.disl.exception.DiSLFatalException;
 
 import java.lang.classfile.*;
+import java.lang.classfile.attribute.RuntimeInvisibleAnnotationsAttribute;
+import java.lang.classfile.attribute.RuntimeVisibleAnnotationsAttribute;
 import java.lang.classfile.constantpool.ClassEntry;
 import java.lang.classfile.constantpool.ConstantPoolBuilder;
 import java.lang.classfile.constantpool.LoadableConstantEntry;
@@ -538,6 +540,37 @@ public abstract class ClassFileHelper {
     // TODO this might not be needed as it does not use ASM to replace . with /
     public static String typeName(final ClassModel classModel) {
         return JavaNames.internalToType(classModel.thisClass().name().stringValue());
+    }
+
+
+    // These methods are to get the runtime visible and invisible annotations of class and of methods
+    // TODO should I do the same for RuntimeInvisibleTypeAnnotationsAttribute and RuntimeVisibleTypeAnnotationsAttribute???
+    public static List<RuntimeVisibleAnnotationsAttribute> getVisibleAnnotation(ClassModel classModel) {
+        return classModel.elementStream()
+                .filter(e -> e instanceof RuntimeVisibleAnnotationsAttribute)
+                .map(e -> (RuntimeVisibleAnnotationsAttribute)e)
+                .toList();
+    }
+
+    public static List<RuntimeVisibleAnnotationsAttribute> getVisibleAnnotation(MethodModel methodModel) {
+        return methodModel.elementStream()
+                .filter(e -> e instanceof RuntimeVisibleAnnotationsAttribute)
+                .map(e -> (RuntimeVisibleAnnotationsAttribute)e)
+                .toList();
+    }
+
+    public static List<RuntimeInvisibleAnnotationsAttribute> getInvisibleAnnotation(ClassModel classModel) {
+        return classModel.elementStream()
+                .filter(e -> e instanceof RuntimeInvisibleAnnotationsAttribute)
+                .map(e -> (RuntimeInvisibleAnnotationsAttribute)e)
+                .toList();
+    }
+
+    public static List<RuntimeInvisibleAnnotationsAttribute> getInvisibleAnnotation(MethodModel methodModel) {
+        return methodModel.elementStream()
+                .filter(e -> e instanceof RuntimeInvisibleAnnotationsAttribute)
+                .map(e -> (RuntimeInvisibleAnnotationsAttribute)e)
+                .toList();
     }
 
 
