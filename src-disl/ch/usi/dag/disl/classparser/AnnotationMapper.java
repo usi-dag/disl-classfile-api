@@ -1,16 +1,21 @@
 package ch.usi.dag.disl.classparser;
 
+import java.lang.classfile.Annotation;
+import java.lang.classfile.AnnotationElement;
+import java.lang.classfile.AnnotationValue;
+import java.lang.classfile.MethodModel;
+import java.lang.classfile.attribute.RuntimeInvisibleAnnotationsAttribute;
+import java.lang.classfile.attribute.RuntimeVisibleAnnotationsAttribute;
+import java.lang.classfile.constantpool.Utf8Entry;
+import java.lang.constant.ClassDesc;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
+import ch.usi.dag.disl.util.ClassFileHelper;
+// TODO remove all asm instances once the other are verified that works correctly
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -102,6 +107,23 @@ final class AnnotationMapper {
         return this;
     }
 
+    public AnnotationMapper accept(final MethodModel methodModel) {
+        List<RuntimeInvisibleAnnotationsAttribute> runtimeInvisibleAnnotationsAttributes = ClassFileHelper.getInvisibleAnnotation(methodModel);
+        List<RuntimeVisibleAnnotationsAttribute> runtimeVisibleAnnotationsAttributes = ClassFileHelper.getVisibleAnnotation(methodModel);
+        List<Annotation> visibleAnnotation = runtimeVisibleAnnotationsAttributes.stream()
+                .map(RuntimeVisibleAnnotationsAttribute::annotations)
+                .flatMap(Collection::stream)
+                .toList();
+        List<Annotation> invisibleAnnotation = runtimeInvisibleAnnotationsAttributes.stream()
+                .map(RuntimeInvisibleAnnotationsAttribute::annotations)
+                .flatMap(Collection::stream)
+                .toList();
+        Arrays.asList(visibleAnnotation, invisibleAnnotation).stream()
+                .flatMap(Collection::stream)
+                .forEach(this::accept);
+
+        return this;
+    }
 
     public AnnotationMapper accept (final AnnotationNode an) {
         final Class <?> ac = __resolveClass (Type.getType (an.desc));
@@ -132,6 +154,52 @@ final class AnnotationMapper {
         });
 
         return this;
+    }
+
+    public AnnotationMapper accept(final Annotation annotation) {
+        final Class<?> ac = __resolveClass(annotation.classSymbol());
+        final Map<Predicate<String>, BiConsumer<String, Object>> consumers = __findConsumers(ac);
+        List<AnnotationElement> elements = annotation.elements();
+        for (AnnotationElement element: elements) {
+            Utf8Entry elementName = element.name();
+            AnnotationValue value = element.value();
+            acceptElement(elementName, value, consumers);
+        }
+        return this;
+    }
+
+    public void acceptElement(final Utf8Entry elementName,
+                              final AnnotationValue value ,
+                              final Map<Predicate<String>, BiConsumer<String, Object>> consumers
+    ) {
+        switch (value) {
+            case AnnotationValue.OfArray ofArray -> {
+                List<AnnotationValue> annotationValues = ofArray.values();
+                for (AnnotationValue innerAnnotationValue: annotationValues) {
+                    acceptElement(elementName,innerAnnotationValue, consumers);
+                }
+            }
+            case AnnotationValue.OfEnum ofEnum -> {
+                // TODO is ofEnum.constantName() equivalent to "Object value" of method "Visit" from asm visitor????
+                final Object enumValue = __instantiateEnum(ofEnum.classSymbol().descriptorString(), ofEnum.constantName().stringValue());
+                // TODO is elementName.stringValue() the correct name to pass??
+                __getConsumer(consumers, elementName.stringValue()).accept(elementName.stringValue(), enumValue);
+            }
+            case AnnotationValue.OfClass ofClass -> {
+                // TODO what to pass here??? maybe the class itself???
+                __getConsumer(consumers, elementName.stringValue()).accept(elementName.stringValue(), ofClass.getClass());
+            }
+            case AnnotationValue.OfString ofString -> {
+                __getConsumer(consumers, elementName.stringValue()).accept(elementName.stringValue(), ofString.stringValue());
+            }
+            case AnnotationValue.OfConstant ofConstant -> {
+                // TODO do we ned this??? for example Int, Float, ... ???
+                throw new ParserRuntimeException("Failed to parse annotation: "
+                        + elementName.stringValue() + " with value " + value);
+            }
+            default -> throw new ParserRuntimeException("Failed to parse annotation: "
+                    + elementName.stringValue() + " with value " + value);
+        }
     }
 
 
@@ -181,11 +249,21 @@ final class AnnotationMapper {
         }
     }
 
+    private static Class<?> __resolveClass(final ClassDesc desc) {
+        try {
+            return Class.forName (desc.displayName());
+
+        } catch (final ClassNotFoundException e) {
+            throw new ParserRuntimeException (e);
+        }
+    }
+
 
     private static Object __instantiateEnum (
         final String desc, final String value
     ) {
-        final String className = Type.getType (desc).getClassName ();
+        //Type.getType (desc).getClassName ();
+        final String className = ClassDesc.ofDescriptor(desc).displayName();
 
         try {
             final Class <?> enumClass = Class.forName (className);
