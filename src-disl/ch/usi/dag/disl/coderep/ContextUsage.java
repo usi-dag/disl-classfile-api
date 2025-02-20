@@ -1,12 +1,8 @@
 package ch.usi.dag.disl.coderep;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Set;
-
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.MethodNode;
+import java.lang.classfile.MethodModel;
+import java.lang.constant.ClassDesc;
+import java.util.*;
 
 import ch.usi.dag.disl.classparser.ContextKind;
 
@@ -21,12 +17,12 @@ final class ContextUsage {
     private final Set <ContextKind> __contextKinds;
 
     /** An unmodifiable set of referenced static context types. */
-    private final Set <Type> __contextTypes;
+    private final Set <ClassDesc> __contextTypes;
 
     //
 
     private ContextUsage (
-        final Set <ContextKind> usedContexts, final Set <Type> staticContexts
+        final Set <ContextKind> usedContexts, final Set <ClassDesc> staticContexts
     ) {
         __contextKinds = Collections.unmodifiableSet (usedContexts);
         __contextTypes = Collections.unmodifiableSet (staticContexts);
@@ -44,31 +40,25 @@ final class ContextUsage {
     /**
      * @return An unmodifiable set of used static context types.
      */
-    public Set <Type> staticContextTypes () {
+    public Set <ClassDesc> staticContextTypes () {
         return __contextTypes;
     }
 
-    //
-
-    public static ContextUsage forMethod (final MethodNode method) {
-        //
-        // Collect the kinds of contexts appearing in the arguments as well as
-        // the types of static contexts.
-        //
+    public static ContextUsage forMethod(final MethodModel method) {
+        // Collect the kinds of contexts appearing in the arguments as well as the types of static contexts.
         final EnumSet <ContextKind> usedContexts = EnumSet.noneOf (ContextKind.class);
-        final Set <Type> staticContextTypes = new HashSet <Type> ();
-
-        for (final Type argType : Type.getArgumentTypes (method.desc)) {
-            final ContextKind contextKind = ContextKind.forType (argType);
+        final Set<ClassDesc> staticContextTypes = new HashSet<>();
+        List<ClassDesc> parameters = method.methodTypeSymbol().parameterList();
+        for (final ClassDesc parameterDesc: parameters) {
+            final ContextKind contextKind = ContextKind.forType(parameterDesc);
             if (contextKind != null) {
-                usedContexts.add (contextKind);
+                usedContexts.add(contextKind);
                 if (contextKind == ContextKind.STATIC) {
-                    staticContextTypes.add (argType);
+                    staticContextTypes.add(parameterDesc);
                 }
             }
         }
-
-        return new ContextUsage (usedContexts, staticContextTypes);
+        return new ContextUsage(usedContexts, staticContextTypes);
     }
 
 }
