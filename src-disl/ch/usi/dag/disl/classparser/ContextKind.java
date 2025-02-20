@@ -1,9 +1,8 @@
 package ch.usi.dag.disl.classparser;
 
+import java.lang.constant.ClassDesc;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.objectweb.asm.Type;
 
 import ch.usi.dag.disl.classcontext.ClassContext;
 import ch.usi.dag.disl.dynamiccontext.DynamicContext;
@@ -15,10 +14,10 @@ import ch.usi.dag.disl.util.ReflectionHelper;
 public enum ContextKind {
 
     STATIC (StaticContext.class) {
-        private final Map <Type, Boolean> __cache = new HashMap <Type, Boolean> ();
+        private final Map <ClassDesc, Boolean> __cache = new HashMap <ClassDesc, Boolean> ();
 
         @Override
-        public boolean matches (final Type type) {
+        public boolean matches (final ClassDesc type) {
             //
             // Static context has to implement the StaticContext interface.
             //
@@ -32,7 +31,7 @@ public enum ContextKind {
             }
         }
 
-        private boolean __implementsStaticContext (final Type type) {
+        private boolean __implementsStaticContext (final ClassDesc type) {
             final Class <?> typeClass = ReflectionHelper.tryResolveClass (type);
             if (typeClass != null) {
                 return ReflectionHelper.implementsInterface (typeClass, _itfClass);
@@ -54,21 +53,21 @@ public enum ContextKind {
 
     protected final Class <?> _itfClass;
 
-    protected final Type _itfType;
+    protected final ClassDesc _itfType;
 
     //
 
     private ContextKind (final Class <?> itfClass) {
         _itfClass = itfClass;
-        _itfType = Type.getType (_itfClass);
+        _itfType = ClassDesc.ofDescriptor(itfClass.descriptorString());
     }
 
 
-    public boolean matches (final Type type) {
-        return _itfType.equals (type);
+    public boolean matches (final ClassDesc type) {
+        return _itfType.equals(type);
     }
 
-    public static ContextKind forType (final Type type) {
+    public static ContextKind forType (final ClassDesc type) {
         //
         // Find the context that matches the type
         //
