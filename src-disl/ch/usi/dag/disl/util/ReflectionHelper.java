@@ -1,10 +1,9 @@
 package ch.usi.dag.disl.util;
 
+import java.lang.constant.ClassDesc;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-
-import org.objectweb.asm.Type;
 
 import ch.usi.dag.disl.exception.DiSLFatalException;
 import ch.usi.dag.disl.exception.ReflectionException;
@@ -50,33 +49,33 @@ public final class ReflectionHelper {
     //
 
     /**
-     * Resolves the given ASM {@link Type} to a Java {@link Class}.
+     * Resolves the given CLassFile {@link ClassDesc} to a Java {@link Class}.
      *
      * @param type the type to resolve
      * @return instance of {@link Class} corresponding to the given type
      * @throws ReflectionException if the class could not be resolved
      */
-    public static Class <?> resolveClass (final Type type)
+    public static Class <?> resolveClass (final ClassDesc type)
     throws ReflectionException {
         try {
             return __classForType (type);
 
         } catch (final ClassNotFoundException e) {
             throw new ReflectionException (
-                e, "failed to resolve class %s", type.getClassName ()
+                e, "failed to resolve class %s", type.displayName()
             );
         }
     }
 
 
     /**
-     * Resolves the given ASM {@link Type} to a Java {@link Class}.
+     * Resolves the given ClassFile {@link ClassDesc} to a Java {@link Class}.
      * Returns {@code null} if the class could not be resolved.
      *
      * @param type the type to resolve
      * @return instance of {@link Class} corresponding to the given type
      */
-    public static Class <?> tryResolveClass (final Type type) {
+    public static Class <?> tryResolveClass (final ClassDesc type) {
         try {
             return __classForType (type);
 
@@ -86,9 +85,9 @@ public final class ReflectionHelper {
     }
 
 
-    private static Class <?> __classForType (final Type type)
+    private static Class <?> __classForType (final ClassDesc type)
     throws ClassNotFoundException {
-        return Class.forName (type.getClassName ());
+        return Class.forName (type.displayName());
     }
 
     //
