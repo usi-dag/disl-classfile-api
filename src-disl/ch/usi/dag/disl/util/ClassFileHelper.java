@@ -343,7 +343,7 @@ public abstract class ClassFileHelper {
         if (index < 0) {
             return null;
         }
-        while (index >= 0 && index < instructions.size()) {
+        while (index < instructions.size()) {
             index += 1;
             if (instructions.get(index) instanceof Instruction) {
                 return (Instruction) instructions.get(index);
@@ -364,6 +364,14 @@ public abstract class ClassFileHelper {
             }
         }
         return null;
+    }
+
+    public static CodeElement nextInstruction(List<CodeElement> instructions, CodeElement start) {
+        int index = instructions.indexOf(start);
+        if (index < 0 || index + 1 >= instructions.size()) {
+            return null;
+        }
+        return instructions.get(index+1);
     }
 
     // also accept ClassDesc and I believe ConstDesc too
