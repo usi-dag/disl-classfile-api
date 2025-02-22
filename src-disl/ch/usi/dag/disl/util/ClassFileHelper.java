@@ -374,8 +374,16 @@ public abstract class ClassFileHelper {
         return instructions.get(index+1);
     }
 
+    public static CodeElement previousInstruction(List<CodeElement> instructions, CodeElement start) {
+        int index = instructions.indexOf(start);
+        if (index <= 0) {
+            return null;
+        }
+        return instructions.get(index -1);
+    }
+
     // also accept ClassDesc and I believe ConstDesc too
-    public static boolean booleanisReferenceType(TypeDescriptor.OfField<?> desc) {
+    public static boolean isReferenceType(TypeDescriptor.OfField<?> desc) {
         return isReferenceType(TypeKind.from(desc));
     }
 
