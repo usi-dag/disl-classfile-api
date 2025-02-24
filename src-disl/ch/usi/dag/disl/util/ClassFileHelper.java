@@ -344,8 +344,8 @@ public abstract class ClassFileHelper {
             return null;
         }
         for (int i = index; i < instructions.size(); i ++) {
-            if (instructions.get(index) instanceof Instruction) {
-                return (Instruction) instructions.get(index);
+            if (instructions.get(i) instanceof Instruction) {
+                return (Instruction) instructions.get(i);
             }
         }
         return null;
