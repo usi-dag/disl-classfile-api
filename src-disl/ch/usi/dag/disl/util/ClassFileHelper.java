@@ -357,10 +357,10 @@ public abstract class ClassFileHelper {
             return null;
         }
         while (index > 0) {
-            index -= 1;
             if (instructions.get(index) instanceof Instruction) {
                 return (Instruction) instructions.get(index);
             }
+            index -= 1;
         }
         return null;
     }
