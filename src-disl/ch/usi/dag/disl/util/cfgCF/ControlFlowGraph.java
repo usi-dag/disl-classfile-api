@@ -7,6 +7,8 @@ import java.lang.classfile.instruction.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static ch.usi.dag.disl.util.ClassFileHelper.getLabelTargetMap;
+
 public class ControlFlowGraph {
 
     private final List<CodeElement> instructions;  // list of all instruction (include labels and line numbers) to navigate,
@@ -141,10 +143,7 @@ public class ControlFlowGraph {
             return joints;
         }
 
-        Map<Label, LabelTarget> labelTargetMap = instructions.stream()
-                .filter(i -> i instanceof LabelTarget)
-                .map(i -> (LabelTarget)i).
-                collect(Collectors.toMap(LabelTarget::label, i -> i));
+        Map<Label, LabelTarget> labelTargetMap = getLabelTargetMap(instructions);
 
         for (int i = connectedSize; i < connectedNodes.size(); i++) {
             BasicBlockCF current = connectedNodes.get(i);

@@ -17,6 +17,8 @@ import java.lang.reflect.AccessFlag;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public abstract class ClassFileHelper {
@@ -363,6 +365,15 @@ public abstract class ClassFileHelper {
             index -= 1;
         }
         return null;
+    }
+
+    // create a map from Label to its actual instruction LabelTarget, this is for convenience since
+    // in the classFile the jump instructions do not contain the LabelTarget but only the Label
+    public static Map<Label, LabelTarget> getLabelTargetMap(List<CodeElement> instructions) {
+        return instructions.stream()
+                .filter(i -> i instanceof LabelTarget)
+                .map(i -> (LabelTarget)i).
+                collect(Collectors.toMap(LabelTarget::label, i -> i));
     }
 
     public static CodeElement nextInstruction(List<CodeElement> instructions, CodeElement start) {

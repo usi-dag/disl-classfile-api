@@ -10,6 +10,8 @@ import java.lang.classfile.instruction.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static ch.usi.dag.disl.util.ClassFileHelper.getLabelTargetMap;
+
 public class BasicBlockCalculator {
 
     public static List<CodeElement> getAll(final List<CodeElement> instructions,
@@ -43,10 +45,7 @@ public class BasicBlockCalculator {
         // differently from ASM in the ClassFile API the target of a branch instruction is not the
         // LabelTarget but just the Label, this map is to facilitate the lookup of the actual element
         // in the instructions.
-        Map<Label, LabelTarget> labelTargetMap = instructions.stream()
-                .filter(i -> i instanceof LabelTarget)
-                .map(i -> (LabelTarget)i).
-                collect(Collectors.toMap(LabelTarget::label, i -> i));
+        Map<Label, LabelTarget> labelTargetMap = getLabelTargetMap(instructions);
 
         // Scan all the instructions, identify those that terminate their basic
         // block and collect the starting instructions of the basic blocks that follow them.
