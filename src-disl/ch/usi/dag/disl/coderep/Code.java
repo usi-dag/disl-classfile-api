@@ -1,17 +1,17 @@
 package ch.usi.dag.disl.coderep;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.MethodModel;
+import java.lang.classfile.instruction.ExceptionCatch;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
-
 import ch.usi.dag.disl.localvar.LocalVars;
 import ch.usi.dag.disl.localvar.SyntheticLocalVar;
 import ch.usi.dag.disl.localvar.ThreadLocalVar;
-import ch.usi.dag.disl.util.AsmHelper;
+import ch.usi.dag.disl.util.ClassFileHelper;
 
 
 /**
@@ -23,7 +23,7 @@ import ch.usi.dag.disl.util.AsmHelper;
 public class Code {
 
     /** A method representing the code template. */
-    private final MethodNode __method;
+    private final MethodModel __method;
 
     /** Synthetic-local variables referenced by the code template. */
     private final Set <SyntheticLocalVar> __syntheticLocals;
@@ -44,7 +44,7 @@ public class Code {
     //
 
     public Code (
-        final MethodNode method,
+        final MethodModel method,
         final Set <SyntheticLocalVar> syntheticLocals,
         final Set <ThreadLocalVar> threadLocals,
         final Set <StaticContextMethod> staticContextMethods,
@@ -60,8 +60,9 @@ public class Code {
     }
 
 
+    // TODO need to find other way around instead of cloning
     private Code (final Code that) {
-        __method = AsmHelper.cloneMethod (that.__method);
+        __method = that.__method;
 
         // The following immutables can be shared.
         __syntheticLocals = that.__syntheticLocals;
@@ -75,21 +76,27 @@ public class Code {
     /**
      * @return An ASM instruction list.
      */
-    public InsnList getInstructions () {
-        return __method.instructions;
+    public List<CodeElement> getInstructions () {
+        if (__method.code().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return __method.code().get().elementList();
     }
 
 
     /**
      * @return A list of try-catch blocks (as represented in ASM).
      */
-    public List <TryCatchBlockNode> getTryCatchBlocks () {
-        return __method.tryCatchBlocks;
+    public List <ExceptionCatch> getTryCatchBlocks () {
+        if (__method.code().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return __method.code().get().exceptionHandlers();
     }
 
 
     /**
-     * @returns An unmodifiable set of all synthetic local variables referenced
+     * @return An unmodifiable set of all synthetic local variables referenced
      *          in the code.
      */
     public Set <SyntheticLocalVar> getReferencedSLVs () {
@@ -129,13 +136,13 @@ public class Code {
      *         representing this code.
      */
     public int getParameterSlotCount () {
-        return AsmHelper.getParameterSlotCount (__method);
+        return ClassFileHelper.getParameterSlotCount(__method);
     }
 
     //
 
     /**
-     * Creates a clone of this code.
+     * Creates a clone of this code. TODO CodeModel cannot be copied so this method is not working as intended
      */
     @Override
     public Code clone () {
