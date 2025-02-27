@@ -1,23 +1,21 @@
 package ch.usi.dag.disl.coderep;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.Label;
+import java.lang.classfile.MethodModel;
+import java.lang.classfile.instruction.ExceptionCatch;
+import java.lang.classfile.instruction.FieldInstruction;
+import java.lang.classfile.instruction.InvokeInstruction;
+import java.lang.classfile.instruction.LabelTarget;
+import java.lang.constant.ClassDesc;
 import java.lang.reflect.Method;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
+import ch.usi.dag.disl.util.*;
+import ch.usi.dag.disl.util.cfgCF.ControlFlowGraph;
 
 import ch.usi.dag.disl.InitializationException;
 import ch.usi.dag.disl.exception.ReflectionException;
@@ -25,18 +23,14 @@ import ch.usi.dag.disl.localvar.AbstractLocalVar;
 import ch.usi.dag.disl.localvar.LocalVars;
 import ch.usi.dag.disl.localvar.SyntheticLocalVar;
 import ch.usi.dag.disl.localvar.ThreadLocalVar;
-import ch.usi.dag.disl.util.AsmHelper;
-import ch.usi.dag.disl.util.AsmHelper.Insns;
-import ch.usi.dag.disl.util.CodeTransformer;
-import ch.usi.dag.disl.util.JavaNames;
-import ch.usi.dag.disl.util.ReflectionHelper;
-import ch.usi.dag.disl.util.cfg.CtrlFlowGraph;
+
+import static ch.usi.dag.disl.util.ClassFileHelper.getLabelTargetMap;
 
 
 /**
  * Represents a snippet or argument processor code template. This template only
  * contains the original code, without any modifications related, e.g., to the
- * use of thread local variables. A instance of the template containing the
+ * use of thread local variables. An instance of the template containing the
  * modified/processed code can be obtained on demand using the
  * {@link #process(LocalVars) process()} method.
  */
@@ -46,42 +40,41 @@ public class UnprocessedCode {
     private final String __className;
 
     /** Method node containing the snippet code. */
-    private final MethodNode __method;
+    private final MethodModel __method;
 
-    //
-
-    public UnprocessedCode (
-        final String className, final MethodNode method
-    ) {
+    public UnprocessedCode(final String className, final MethodModel methodModel) {
         __className = className;
-        __method = method;
+        __method = methodModel;
     }
-
-    //
 
     public String className () {
         return __className;
     }
 
     public String methodName () {
-        return __method.name;
+        return __method.methodName().stringValue();
     }
 
     public String location () {
-        return location (__method.instructions.getFirst ());
+        if (__method.code().isEmpty()) {
+            throw new RuntimeException("Method " + __method.methodName().stringValue() + " Has no Code!");
+        }
+        return location (__method.code().get().elementList().getFirst());
     }
 
-    public String location (final AbstractInsnNode insn) {
+    public String location(final CodeElement codeElement) {
+        if (__method.code().isEmpty()) {
+            throw new RuntimeException("Method " + __method.methodName().stringValue() + " Has no Code!");
+        }
         return String.format (
-            "snippet %s.%s%s", __className, __method.name,
-            AsmHelper.formatLineNo (":%d ", insn)
+                "snippet %s.%s%s", __className, __method.methodName().stringValue(),
+                ClassFileHelper.formatLineNo(":%d ", codeElement, __method.code().get().elementList())
         );
     }
 
     //
 
     public Code process (final LocalVars vars) {
-        //
         // Analyze code:
         //
         // Determine the kinds of contexts used in the snippet parameters.
@@ -89,44 +82,37 @@ public class UnprocessedCode {
         // Collect a set of static context methods invoked by the snippet code.
         // This is done first, because it can result in initialization failure.
         //
-        // Then collect the sets of referenced synthetic local and thread local
-        // variables, and finally determine if there is any exception handler in
+        // Then collect the sets of referenced synthetic local and thread local variables, and finally determine if there is any exception handler in
         // the code that handles the exception and does not propagate it.
-        //
-        final ContextUsage ctxs = ContextUsage.forMethod (__method);
-        final Set <StaticContextMethod> scms = __collectStaticContextMethods (
-            __method.instructions, ctxs.staticContextTypes ()
+        final ContextUsage ctxs = ContextUsage.forMethod(__method);
+        List<CodeElement> instructions = __method.code().get().elementList();
+
+        final Set<StaticContextMethod> staticContextMethods = __collectStaticContextMethods(
+                instructions, ctxs.staticContextTypes()
         );
 
-        final Set <SyntheticLocalVar> slvs = __collectReferencedVars (
-            __method.instructions, vars.getSyntheticLocals ()
+        final Set<SyntheticLocalVar> syntheticLocalVars = __collectReferencedVars(
+                instructions, vars.getSyntheticLocals()
         );
 
-        final Set <ThreadLocalVar> tlvs = __collectReferencedVars (
-            __method.instructions, vars.getThreadLocals ()
+        final Set<ThreadLocalVar> threadLocalVars = __collectReferencedVars(
+                instructions, vars.getThreadLocals()
         );
+
+        // in the ClassFile api the exception block instruction are included also with the normal instruction
+        List<CodeElement> instructionsWithoutTryCatch = instructions.stream().filter(i -> !(i instanceof ExceptionCatch)).collect(Collectors.toList());
+        List<ExceptionCatch> exceptionCatches = __method.code().isPresent()? __method.code().get().exceptionHandlers() : new ArrayList<>();
 
         final boolean handlesExceptions = __handlesExceptionWithoutThrowing (
-            __method.instructions, __method.tryCatchBlocks
+            instructionsWithoutTryCatch, exceptionCatches
         );
 
-        //
         // Process code:
-        //
-        // Clone the method code so that we can transform it, then:
-        //
         // - replace all RETURN instructions with a GOTO to the end of a method
-        //
-        // Finally create an instance of processed code.
-        //
-        final MethodNode method = AsmHelper.cloneMethod (__method);
-
-        CodeTransformer.apply (method.instructions,
-            new ReplaceReturnsWithGotoCodeTransformer ()
-        );
+        final MethodModel method = ClassFileCodeTransformer.replaceReturnsWithGoto(__method);
 
         return new Code (
-            method, slvs, tlvs, scms, handlesExceptions
+            method, syntheticLocalVars, threadLocalVars, staticContextMethods, handlesExceptions
         );
     }
 
@@ -136,7 +122,7 @@ public class UnprocessedCode {
      * list of byte code instructions. Throws an exception if any of the
      * invocations is invalid.
      *
-     * @param insns
+     * @param instructions
      *        instructions to analyze
      * @param scTypes
      *        a set of known static context types
@@ -146,120 +132,99 @@ public class UnprocessedCode {
      *         contains arguments, has an invalid return type, or any of the
      *         referenced classes or methods could not be found via reflection
      */
-    private Set <StaticContextMethod> __collectStaticContextMethods (
-        final InsnList insns, final Set <Type> scTypes
-    ) {
+    // TODO is this correct????
+    private Set<StaticContextMethod> __collectStaticContextMethods(final List<CodeElement> instructions, final Set<ClassDesc> scTypes) {
         try {
             final ConcurrentMap <String, Boolean> seen = new ConcurrentHashMap <> ();
-            return Insns.asList (insns).parallelStream ().unordered ()
-                //
-                // Select instructions representing method invocations on known
-                // static context classes.
-                //
-                .filter (insn -> insn instanceof MethodInsnNode)
-                .map (insn -> (MethodInsnNode) insn)
-                .filter (insn -> scTypes.contains (Type.getObjectType (insn.owner)))
-                //
-                // Ensure that each static context method invocation is valid.
-                // This means that it does not have any parameters and only
-                // returns either a primitive type or a String.
-                //
-                .filter (insn -> {
-                    // Throws InvalidStaticContextInvocationException.
-                    __ensureInvocationHasNoArguments (insn);
-                    __ensureInvocationReturnsAllowedType (insn);
-                    return true;
-                })
-                //
-                // Finally create an instance of static method invocation, but
-                // only for methods we have not seen so far.
-                //
-                .filter (insn -> seen.putIfAbsent (__methodId (insn), true) == null)
-                .map (insn -> {
-                    // Throws InvalidStaticContextInvocationException.
-                    final Class <?> ownerClass = __resolveClass (insn);
-                    final Method contextMethod = __resolveMethod (insn, ownerClass);
-                    return new StaticContextMethod (
-                        __methodId (insn), contextMethod, ownerClass
-                    );
-                })
-                .collect (Collectors.toSet ());
-
+            return instructions.parallelStream().unordered()
+                    // Select instructions representing method invocations on known static context classes.
+                    .filter(instruction -> instruction instanceof InvokeInstruction)
+                    .map(instruction -> (InvokeInstruction)instruction)
+                    .filter(instruction -> scTypes.contains(instruction.owner().asSymbol()))
+                    // Ensure that each static context method invocation is valid.
+                    // This means that it does not have any parameters and only returns either a primitive type or a String.
+                    .filter(instruction -> {
+                        __ensureInvocationHasNoArguments(instruction);
+                        __ensureInvocationReturnsAllowedType(instruction);
+                        return true;
+                    })
+                    // Finally create an instance of static method invocation, but only for methods we have not seen so far.
+                    .filter(instruction -> seen.putIfAbsent(__methodId(instruction), true) == null)
+                    .map(instruction -> {
+                        final Class<?> ownerClass = __resolveClass(instruction);
+                        final Method contextMethod = __resolveMethod(instruction, ownerClass);
+                        return new StaticContextMethod(
+                                __methodId(instruction), contextMethod, ownerClass
+                        );
+                    })
+                    .collect(Collectors.toSet());
         } catch (final InvalidStaticContextInvocationException e) {
-            final MethodInsnNode insn = e.insn ();
-            throw new InitializationException (
-                "%s: invocation of static context method %s.%s: %s",
-                location (insn), JavaNames.internalToType (insn.owner),
-                insn.name, e.getMessage ()
+            final InvokeInstruction instruction = e.insn();
+            throw new InitializationException(
+                    "%s: invocation of static context method %s.%s: %s",
+                    location(instruction), JavaNames.internalToType(instruction.owner().asInternalName()),
+                    instruction.name().stringValue(), e.getMessage()
             );
         }
     }
 
-
-    private static String __methodId (final MethodInsnNode methodInsn) {
-        return JavaNames.methodName (methodInsn.owner, methodInsn.name);
+    private static String __methodId (final InvokeInstruction instruction) {
+        return JavaNames.methodName (instruction.owner().name().stringValue(), instruction.name().stringValue());
     }
 
-
-    private void __ensureInvocationHasNoArguments (final MethodInsnNode insn) {
-        if (Type.getArgumentTypes (insn.desc).length != 0) {
+    private void __ensureInvocationHasNoArguments(final InvokeInstruction instruction) {
+        if (!instruction.typeSymbol().parameterList().isEmpty()) {
             throw new InvalidStaticContextInvocationException (
-                "arguments found, but NONE allowed", insn
+                    "arguments found, but NONE allowed", instruction
             );
         }
     }
 
-
-    private void __ensureInvocationReturnsAllowedType (final MethodInsnNode insn) {
-        final Type returnType = Type.getReturnType (insn.desc);
+    private void __ensureInvocationReturnsAllowedType (final InvokeInstruction instruction) {
+        final ClassDesc returnType = instruction.typeSymbol().returnType();
         if (! __ALLOWED_RETURN_TYPES__.contains (returnType)) {
             throw new InvalidStaticContextInvocationException (
-                "return type MUST be a primitive type or a String", insn
+                "return type MUST be a primitive type or a String", instruction
             );
         }
     }
 
-
-    @SuppressWarnings ("serial")
-    private static final Set <Type> __ALLOWED_RETURN_TYPES__ = Collections.unmodifiableSet (
-        new HashSet <Type> (9) {{
-            add (Type.BOOLEAN_TYPE);
-            add (Type.BYTE_TYPE);
-            add (Type.CHAR_TYPE);
-            add (Type.SHORT_TYPE);
-            add (Type.INT_TYPE);
-            add (Type.LONG_TYPE);
-
-            add (Type.FLOAT_TYPE);
-            add (Type.DOUBLE_TYPE);
-
-            add (Type.getType (String.class));
-        }}
+    private static final Set <ClassDesc> __ALLOWED_RETURN_TYPES__ = Collections.unmodifiableSet (
+            new HashSet<>(9) {{
+                add(ClassDesc.ofDescriptor(boolean.class.descriptorString()));
+                add(ClassDesc.ofDescriptor(byte.class.descriptorString()));
+                add(ClassDesc.ofDescriptor(char.class.descriptorString()));
+                add(ClassDesc.ofDescriptor(short.class.descriptorString()));
+                add(ClassDesc.ofDescriptor(int.class.descriptorString()));
+                add(ClassDesc.ofDescriptor(long.class.descriptorString()));
+                add(ClassDesc.ofDescriptor(float.class.descriptorString()));
+                add(ClassDesc.ofDescriptor(double.class.descriptorString()));
+                add(ClassDesc.ofDescriptor(String.class.descriptorString()));
+            }}
     );
 
 
-    private Class <?> __resolveClass (final MethodInsnNode insn) {
+    private Class <?> __resolveClass (final InvokeInstruction instruction) {
         try {
-            return ReflectionHelper.resolveClass (Type.getObjectType (insn.owner));
+            return ReflectionHelper.resolveClass(instruction.owner().asSymbol());
 
         } catch (final ReflectionException e) {
-            throw new InvalidStaticContextInvocationException (e.getMessage (), insn);
+            throw new InvalidStaticContextInvocationException (e.getMessage (), instruction);
         }
     }
 
 
     private Method __resolveMethod (
-        final MethodInsnNode insn, final Class <?> ownerClass
+        final InvokeInstruction instruction, final Class <?> ownerClass
     ) {
         try {
-            return ReflectionHelper.resolveMethod (ownerClass,  insn.name);
+            return ReflectionHelper.resolveMethod (ownerClass,  instruction.name().stringValue());
 
         } catch (final ReflectionException e) {
-            throw new InvalidStaticContextInvocationException (e.getMessage (), insn);
+            throw new InvalidStaticContextInvocationException (e.getMessage (), instruction);
         }
     }
 
-    //
 
     /**
      * Scans the given instruction sequence for field accesses and collects a
@@ -268,27 +233,24 @@ public class UnprocessedCode {
      * name.
      *
      * @param <T> type of the return value
-     * @param insn the instruction sequence to scan
+     * @param instructions the instructions list to scan
      * @param vars mapping between fully qualified field names and variables
      * @return a set of variables references by the code.
      */
-    private <T> Set <T> __collectReferencedVars (
-        final InsnList insns, final Map <String, T> vars
-    ) {
-        return Insns.asList (insns).parallelStream ().unordered ()
-            .filter (insn -> insn instanceof FieldInsnNode)
-            .map (insn -> {
-                final FieldInsnNode fi = (FieldInsnNode) insn;
-                return Optional.ofNullable (vars.get (
-                    AbstractLocalVar.fqFieldNameFor (fi.owner, fi.name)
-                ));
-            })
-            .filter (o -> o.isPresent ())
-            .map (o -> o.get ())
-            .collect (Collectors.toSet ());
+    private <T> Set<T> __collectReferencedVars(final List<CodeElement> instructions, final Map<String, T> vars) {
+        return instructions.parallelStream().unordered()
+                .filter(instruction -> instruction instanceof FieldInstruction)
+                .map(instruction -> {
+                    final FieldInstruction fieldInstruction = (FieldInstruction) instruction;
+                    return Optional.ofNullable(vars.get(
+                            // TODO "asInternalName() is equivalent????
+                            AbstractLocalVar.fqFieldNameFor(fieldInstruction.owner().asInternalName(), fieldInstruction.name().stringValue())
+                    ));
+                })
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toSet());
     }
-
-    //
 
     /**
      * Determines if the code contains an exception handler that handles
@@ -296,25 +258,27 @@ public class UnprocessedCode {
      * because it can cause stack inconsistency that has to be handled in the
      * weaver.
      */
-    private boolean __handlesExceptionWithoutThrowing (
-        final InsnList insns, final List <TryCatchBlockNode> tcbs
-    ) {
-        if (tcbs.size () == 0) {
+    private boolean __handlesExceptionWithoutThrowing(final List<CodeElement> instructions, List<ExceptionCatch> exceptionCatches) {
+        if (exceptionCatches.isEmpty()) {
             return false;
         }
-
-        //
         // Create a control flow graph and check if the control flow continues
-        // after an exception handler, which indicates that the handler handles
-        // the exception.
-        //
-        final CtrlFlowGraph cfg = new CtrlFlowGraph (insns, tcbs);
-        cfg.visit (insns.getFirst ());
+        // after an exception handler, which indicates that the handler handles the exception.
+        final ControlFlowGraph cfg = new ControlFlowGraph(instructions, exceptionCatches);
+        cfg.visit(instructions.stream()
+                .filter(i -> !(i instanceof ExceptionCatch))
+                .findFirst().orElseThrow());  // TODO this should not happen, but maybe it should be handled with a custom DiSL exception
 
-        for (int i = tcbs.size () - 1; i >= 0; --i) {
-            final TryCatchBlockNode tcb = tcbs.get (i);
-            if (cfg.visit (tcb.handler).size () != 0) {
-                return true;
+        Map<Label, LabelTarget> labelTargetMap = getLabelTargetMap(instructions);
+
+        for (int i = exceptionCatches.size() - 1; i >= 0; i--) {
+            final ExceptionCatch exceptionCatch = exceptionCatches.get(i);
+            Label label = exceptionCatch.handler();
+            if (labelTargetMap.containsKey(label)) {
+                List<CodeElement> visited = cfg.visit(labelTargetMap.get(label));
+                if (!visited.isEmpty()) {
+                    return true;
+                }
             }
         }
 
