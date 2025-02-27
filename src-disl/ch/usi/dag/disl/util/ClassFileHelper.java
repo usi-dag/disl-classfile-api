@@ -16,6 +16,7 @@ import java.lang.invoke.TypeDescriptor;
 import java.lang.reflect.AccessFlag;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -599,6 +600,17 @@ public abstract class ClassFileHelper {
                 .toList();
     }
 
+    public static List<Annotation> getFieldInvisibleAnnotations(FieldModel field) {
+        // In a field there should only be a single element of type RuntimeInvisibleAnnotationsAttribute
+        RuntimeInvisibleAnnotationsAttribute annotationsAttribute = field.elementStream()
+                .filter(e -> e instanceof RuntimeInvisibleAnnotationsAttribute)
+                .map(e -> (RuntimeInvisibleAnnotationsAttribute)e )
+                .findFirst().orElse(null);
+        if (annotationsAttribute == null) {
+            return new ArrayList<>();
+        }
+        return annotationsAttribute.annotations();
+    }
 
 
 }
