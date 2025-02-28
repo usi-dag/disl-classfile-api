@@ -572,32 +572,48 @@ public abstract class ClassFileHelper {
 
     // These methods are to get the runtime visible and invisible annotations of class and of methods
     // TODO should I do the same for RuntimeInvisibleTypeAnnotationsAttribute and RuntimeVisibleTypeAnnotationsAttribute???
-    public static List<RuntimeVisibleAnnotationsAttribute> getVisibleAnnotation(ClassModel classModel) {
-        return classModel.elementStream()
+    public static List<Annotation> getVisibleAnnotation(ClassModel classModel) {
+        RuntimeVisibleAnnotationsAttribute a = classModel.elementStream()
                 .filter(e -> e instanceof RuntimeVisibleAnnotationsAttribute)
                 .map(e -> (RuntimeVisibleAnnotationsAttribute)e)
-                .toList();
+                .findFirst().orElse(null);
+        if (a == null) {
+            return new ArrayList<>();
+        }
+        return a.annotations();
     }
 
-    public static List<RuntimeVisibleAnnotationsAttribute> getVisibleAnnotation(MethodModel methodModel) {
-        return methodModel.elementStream()
+    public static List<Annotation> getVisibleAnnotation(MethodModel methodModel) {
+        RuntimeVisibleAnnotationsAttribute a = methodModel.elementStream()
                 .filter(e -> e instanceof RuntimeVisibleAnnotationsAttribute)
                 .map(e -> (RuntimeVisibleAnnotationsAttribute)e)
-                .toList();
+                .findFirst().orElse(null);
+        if (a == null) {
+            return new ArrayList<>();
+        }
+        return a.annotations();
     }
 
-    public static List<RuntimeInvisibleAnnotationsAttribute> getInvisibleAnnotation(ClassModel classModel) {
-        return classModel.elementStream()
+    public static List<Annotation> getInvisibleAnnotation(ClassModel classModel) {
+        RuntimeInvisibleAnnotationsAttribute a = classModel.elementStream()
                 .filter(e -> e instanceof RuntimeInvisibleAnnotationsAttribute)
                 .map(e -> (RuntimeInvisibleAnnotationsAttribute)e)
-                .toList();
+                .findFirst().orElse(null);
+        if (a == null) {
+            return new ArrayList<>();
+        }
+        return a.annotations();
     }
 
-    public static List<RuntimeInvisibleAnnotationsAttribute> getInvisibleAnnotation(MethodModel methodModel) {
-        return methodModel.elementStream()
+    public static List<Annotation> getInvisibleAnnotation(MethodModel methodModel) {
+        RuntimeInvisibleAnnotationsAttribute a = methodModel.elementStream()
                 .filter(e -> e instanceof RuntimeInvisibleAnnotationsAttribute)
                 .map(e -> (RuntimeInvisibleAnnotationsAttribute)e)
-                .toList();
+                .findFirst().orElse(null);
+        if (a == null) {
+            return new ArrayList<>();
+        }
+        return a.annotations();
     }
 
     public static List<Annotation> getFieldInvisibleAnnotations(FieldModel field) {
