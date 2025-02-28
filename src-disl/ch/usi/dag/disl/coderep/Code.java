@@ -23,7 +23,7 @@ import ch.usi.dag.disl.util.ClassFileHelper;
 public class Code {
 
     /** A method representing the code template. */
-    private final MethodModel __method;
+    private MethodModel __method;
 
     /** Synthetic-local variables referenced by the code template. */
     private final Set <SyntheticLocalVar> __syntheticLocals;
@@ -147,6 +147,12 @@ public class Code {
     @Override
     public Code clone () {
         return new Code (this);
+    }
+
+
+    // this is needed in case the code of the method is transformed, the ClassFile api do not allow editing methods, but a new method of a new class must be created
+    public void setNewMethod(MethodModel newMethod) {
+        this.__method = newMethod;
     }
 
 }
