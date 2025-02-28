@@ -1,14 +1,17 @@
 package ch.usi.dag.disl.classparser;
 
+import java.lang.classfile.Annotation;
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.attribute.RuntimeInvisibleAnnotationsAttribute;
+import java.lang.constant.ClassDesc;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.ClassNode;
+import ch.usi.dag.util.classfileAPI.ClassModelHelper;
 
 import ch.usi.dag.disl.DiSL.CodeOption;
 import ch.usi.dag.disl.InitializationException;
@@ -20,7 +23,6 @@ import ch.usi.dag.disl.exception.StaticContextGenException;
 import ch.usi.dag.disl.localvar.LocalVars;
 import ch.usi.dag.disl.processor.ArgProcessor;
 import ch.usi.dag.disl.snippet.Snippet;
-import ch.usi.dag.util.asm.ClassNodeHelper;
 
 
 /**
@@ -31,112 +33,83 @@ public final class DislClasses {
 
     private final SnippetParser __snippetParser;
 
-    //
-
     private DislClasses (final SnippetParser snippetParser) {
         // not to be instantiated from outside
         __snippetParser = snippetParser;
     }
 
-    //
 
-    public static DislClasses load (
-        final Set <CodeOption> options, final Stream <String> classNames
-    ) throws ParserException, StaticContextGenException, ReflectionException,
-    ProcessorException {
-        //
-        // Get an ASM tree representation of the DiSL classes first, then
-        // parse them as snippets or argument processors depending on the
-        // annotations associated with each class.
-        //
-        final List <ClassNode> classNodes = classNames
-            .map (className -> __createClassNode (className))
-            .collect (Collectors.toList ());
+    public static DislClasses load(final Set <CodeOption> options, final Stream <String> classNames
+                                    ) throws ParserException, StaticContextGenException, ReflectionException, ProcessorException {
+        final List<ClassModel> classModels = classNames
+                .map(DislClasses::__createClassModel)
+                .toList();
 
-        if (classNodes.isEmpty ()) {
-            throw new InitializationException (
-                "No DiSL classes found. They must be explicitly specified "+
-                "using the disl.classes system property or the DiSL-Classes "+
-                "attribute in the instrumentation JAR manifest."
-            );
+        if (classModels.isEmpty()) {
+            throw new InitializationException("No DiSL classes found. They must be explicitly specified "+
+                    "using the disl.classes system property or the DiSL-Classes "+
+                    "attribute in the instrumentation JAR manifest.");
         }
-
-        //
 
         final SnippetParser sp = new SnippetParser ();
         final ArgProcessorParser app = new ArgProcessorParser ();
 
-        for (final ClassNode classNode : classNodes) {
-            if (__isArgumentProcessor (classNode)) {
-                app.parse (classNode);
+        for (final ClassModel classModel: classModels) {
+            if (__isArgumentProcessor(classModel)) {
+                app.parse(classModel);
             } else {
-                sp.parse (classNode);
+                sp.parse(classModel);
             }
         }
 
-        //
-        // Collect all local variables and initialize the argument processor
-        // and snippets.
-        //
         final LocalVars localVars = LocalVars.merge (
-            sp.getAllLocalVars (), app.getAllLocalVars ()
+                sp.getAllLocalVars (), app.getAllLocalVars ()
         );
 
-        final Map <Type, ArgProcessor> processors = app.initProcessors (localVars);
+        final Map<ClassDesc, ArgProcessor> processors = app.initProcessors(localVars);
 
-        // TODO LB: Consider whether we need to create the argument processor
-        // invocation map now -- we basically discard the argument processors
-        // and keep an invocation map keyed to instruction indices! :-(
-
-        // TODO LB: Move the loop to the SnippetParser class
-        for (final Snippet snippet : sp.getSnippets ()) {
-            snippet.init (localVars, processors, options);
+        for (final Snippet snippet: sp.getSnippets()) {
+            snippet.init(localVars, processors, options);
         }
 
-        return new DislClasses (sp);
+        return new DislClasses(sp);
     }
 
 
-    private static ClassNode __createClassNode (final String className) {
-        //
-        // Parse input stream into a class node. Include debug information so
-        // that we can report line numbers in case of problems in DiSL classes.
+    private static ClassModel __createClassModel(final String className) {
+        // Parse input stream into a class node. Include debug information so that we can report line numbers in case of problems in DiSL classes.
         // Re-throw any exceptions as DiSL initialization exceptions.
-        //
         try {
-            return ClassNodeHelper.SNIPPET.load (className);
-
+            return ClassModelHelper.SNIPPET.load(className);  // TODO is my classModelHelper equivalent ans the ClassNodeHelper???
         } catch (final Exception e) {
-            throw new InitializationException (
-                e, "failed to load DiSL class %s", className
-            );
+            throw new InitializationException(e, "failed to load DiSL class %s", className);
         }
     }
 
 
-    private static boolean __isArgumentProcessor (final ClassNode classNode) {
-        //
-        // An argument processor must have an @ArgumentProcessor annotation
-        // associated with the class. DiSL instrumentation classes may have
-        // an @Instrumentation annotation. DiSL classes without annotations
-        // are by default considered to be instrumentation classes.
-        //
-        if (classNode.invisibleAnnotations != null) {
-            final Type apType = Type.getType (ArgumentProcessor.class);
+    private static boolean __isArgumentProcessor(final ClassModel classModel) {
+        // An argument processor must have an @ArgumentProcessor annotation associated with the class.
+        // DiSL instrumentation classes may have an @Instrumentation annotation.
+        // DiSL classes without annotations are by default considered to be instrumentation classes.
+        List<RuntimeInvisibleAnnotationsAttribute> runtimeInvisibleAnnotationsAttributes = classModel
+                .elementStream()
+                .filter(e -> e instanceof RuntimeInvisibleAnnotationsAttribute)
+                .map(e -> (RuntimeInvisibleAnnotationsAttribute)e)
+                .toList();
 
-            for (final AnnotationNode annotation : classNode.invisibleAnnotations) {
-                final Type annotationType = Type.getType (annotation.desc);
-                if (apType.equals (annotationType)) {
+        String argProcessor = ArgumentProcessor.class.descriptorString();
+
+        for (RuntimeInvisibleAnnotationsAttribute annotationsAttribute: runtimeInvisibleAnnotationsAttributes) {
+            List<Annotation> annotations = annotationsAttribute.annotations();
+            for (Annotation annotation: annotations) {
+                if(Objects.equals(annotation.classSymbol().descriptorString(), argProcessor)) {
                     return true;
                 }
             }
         }
-
-        // default: not an argument processor
         return false;
     }
 
-    //
 
     public List <Snippet> getSnippets () {
         return __snippetParser.getSnippets ();
