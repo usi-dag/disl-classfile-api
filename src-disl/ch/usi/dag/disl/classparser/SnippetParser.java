@@ -1,18 +1,17 @@
 package ch.usi.dag.disl.classparser;
 
-import java.lang.reflect.InvocationTargetException;
+import java.lang.classfile.Annotation;
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.MethodModel;
+import java.lang.constant.ClassDesc;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
+import ch.usi.dag.disl.util.*;
 
 import ch.usi.dag.disl.annotation.After;
 import ch.usi.dag.disl.annotation.AfterReturning;
@@ -31,10 +30,6 @@ import ch.usi.dag.disl.scope.Scope;
 import ch.usi.dag.disl.scope.ScopeMatcher;
 import ch.usi.dag.disl.snippet.Snippet;
 import ch.usi.dag.disl.snippet.SnippetUnprocessedCode;
-import ch.usi.dag.disl.util.AsmHelper;
-import ch.usi.dag.disl.util.JavaNames;
-import ch.usi.dag.disl.util.Logging;
-import ch.usi.dag.disl.util.ReflectionHelper;
 import ch.usi.dag.util.logging.Logger;
 
 
@@ -58,18 +53,16 @@ class SnippetParser extends AbstractParser {
     //
 
     // NOTE: this method can be called many times
-    public void parse (final ClassNode dislClass) throws ParserException {
-        processLocalVars (dislClass);
-
-        //
+    public void parse(final ClassModel dislClass) throws ParserException {
+        processLocalVars(dislClass);
 
         try {
-            final String className = AsmHelper.typeName (dislClass);
+            final String className = ClassFileHelper.typeName(dislClass);
 
-            snippets.addAll (dislClass.methods.parallelStream ().unordered ()
-                .filter (m -> __isSnippetCandidate (m))
-                .map (m -> __parseSnippetWrapper (className, m))
-                .collect (Collectors.toList ())
+            snippets.addAll(dislClass.methods().parallelStream().unordered()
+                    .filter(this::__isSnippetCandidate)
+                    .map(m -> __parseSnippetWrapper(className, m))
+                    .toList()
             );
 
         } catch (final ParserRuntimeException e) {
@@ -77,83 +70,61 @@ class SnippetParser extends AbstractParser {
         }
     }
 
-    private boolean __isSnippetCandidate (final MethodNode m) {
-        if (JavaNames.isConstructorName (m.name)) {
-            __log.trace ("ignoring %s (constructor)", m.name);
+
+    private boolean __isSnippetCandidate(final MethodModel m) {
+        if (JavaNames.isConstructorName(m.methodName().stringValue())) {
+            __log.trace ("ignoring %s (constructor)", m.methodName().stringValue());
             return false;
         }
-
-        if (JavaNames.isInitializerName (m.name)) {
-            __log.trace ("ignoring %s (static initializer)", m.name);
+        if (JavaNames.isInitializerName(m.methodName().stringValue())) {
+            __log.trace ("ignoring %s (static initializer)", m.methodName().stringValue());
             return false;
         }
-
-        if (m.invisibleAnnotations == null || m.invisibleAnnotations.isEmpty ()) {
-            __log.trace ("ignoring %s (no annotations found)", m.name);
+        if (ClassFileHelper.getInvisibleAnnotation(m).isEmpty()) {
+            __log.trace ("ignoring %s (no annotations found)", m.methodName().stringValue());
             return false;
         }
-
         return true;
     }
 
-    private Snippet __parseSnippetWrapper (
-        final String className, final MethodNode method
-    ) {
-        //
-        // Wrap all parser exceptions into ParserRuntimeException so that
-        // __parseSnippet() can be called from a stream pipeline.
-        //
-        try {
-            return __parseSnippet (className, method);
 
-        } catch (final Exception e) {
+    private Snippet __parseSnippetWrapper(final String className, final MethodModel method) {
+        // Wrap all parser exceptions into ParserRuntimeException so that __parseSnippet() can be called from a stream pipeline.
+        try {
+            return __parseSnippet(className, method);
+        }  catch (final Exception e) {
             throw new ParserRuntimeException (
-                e, "error parsing snippet %s.%s()",
-                className, method.name
+                    e, "error parsing snippet %s.%s()",
+                    className, method.methodName().stringValue()
             );
         }
     }
 
 
-    private Snippet __parseSnippet (
-        final String className, final MethodNode method
-    ) throws ParserException, ReflectionException, MarkerException, GuardException  {
-        __ensureSnippetIsWellDefined (method);
+    private Snippet __parseSnippet(final String className, final MethodModel method)
+            throws ParserException, ReflectionException, MarkerException, GuardException
+    {
+        __ensureSnippetIsWellDefined(method);
 
-        //
-
-        final SnippetAnnotationData data = __parseSnippetAnnotation (
-            method.invisibleAnnotations.get (0)
-        );
-
-        //
+        // only the first annotation will apply
+        final SnippetAnnotationData data = __parseSnippetAnnotation(ClassFileHelper.getInvisibleAnnotation(method).getFirst());
 
         final Marker marker = getMarker (data.marker, data.args);
         final Scope scope = ScopeMatcher.forPattern (data.scope);
         final Method guard = GuardHelper.findAndValidateGuardMethod (
-            AbstractParser.getGuard (data.guard), GuardHelper.snippetContextSet ()
+                AbstractParser.getGuard (data.guard), GuardHelper.snippetContextSet ()
         );
 
-        final SnippetUnprocessedCode template = new SnippetUnprocessedCode (
-            className, method, data.dynamicBypass
-        );
-
-        //
+        final SnippetUnprocessedCode template = new SnippetUnprocessedCode(className, method, data.dynamicBypass);
 
         return new Snippet (
-            data.type, marker, scope, guard, data.order, template
+                data.type, marker, scope, guard, data.order, template
         );
     }
 
-    //
 
-    private void __ensureSnippetIsWellDefined (
-        final MethodNode method
-    ) throws ParserException {
-        //
-        // The ordering of (some of) these checks is important -- some may
-        // rely on certain assumptions to be satisfied.
-        //
+    private void __ensureSnippetIsWellDefined(final MethodModel method) throws ParserException {
+        // The ordering of (some of) these checks is important -- some may rely on certain assumptions to be satisfied.
         __warnOnMultipleAnnotations (method);
         __ensureSnippetOnlyHasDislAnnotations (method);
 
@@ -166,58 +137,51 @@ class SnippetParser extends AbstractParser {
         ensureMethodUsesContextProperly (method);
     }
 
-    private void __warnOnMultipleAnnotations (
-        final MethodNode method
-    ) throws SnippetParserException {
-        final int annotationCount = method.invisibleAnnotations.size ();
+
+    private void __warnOnMultipleAnnotations(final MethodModel method) throws SnippetParserException {
+        final int annotationCount = ClassFileHelper.getInvisibleAnnotation(method).size();
         if (annotationCount > 1) {
             __log.warn (
-                "%s has %d annotations, one the first will apply",
-                method.name, annotationCount
+                    "%s has %d annotations, only the first will apply",
+                    method.methodName().stringValue(), annotationCount
             );
         }
     }
 
 
-    private static void __ensureSnippetOnlyHasDislAnnotations (
-        final MethodNode method
-    ) throws SnippetParserException {
-        for (final AnnotationNode annotation : method.invisibleAnnotations) {
-            final Type annotationType = Type.getType (annotation.desc);
-            if (! __isSnippetAnnotation (annotationType)) {
+    private static void __ensureSnippetOnlyHasDislAnnotations(final MethodModel method) throws SnippetParserException {
+        for (final Annotation annotation: ClassFileHelper.getInvisibleAnnotation(method)) {
+            ClassDesc annotationType = annotation.classSymbol();
+            if (! __isSnippetAnnotation(annotationType)) {
                 throw new SnippetParserException (String.format (
-                    "unsupported annotation: %s", annotationType.getClassName ()
+                        "unsupported annotation: %s", annotationType.displayName()
                 ));
             }
         }
     }
 
-    //
 
-    private SnippetAnnotationData __parseSnippetAnnotation (
-        final AnnotationNode annotation
-    ) throws SnippetParserException {
-        //
+    private SnippetAnnotationData __parseSnippetAnnotation(final Annotation annotation) throws SnippetParserException {
         // At this point, the snippet has been checked for unsupported
         // annotations. The lookup is therefore safe.
-        //
-        final Type annotationType = Type.getType (annotation.desc);
-        final Class <?> annotationClass = __getAnnotationClass (annotationType);
-        return __parseSnippetAnnotationFields (annotation, annotationClass);
+        final ClassDesc annotationType = annotation.classSymbol();
+        final Class<?> annotationClass = __getAnnotationClass(annotationType);
+        return __parseSnippetAnnotationFields(annotation, annotationClass);
     }
 
 
-    private static boolean __isSnippetAnnotation (final Type annotationType) {
+    private static boolean __isSnippetAnnotation (final ClassDesc annotationType) {
         return __SNIPPET_ANNOTATIONS__.containsKey (annotationType);
     }
 
-    private static Class <?> __getAnnotationClass (final Type annotationType) {
+
+
+    private static Class <?> __getAnnotationClass (final ClassDesc annotationType) {
         return __SNIPPET_ANNOTATIONS__.get (annotationType);
     }
 
-    @SuppressWarnings ("serial")
-    private static final Map <Type, Class <?>> __SNIPPET_ANNOTATIONS__ =
-        Collections.unmodifiableMap (new HashMap <Type, Class <?>> () {
+    private static final Map <ClassDesc, Class <?>> __SNIPPET_ANNOTATIONS__ =
+        Collections.unmodifiableMap (new HashMap <ClassDesc, Class <?>> () {
             {
                 put (After.class);
                 put (AfterReturning.class);
@@ -226,7 +190,7 @@ class SnippetParser extends AbstractParser {
             }
 
             private void put (final Class <?> annotationClass) {
-                put (Type.getType (annotationClass), annotationClass);
+                put (ClassDesc.ofDescriptor(annotationClass.descriptorString()), annotationClass);
             }
         });
 
@@ -236,14 +200,14 @@ class SnippetParser extends AbstractParser {
     private static class SnippetAnnotationData {
         final Class <?> type;
 
-        Type marker;
+        ClassDesc marker;
 
         //
         // Default values of annotation attributes.
         //
         String args = null;
         String scope = "*";
-        Type guard = null;
+        ClassDesc guard = null;
         int order = 100;
         boolean dynamicBypass = true;
 
@@ -253,31 +217,23 @@ class SnippetParser extends AbstractParser {
     }
 
 
-    private SnippetAnnotationData __parseSnippetAnnotationFields (
-        final AnnotationNode annotation, final Class <?> type
-    ) {
-        final SnippetAnnotationData result = parseAnnotation (
-            annotation, new SnippetAnnotationData (type)
-        );
+    private SnippetAnnotationData __parseSnippetAnnotationFields(final Annotation annotation, final Class<?> type) {
+        final SnippetAnnotationData result = parseAnnotation(annotation, new SnippetAnnotationData(type));
 
         if (result.marker == null) {
             throw new DiSLFatalException (
-                "Missing [marker] attribute in annotation "+ type.getName ()
-                + ". This may happen if annotation class is changed but"
-                + " data holder class is not."
+                    "Missing [marker] attribute in annotation "+ type.getName ()
+                            + ". This may happen if annotation class is changed but"
+                            + " data holder class is not."
             );
         }
-
         return result;
     }
 
-    //
 
-    private Marker getMarker (
-        final Type markerType, final String markerParam
-    ) throws ReflectionException, MarkerException {
-        final Class <?> rawMarkerClass = ReflectionHelper.resolveClass (markerType);
-        final Class <? extends Marker> markerClass = rawMarkerClass.asSubclass (Marker.class);
+    private Marker getMarker(final ClassDesc markerType, final String markerParam) throws ReflectionException, MarkerException {
+        final Class<?> rawMarkerClass = ReflectionHelper.resolveClass(markerType);
+        final Class<? extends Marker> markerClass = rawMarkerClass.asSubclass(Marker.class);
 
         // instantiate marker WITHOUT Parameter as an argument
         if (markerParam == null) {
@@ -287,9 +243,9 @@ class SnippetParser extends AbstractParser {
             } catch (final ReflectionException e) {
                 if (e.getCause () instanceof NoSuchMethodException) {
                     throw new MarkerException ("Marker " + markerClass.getName ()
-                        + " requires \"param\" annotation attribute"
-                        + " declared",
-                        e);
+                            + " requires \"param\" annotation attribute"
+                            + " declared",
+                            e);
                 }
 
                 throw e;
@@ -299,13 +255,13 @@ class SnippetParser extends AbstractParser {
         // try to instantiate marker WITH Parameter as an argument
         try {
             return ReflectionHelper.createInstance (
-                markerClass, new Parameter (markerParam)
+                    markerClass, new Parameter (markerParam)
             );
 
         } catch (final ReflectionException e) {
             if (e.getCause () instanceof NoSuchMethodException) {
                 throw new MarkerException ("Marker " + markerClass.getName ()
-                    + " does not support \"param\" attribute", e);
+                        + " does not support \"param\" attribute", e);
             }
 
             throw e;
