@@ -1,15 +1,14 @@
 package ch.usi.dag.disl.snippet;
 
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.MethodModel;
+import java.lang.constant.ClassDesc;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
 
 import ch.usi.dag.disl.DiSL.CodeOption;
 import ch.usi.dag.disl.exception.MarkerException;
@@ -104,10 +103,8 @@ public class Snippet implements Comparable <Snippet> {
      *
      * @throws MarkerException
      */
-    public final List <Shadow> selectApplicableShadows (
-        final ClassNode classNode, final MethodNode methodNode
-    ) throws MarkerException {
-        return __guardedShadows (marker.mark (classNode, methodNode, this));
+    public final List<Shadow> selectApplicableShadows(final ClassModel classModel, final MethodModel methodModel) throws MarkerException {
+        return __guardedShadows(marker.mark(classModel, methodModel, this));
     }
 
 
@@ -194,11 +191,9 @@ public class Snippet implements Comparable <Snippet> {
      * snippet and making this class immutable. Moreover, the state of a
      * snippet should not be determined by its static type.
      */
-    public void init (
-        final LocalVars locals, final Map <Type, ArgProcessor> processors,
-        final Set <CodeOption> options
-    ) throws ProcessorException, ReflectionException  {
-        __code = __template.process (locals, processors, marker, options);
+    public void init(final LocalVars locals, final Map<ClassDesc, ArgProcessor> processors, final Set<CodeOption> options)
+            throws ProcessorException, ReflectionException{
+        __code = __template.process(locals, processors, marker, options);
     }
 
 }
