@@ -272,7 +272,7 @@ public abstract class ClassFileHelper {
     }
 
     // TODO there might be a better way to do this (without using ASM)
-    private static MethodTypeDesc getMethodDescriptor(final Method method) {
+    public static MethodTypeDesc getMethodDescriptor(final Method method) {
         Class<?> returnType = method.getReturnType();
         Class<?>[] parameters = method.getParameterTypes();
         ClassDesc classDesc = ClassDesc.ofDescriptor(returnType.descriptorString());
