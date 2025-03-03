@@ -164,7 +164,7 @@ public class ClassFileCodeTransformer {
      * </pre>
      * @return the MethodTransform
      */
-    public static MethodTransform InsertDynamicBypassControlCodeTransformer() {
+    public static MethodTransform insertDynamicBypassControlCodeTransformer() {
         final Method __dbActivate__ = ReflectionHelper.getMethod (ch.usi.dag.disl.dynamicbypass.DynamicBypass.class, "activate");
         final Method __dbDeactivate__ = ReflectionHelper.getMethod (ch.usi.dag.disl.dynamicbypass.DynamicBypass.class, "deactivate");
         final ClassDesc ownerDesc = ClassDesc.ofDescriptor(ch.usi.dag.disl.dynamicbypass.DynamicBypass.class.descriptorString());

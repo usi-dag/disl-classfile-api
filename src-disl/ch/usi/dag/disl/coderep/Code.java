@@ -83,6 +83,10 @@ public class Code {
         return __method.code().get().elementList();
     }
 
+    public MethodModel getMethod() {
+        return this.__method;
+    }
+
 
     /**
      * @return A list of try-catch blocks (as represented in ASM).
