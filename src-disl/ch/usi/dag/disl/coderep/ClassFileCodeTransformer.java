@@ -3,12 +3,15 @@ package ch.usi.dag.disl.coderep;
 import ch.usi.dag.disl.util.ClassFileHelper;
 import ch.usi.dag.disl.util.ReflectionHelper;
 
+import java.io.PrintStream;
 import java.lang.classfile.*;
 import java.lang.classfile.instruction.*;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 import java.lang.reflect.Method;
 import java.util.List;
+
+import static java.lang.constant.ConstantDescs.*;
 
 public class ClassFileCodeTransformer {
 
@@ -52,6 +55,65 @@ public class ClassFileCodeTransformer {
     }
 
     // various Transformers:
+
+    /**
+     * insert an exception handler around the code
+     * @param location string to print if there is an exception
+     * @return the MethodTransform
+     */
+    public static MethodTransform InsertExceptionHandlerCodeTransformer(String location) {
+        // The inserted code:
+        //
+        // TRY_BEGIN:       try {
+        //                      ... original snippet code ...
+        //                      goto HANDLER_END;
+        // TRY_END:         } finally (e) {
+        // HANDLER_BEGIN:       System.err.println(...);
+        //                      e.printStackTrace();
+        //                      System.exit(666);
+        //                      throw e;
+        // HANDLER_END:     }
+        final ClassDesc printStreamDesc = ClassDesc.ofDescriptor(PrintStream.class.descriptorString());
+        return (methodBuilder, methodElement) -> {
+            if (methodElement instanceof CodeModel) {
+                methodBuilder.withCode(codeBuilder -> {
+                    Label HANDLER_END = codeBuilder.newLabel(); // label that goes at the end
+
+                    codeBuilder
+                            .trying(tryHandler -> {
+                                for (CodeElement instruction: ((CodeModel) methodElement).elementList()) {
+                                    tryHandler.with(instruction); // add all the original instructions
+                                }
+                                tryHandler.goto_(HANDLER_END); // TODO is this actually needed, of the builder automatically add it??
+                            }, catchHandler -> {
+                                catchHandler.catchingAll(blockCodeBuilder -> {
+                                    // The caught exception will be on top of the operand stack when the catch block is entered.
+
+                                    // get print class
+                                    codeBuilder.getstatic(ClassDesc.ofDescriptor(System.class.descriptorString()), "out", printStreamDesc);
+                                    // load constant
+                                    blockCodeBuilder.loadConstant(String.format("%s: failed to handle an exception", location)); // load string
+                                    // print string
+                                    codeBuilder.invokevirtual(printStreamDesc, "println", MethodTypeDesc.of(CD_void, CD_String));
+
+                                    codeBuilder.dup();
+                                    // print stack trace
+                                    codeBuilder.invokestatic(ClassDesc.ofDescriptor(Throwable.class.descriptorString()), "printStackTrace", MethodTypeDesc.of(CD_void));
+                                    // system exit
+                                    codeBuilder.loadConstant(666);
+                                    codeBuilder.invokestatic(ClassDesc.ofDescriptor(System.class.descriptorString()), "exit", MethodTypeDesc.of(CD_void, CD_int));
+                                    // throw exception
+                                    codeBuilder.athrow();
+                                });
+                            })
+                            .labelBinding(HANDLER_END) // the label need to be bound to an instruction
+                            .nop();
+                });
+            } else {
+                methodBuilder.with(methodElement);
+            }
+        };
+    }
 
 
     /**
