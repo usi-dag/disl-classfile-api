@@ -342,6 +342,9 @@ public abstract class ClassFileHelper {
     }
 
     public static Instruction nextRealInstruction(List<CodeElement> instructions, CodeElement start) {
+        if (start == null || instructions == null) {
+            return null;
+        }
         int index = instructions.indexOf(start);
         if (index < 0) {
             return null;
@@ -355,6 +358,9 @@ public abstract class ClassFileHelper {
     }
 
     public static Instruction previousRealInstruction(List<CodeElement> instructions, CodeElement start) {
+        if (start == null || instructions == null) {
+            return null;
+        }
         int index = instructions.indexOf(start);
         if (index < 0) {
             return null;
@@ -378,6 +384,9 @@ public abstract class ClassFileHelper {
     }
 
     public static CodeElement nextInstruction(List<CodeElement> instructions, CodeElement start) {
+        if (start == null || instructions == null) {
+            return null;
+        }
         int index = instructions.indexOf(start);
         if (index < 0 || index + 1 >= instructions.size()) {
             return null;
@@ -386,6 +395,9 @@ public abstract class ClassFileHelper {
     }
 
     public static CodeElement previousInstruction(List<CodeElement> instructions, CodeElement start) {
+        if (start == null || instructions == null) {
+            return null;
+        }
         int index = instructions.indexOf(start);
         if (index <= 0) {
             return null;
