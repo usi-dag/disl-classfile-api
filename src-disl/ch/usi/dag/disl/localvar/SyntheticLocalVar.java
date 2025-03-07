@@ -1,8 +1,5 @@
 package ch.usi.dag.disl.localvar;
 
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.InsnList;
-
 import ch.usi.dag.disl.annotation.SyntheticLocal;
 
 import java.lang.classfile.CodeElement;
@@ -29,20 +26,11 @@ public class SyntheticLocalVar extends AbstractLocalVar {
         return initialize;
     }
 
-    // TODO remove later
-    public InsnList getInitCode () {
-        return initCode;
-    }
 
     public List<CodeElement> getInitCodeList() {return initCodeList;}
 
     public boolean hasInitCode () {
-        return initCode != null;
-    }
-
-    // TODO remove later
-    public void setInitCode (final InsnList initCode) {
-        this.initCode = initCode;
+        return initCodeList != null;
     }
 
     public void setInitCodeList(List<CodeElement> initCodeList) {
