@@ -1,15 +1,15 @@
 package ch.usi.dag.disl.processor.generator;
 
-import org.objectweb.asm.Type;
-
 import ch.usi.dag.disl.coderep.Code;
 import ch.usi.dag.disl.processor.ArgProcessorKind;
+
+import java.lang.constant.ClassDesc;
 
 
 public class ProcMethodInstance {
 
     private final int argIndex;
-    private final Type argType;
+    private final ClassDesc argType;
     private final int argsCount;
 
     private final ArgProcessorKind kind;
@@ -18,7 +18,7 @@ public class ProcMethodInstance {
     //
 
     public ProcMethodInstance (
-        final int argIndex, final Type argType,
+        final int argIndex, final ClassDesc argType,
         final int argsCount, final ArgProcessorKind kind,
         final Code code
     ) {
@@ -36,7 +36,7 @@ public class ProcMethodInstance {
     }
 
 
-    public Type getArgType () {
+    public ClassDesc getArgType () {
         return argType;
     }
 
