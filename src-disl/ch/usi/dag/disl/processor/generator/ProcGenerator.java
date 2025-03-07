@@ -1,13 +1,14 @@
 package ch.usi.dag.disl.processor.generator;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.instruction.InvokeInstruction;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
 
 import ch.usi.dag.disl.exception.DiSLFatalException;
 import ch.usi.dag.disl.exception.ProcessorException;
@@ -22,7 +23,7 @@ import ch.usi.dag.disl.snippet.Snippet;
 
 public class ProcGenerator {
 
-    Map<ArgProcessor, ProcInstance> insideMethodPIs = new HashMap<ArgProcessor, ProcInstance>();
+    Map<ArgProcessor, ProcInstance> insideMethodPIs = new HashMap<>();
 
     public PIResolver compute(final Map<Snippet, List<Shadow>> snippetMarkings)
             throws ProcessorException {
@@ -82,8 +83,11 @@ public class ProcGenerator {
         ProcInstance procInst = insideMethodPIs.get(prcInv.getProcessor());
 
         if (procInst == null) {
-            procInst = createProcInstance(ArgumentProcessorMode.METHOD_ARGS,
-                    shadow.getMethodNode().desc, shadow, prcInv);
+            procInst = createProcInstance(
+                    ArgumentProcessorMode.METHOD_ARGS,
+                    shadow.getMethodModel().methodTypeSymbol(),          //.getMethodNode().desc,
+                    shadow, prcInv
+            );
         }
 
         return procInst;
@@ -103,38 +107,36 @@ public class ProcGenerator {
 
         // get instruction from the method code
         // the method invocation is the instruction marked as end
-        final AbstractInsnNode instr = shadow.getRegionEnds().get(0);
+        final CodeElement instr = shadow.getRegionEnds().getFirst();
 
-        final String fullMethodName = shadow.getClassNode().name + "."
-                + shadow.getMethodNode().name;
+        final String fullMethodName = shadow.getClassModel().thisClass().name().stringValue() + "."
+                + shadow.getMethodModel().methodName();
 
         // check - method invocation
-        if (!(instr instanceof MethodInsnNode)) {
+        if (!(instr instanceof InvokeInstruction methodInvocation)) {
             throw new ProcessorException("ArgumentProcessor "
                     + prcInv.getProcessor().getName()
                     + " is not applied before method invocation in method "
                     + fullMethodName);
         }
 
-        final MethodInsnNode methodInvocation = (MethodInsnNode) instr;
-
         return createProcInstance(ArgumentProcessorMode.CALLSITE_ARGS,
-                methodInvocation.desc, shadow, prcInv);
+                methodInvocation.typeSymbol(), shadow, prcInv);
     }
 
     private ProcInstance createProcInstance(final ArgumentProcessorMode procApplyType,
-            final String methodDesc, final Shadow shadow, final ProcInvocation prcInv) {
+                                            final MethodTypeDesc methodDesc, final Shadow shadow, final ProcInvocation prcInv) {
 
         final List<ProcMethodInstance> procMethodInstances =
             new LinkedList<ProcMethodInstance>();
 
         // get argument types
-        final Type[] argTypeArray = Type.getArgumentTypes(methodDesc);
+        final ClassDesc[] argTypeArray = methodDesc.parameterArray();
 
         // create processor method instances for each argument if applicable
         for (int i = 0; i < argTypeArray.length; ++i) {
             final List <ProcMethodInstance> pmis = createMethodInstances (
-                i, argTypeArray [i], argTypeArray.length,
+                i, argTypeArray[i], argTypeArray.length,
                 prcInv.getProcessor (), shadow, prcInv
             );
 
@@ -151,11 +153,11 @@ public class ProcGenerator {
 
 
     private List <ProcMethodInstance> createMethodInstances (
-        final int argIndex, final Type argType, final int argsCount,
+        final int argIndex, final ClassDesc argType, final int argsCount,
         final ArgProcessor processor, final Shadow shadow,
         final ProcInvocation procInv
     ) {
-        final ArgProcessorKind argProcType = ArgProcessorKind.valueOf (argType);
+        final ArgProcessorKind argProcType = ArgProcessorKind.valueOf(argType);
         final List <ProcMethodInstance> result = new LinkedList <> ();
 
         // traverse all methods and find the proper ones
