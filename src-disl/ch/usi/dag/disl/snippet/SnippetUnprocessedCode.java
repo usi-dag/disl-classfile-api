@@ -75,7 +75,7 @@ public class SnippetUnprocessedCode {
      * Processes the stored data and creates snippet code structure.
      */
     public SnippetCode process(final LocalVars vars, final Map<ClassDesc, ArgProcessor> processor, final Marker marker, final Set<CodeOption> options)
-            throws ProcessorException, ReflectionException, ReflectiveOperationException {
+            throws ProcessorException, ReflectionException {
         // Pre-process code with local variables.
         final Code code = __template.process(vars);
 
@@ -131,7 +131,7 @@ public class SnippetUnprocessedCode {
 
     private Map<Integer, ProcInvocation> __collectArgProcInvocations(
             final List<CodeElement> instructions, final Map<ClassDesc, ArgProcessor> processorMap, final Marker marker
-    ) throws ProcessorException, ReflectionException, ReflectiveOperationException {
+    ) throws ProcessorException, ReflectionException {
         final Map <Integer, ProcInvocation> result = new HashMap<>();
 
         int instructionIndex = 0;
@@ -160,7 +160,7 @@ public class SnippetUnprocessedCode {
     private ProcessorInfo insnInvokesProcessor(
             final CodeElement instr, final int i,
             final Map <ClassDesc, ArgProcessor> processors, final Marker marker, final List<CodeElement> allInstructions
-    ) throws ProcessorException, ReflectionException, ReflectiveOperationException {
+    ) throws ProcessorException, ReflectionException {
         // check method invocation
         if (!(instr instanceof InvokeInstruction)) {
             return null;
@@ -204,7 +204,12 @@ public class SnippetUnprocessedCode {
         LoadableConstantEntry constantEntry = constantInstruction.constantEntry();
 
         // TODO does this lookup actually work????
-        Object entry = constantEntry.constantValue().resolveConstantDesc(MethodHandles.lookup());
+        Object entry = null;
+        try {
+            entry = constantEntry.constantValue().resolveConstantDesc(MethodHandles.lookup());
+        } catch (ReflectiveOperationException e) {
+            throw new ReflectionException(e.getMessage());
+        }
         if (!(entry instanceof ClassDesc)) {
             throw new ProcessorException (
                     "%s: unsupported processor type %s",
