@@ -341,7 +341,35 @@ public abstract class ClassFileHelper {
                 .toList();
     }
 
+    /**
+     * find the next Instruction after start
+     * @param instructions list of CodeElement
+     * @param start the element to start the search
+     * @return Instruction or null if not found
+     */
     public static Instruction nextRealInstruction(List<CodeElement> instructions, CodeElement start) {
+        if (start == null || instructions == null) {
+            return null;
+        }
+        int index = instructions.indexOf(start) + 1;
+        if (index >= instructions.size()) {
+            return null;
+        }
+        for (int i = index; i < instructions.size(); i ++) {
+            if (instructions.get(i) instanceof Instruction) {
+                return (Instruction) instructions.get(i);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * find the next Instruction after start or start if is an Instruction
+     * @param instructions list of CodeElement
+     * @param start the element to start the search
+     * @return Instruction or null if not found
+     */
+    public static Instruction firstNextRealInstruction(List<CodeElement> instructions, CodeElement start) {
         if (start == null || instructions == null) {
             return null;
         }
@@ -357,7 +385,37 @@ public abstract class ClassFileHelper {
         return null;
     }
 
+
+    /**
+     * find the first real instruction before start
+     * @param instructions list of CodeElement
+     * @param start element to start the search
+     * @return Instruction or null if not found
+     */
     public static Instruction previousRealInstruction(List<CodeElement> instructions, CodeElement start) {
+        if (start == null || instructions == null) {
+            return null;
+        }
+        int index = instructions.indexOf(start) -1;
+        if (index < 0) {
+            return null;
+        }
+        while (index > 0) {
+            if (instructions.get(index) instanceof Instruction) {
+                return (Instruction) instructions.get(index);
+            }
+            index -= 1;
+        }
+        return null;
+    }
+
+    /**
+     * find the first real instruction before start or start itself if is an Instruction
+     * @param instructions list of CodeElement
+     * @param start element to start the search
+     * @return Instruction or null if not found
+     */
+    public static Instruction firstPreviousRealInstruction(List<CodeElement> instructions, CodeElement start) {
         if (start == null || instructions == null) {
             return null;
         }

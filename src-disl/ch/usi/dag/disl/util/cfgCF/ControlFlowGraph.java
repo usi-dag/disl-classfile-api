@@ -51,7 +51,7 @@ public class ControlFlowGraph {
                 end = ClassFileHelper.previousInstruction(instructions, end);
             }
 
-            end = ClassFileHelper.previousRealInstruction(instructions, end);
+            end = ClassFileHelper.firstPreviousRealInstruction(instructions, end);
             nodes.add(new BasicBlockCF(i, start, end, instructions));
         }
 
@@ -80,7 +80,7 @@ public class ControlFlowGraph {
 
     // Return a basic block that contains the input instruction. If not found, return null.
     public BasicBlockCF getBasicBlock(CodeElement element) {
-        CodeElement instruction = ClassFileHelper.nextRealInstruction(instructions, element);
+        CodeElement instruction = ClassFileHelper.firstNextRealInstruction(instructions, element);
         while (instruction != null) {
             for (int i = 0; i < nodes.size(); i++) {
                 if (nodes.get(i).getEntry().equals(instruction)) {

@@ -26,7 +26,7 @@ public class BasicBlockCalculator {
         Set<CodeElement> bbStarts = new HashSet<>() {
             @Override
             public boolean add(CodeElement element) {
-                return super.add(ClassFileHelper.nextRealInstruction(instructions, element));
+                return super.add(ClassFileHelper.firstNextRealInstruction(instructions, element));
             }
 
             @Override
