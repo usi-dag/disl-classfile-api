@@ -37,12 +37,8 @@ public abstract class AbstractLocalVar {
         return fieldName;
     }
 
-    // TODO remove this later
-    public Type getType () {
-        return type;
-    }
 
-    public ClassDesc getTypeDesc() {return typeDesc;}
+    public ClassDesc getType() {return typeDesc;}
 
     public String getDescriptor () {
         return typeDesc.descriptorString();
