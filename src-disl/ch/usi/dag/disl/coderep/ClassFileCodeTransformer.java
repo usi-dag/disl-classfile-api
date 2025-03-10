@@ -1,5 +1,7 @@
 package ch.usi.dag.disl.coderep;
 
+import ch.usi.dag.disl.localvar.AbstractLocalVar;
+import ch.usi.dag.disl.localvar.ThreadLocalVar;
 import ch.usi.dag.disl.util.ClassFileHelper;
 import ch.usi.dag.disl.util.ReflectionHelper;
 
@@ -9,7 +11,10 @@ import java.lang.classfile.instruction.*;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static java.lang.constant.ConstantDescs.*;
 
@@ -190,6 +195,145 @@ public class ClassFileCodeTransformer {
                             ClassFileHelper.getMethodDescriptor(__dbDeactivate__),
                             false
                     );
+                });
+            } else {
+                methodBuilder.with(methodElement);
+            }
+        };
+    }
+
+    public static MethodTransform rewriteThreadLocalVarAccessesCodeTransformer(final Set<ThreadLocalVar> tlvs) {
+        final Set<String> tlvID = tlvs.stream().map(AbstractLocalVar::getID).collect(Collectors.toSet());
+        final ClassDesc threadDesc = ClassDesc.ofDescriptor(Thread.class.descriptorString());
+        final String currentThreadName = "currentThread";
+        MethodTypeDesc methodTypeDesc = MethodTypeDesc.of(threadDesc);
+
+        return (methodBuilder, methodElement) -> {
+            if (methodElement instanceof CodeModel) {
+
+                final List<CodeElement> originalInstructions = ((CodeModel) methodElement).elementList();
+
+                List<CodeElement> modifiedInstructions = new ArrayList<>();
+
+
+                for (CodeElement instruction: originalInstructions) {
+                    if (instruction instanceof FieldInstruction fieldInstruction) {
+                        // check that the variable is a thread local variable
+                        if (!tlvID.contains(ThreadLocalVar.fqFieldNameFor(fieldInstruction.owner().name().stringValue(), fieldInstruction.name().stringValue()))) {
+                            modifiedInstructions.add(fieldInstruction);
+                            continue;
+                        }
+                        final InvokeInstruction currentThreadInstruction = ClassFileHelper.invokeStatic(threadDesc.descriptorString(), currentThreadName, methodTypeDesc.descriptorString());
+                        switch (fieldInstruction.opcode()) {
+                            case Opcode.GETSTATIC -> {
+                                // Issue a call to Thread.currentThread() and access a field
+                                // in the current thread corresponding to the thread-local variable.
+                                modifiedInstructions.add(currentThreadInstruction);
+                                modifiedInstructions.add(
+                                    ClassFileHelper.getField(
+                                            threadDesc.descriptorString(),
+                                            fieldInstruction.name().stringValue(),
+                                            fieldInstruction.typeSymbol().descriptorString())
+                                );
+                            }
+                            case Opcode.PUTSTATIC -> {
+                                Instruction previous = ClassFileHelper.firstPreviousRealInstruction(modifiedInstructions, modifiedInstructions.getLast());
+                                if (__isSimpleLoad(previous)) {
+                                    final int index = modifiedInstructions.indexOf(previous);
+                                    modifiedInstructions.add(index, currentThreadInstruction);
+                                } else {
+                                    modifiedInstructions.add(currentThreadInstruction);
+                                    if (TypeKind.from(fieldInstruction.typeSymbol()).slotSize() == 1) {
+                                        modifiedInstructions.add(StackInstruction.of(Opcode.SWAP));
+                                    } else {
+                                        modifiedInstructions.add(StackInstruction.of(Opcode.DUP_X2));
+                                        modifiedInstructions.add(StackInstruction.of(Opcode.POP));
+                                    }
+                                }
+                                modifiedInstructions.add(
+                                        ClassFileHelper.putField(
+                                                threadDesc.descriptorString(),
+                                                fieldInstruction.name().stringValue(),
+                                                fieldInstruction.typeSymbol().descriptorString())
+                                );
+                            }
+                            default -> modifiedInstructions.add(fieldInstruction);
+                        }
+                    } else {
+                        modifiedInstructions.add(instruction);
+                    }
+                }
+
+                // the reason why all element are added at once at the end it that in some cases we might need to insert an instruction before another previous one
+                // with the codeBuilder we can only add instructions at the very end
+                methodBuilder.withCode(codeBuilder -> {
+                    for (CodeElement instruction: modifiedInstructions) {
+                        codeBuilder.with(instruction);
+                    }
+                });
+            } else {
+                methodBuilder.with(methodElement);
+            }
+        };
+    }
+
+    private static boolean __isSimpleLoad(final Instruction instruction) {
+        final int opcode = instruction.opcode().bytecode();
+        return (opcode >= Opcode.ACONST_NULL.bytecode() && opcode <= Opcode.LDC.bytecode()) ||
+                (opcode >= Opcode.ILOAD.bytecode() && opcode <= Opcode.ALOAD.bytecode()) ||
+                opcode == Opcode.GETSTATIC.bytecode();
+    }
+
+
+    // non optimised version
+    public static MethodTransform rewriteThreadLocalVarAccessesCodeTransformer2(final Set<ThreadLocalVar> tlvs) {
+        final Set<String> tlvID = tlvs.stream().map(AbstractLocalVar::getID).collect(Collectors.toSet());
+        final ClassDesc threadDesc = ClassDesc.ofDescriptor(Thread.class.descriptorString());
+        final String currentThreadName = "currentThread";
+        MethodTypeDesc methodTypeDesc = MethodTypeDesc.of(threadDesc);
+
+        return (methodBuilder, methodElement) -> {
+            if (methodElement instanceof CodeModel) {
+                methodBuilder.transformCode((CodeModel) methodElement, (codeBuilder, codeElement) -> {
+                    if (codeElement instanceof FieldInstruction fieldInstruction) {
+                        if (tlvID.contains(ThreadLocalVar.fqFieldNameFor(fieldInstruction.owner().name().stringValue(), fieldInstruction.name().stringValue()))) {
+                            final InvokeInstruction currentThreadInstruction = ClassFileHelper.invokeStatic(
+                                    threadDesc.descriptorString(),
+                                    currentThreadName,
+                                    methodTypeDesc.descriptorString());
+                            final FieldInstruction putFieldInstruction = ClassFileHelper.putField(
+                                    threadDesc.descriptorString(),
+                                    fieldInstruction.name().stringValue(),
+                                    fieldInstruction.typeSymbol().descriptorString());
+
+                            final FieldInstruction getFieldInstruction = ClassFileHelper.getField(
+                                    threadDesc.descriptorString(),
+                                    fieldInstruction.name().stringValue(),
+                                    fieldInstruction.typeSymbol().descriptorString());
+
+                            switch (fieldInstruction.opcode()) {
+                                case Opcode.GETSTATIC -> {
+                                    codeBuilder.with(currentThreadInstruction);
+                                    codeBuilder.with(getFieldInstruction);
+                                }
+                                case Opcode.PUTSTATIC -> {
+                                    codeBuilder.with(currentThreadInstruction);
+                                    if (TypeKind.from(fieldInstruction.typeSymbol()).slotSize() == 1) {
+                                        codeBuilder.swap();
+                                    } else {
+                                        codeBuilder.dup_x2();
+                                        codeBuilder.pop();
+                                    }
+                                    codeBuilder.with(putFieldInstruction);
+                                }
+                                default -> codeBuilder.with(fieldInstruction);
+                            }
+                        } else {
+                            codeBuilder.with(fieldInstruction);
+                        }
+                    } else {
+                        codeBuilder.with(codeElement);
+                    }
                 });
             } else {
                 methodBuilder.with(methodElement);
