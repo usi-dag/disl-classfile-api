@@ -12,12 +12,6 @@ import java.util.List;
 import java.util.Set;
 
 import ch.usi.dag.util.classfileAPI.InstructionsWrapper;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
-
 import ch.usi.dag.disl.exception.MarkerException;
 import ch.usi.dag.disl.snippet.Shadow;
 import ch.usi.dag.disl.snippet.Shadow.WeavingRegion;
@@ -151,51 +145,6 @@ public abstract class AbstractMarker implements Marker {
          * {@link MarkedRegion}. The computed {@link WeavingRegion} instance
          * will NOT be automatically associated with this {@link MarkedRegion}.
          */
-        public WeavingRegion computeDefaultWeavingRegion (final MethodNode methodNode) {
-
-            final AbstractInsnNode wstart = start;
-            // wends is set to null - see WeavingRegion for details
-
-            // compute after throwing region
-
-            // set start
-            final AbstractInsnNode afterThrowStart = start;
-            AbstractInsnNode afterThrowEnd = null;
-
-            // get end that is the latest in the method instructions
-            final Set<AbstractInsnNode> endsSet = new HashSet<AbstractInsnNode>(ends);
-
-            // get end that is the latest in the method instructions
-            AbstractInsnNode instr = methodNode.instructions.getLast();
-
-            while (instr != null) {
-                if (endsSet.contains(instr)) {
-                    afterThrowEnd = instr;
-                    break;
-                }
-
-                instr = instr.getPrevious();
-            }
-
-            // skip the label nodes which are the end of try-catch blocks
-            if (afterThrowEnd instanceof LabelNode) {
-                final Set<AbstractInsnNode> tcb_ends = new HashSet<AbstractInsnNode>();
-
-                for (final TryCatchBlockNode tcb : methodNode.tryCatchBlocks) {
-                    tcb_ends.add (tcb.end);
-                }
-
-                while (tcb_ends.contains (afterThrowEnd)) {
-                    afterThrowEnd = afterThrowEnd.getPrevious ();
-                }
-            }
-
-            return new WeavingRegion (
-                wstart, null,
-                afterThrowStart, afterThrowEnd
-            );
-        }
-
         public WeavingRegion computeDefaultWeavingRegion(final MethodModel methodModel) {
             final CodeElement wStart = start;
             final CodeElement afterThrowStart = start;
@@ -231,36 +180,10 @@ public abstract class AbstractMarker implements Marker {
                 }
             }
 
-            return new WeavingRegion(wStart, null, afterThrowStart, afterThrowEnd); // TODO
+            return new WeavingRegion(wStart, null, afterThrowStart, afterThrowEnd);
         }
 
 
-    }
-
-    @Override
-    public List <Shadow> mark (
-        final ClassNode classNode, final MethodNode methodNode,
-        final Snippet snippet
-    ) throws MarkerException {
-        // use simplified interface
-        final List<MarkedRegion> regions = mark(methodNode);
-        final List<Shadow> result = new LinkedList<Shadow>();
-
-        // convert marked regions to shadows
-        for (final MarkedRegion mr : regions) {
-            if (!mr.valid()) {
-                throw new MarkerException("Marker " + this.getClass()
-                        + " produced invalid MarkedRegion (some MarkedRegion" +
-                        " fields where not set)");
-            }
-
-            result.add (new Shadow (
-                classNode, methodNode, snippet,
-                mr.getStart (), mr.getEnds (), mr.getWeavingRegion ()
-            ));
-        }
-
-        return result;
     }
 
     @Override
@@ -287,11 +210,9 @@ public abstract class AbstractMarker implements Marker {
      * Implementation of this method should return list of {@link MarkedRegion}
      * instances with start, ends, and the weaving region filled.
      *
-     * @param methodNode
+     * @param methodModel
      *        method node of the marked class
      * @return returns list of MarkedRegion
      */
-    public abstract List <MarkedRegion> mark (MethodNode methodNode);
-
-    public abstract List<MarkedRegion> mark(MethodModel methodModel); // TODO refactor all the implementations
+    public abstract List<MarkedRegion> mark(MethodModel methodModel);
 }
