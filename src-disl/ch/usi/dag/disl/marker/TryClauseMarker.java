@@ -1,13 +1,16 @@
 package ch.usi.dag.disl.marker;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.Label;
+import java.lang.classfile.MethodModel;
+import java.lang.classfile.instruction.ExceptionCatch;
+import java.lang.classfile.instruction.LabelTarget;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
+import ch.usi.dag.disl.util.ClassFileHelper;
 
-import ch.usi.dag.disl.util.AsmHelper.Insns;
 
 /**
  * Marks a try block.
@@ -17,17 +20,35 @@ import ch.usi.dag.disl.util.AsmHelper.Insns;
  */
 public class TryClauseMarker extends AbstractDWRMarker {
 
+
     @Override
-    public List<MarkedRegion> markWithDefaultWeavingReg(MethodNode method) {
+    public List<MarkedRegion> markWithDefaultWeavingReg(MethodModel methodModel) {
+        List<MarkedRegion> regions = new LinkedList<>();
 
-        List<MarkedRegion> regions = new LinkedList<MarkedRegion>();
+        if (methodModel.code().isEmpty()) {
+            return regions;
+        }
 
-        for (TryCatchBlockNode tcb : method.tryCatchBlocks) {
+        List<CodeElement> instructions = methodModel.code().get().elementList();
 
-            AbstractInsnNode start = Insns.FORWARD.firstRealInsn (tcb.start);
+        Map<Label, LabelTarget> labelTargetMap = ClassFileHelper.getLabelTargetMap(instructions);
+
+        for (ExceptionCatch exceptionCatch: methodModel.code().get().exceptionHandlers()) {
+            Label startLabel = exceptionCatch.tryStart();
+            Label endLabel = exceptionCatch.tryEnd();
+
+            LabelTarget startTarget = labelTargetMap.get(startLabel);
+            LabelTarget endTarget = labelTargetMap.get(endLabel);
+            if (startTarget == null || endTarget == null) {
+                continue; //TODO should throw an exception???
+            }
+
+            CodeElement start = ClassFileHelper.firstNextRealInstruction(instructions, startTarget);
             // RFC LB: Consider nextRealInsn, since TCB end is exclusive
             // This depends on the semantics of marked region
-            AbstractInsnNode end = Insns.REVERSE.firstRealInsn (tcb.end);
+            // TODO confirm this
+            // even if the label is before the last instruction we take the instruction before since TCB end is exclusive
+            CodeElement end = ClassFileHelper.firstPreviousRealInstruction(instructions, endTarget);
             regions.add(new MarkedRegion(start, end));
         }
 
