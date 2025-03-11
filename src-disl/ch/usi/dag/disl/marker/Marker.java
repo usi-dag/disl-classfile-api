@@ -4,9 +4,6 @@ import java.lang.classfile.ClassModel;
 import java.lang.classfile.MethodModel;
 import java.util.List;
 
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
-
 import ch.usi.dag.disl.exception.MarkerException;
 import ch.usi.dag.disl.snippet.Shadow;
 import ch.usi.dag.disl.snippet.Snippet;
@@ -76,16 +73,14 @@ public interface Marker {
      * <p>
      * Returns shadows for the marked method.
      *
-     * @param classNode
+     * @param classModel
      *            represents class being marked
-     * @param methodNode
+     * @param methodModel
      *            represents method being marked
      * @param snippet
      *            snippet defining the marker
      * @return
      *         list of shadows for marked method
      */
-    List<Shadow> mark(ClassNode classNode, MethodNode methodNode, Snippet snippet) throws MarkerException;
-
     List<Shadow> mark(ClassModel classModel, MethodModel methodModel, Snippet snippet) throws MarkerException;
 }
