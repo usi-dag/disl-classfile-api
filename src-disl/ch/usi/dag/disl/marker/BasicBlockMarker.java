@@ -1,14 +1,13 @@
 package ch.usi.dag.disl.marker;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.Instruction;
+import java.lang.classfile.MethodModel;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-
-import ch.usi.dag.disl.util.AsmHelper.Insns;
-import ch.usi.dag.disl.util.BasicBlockCalc;
-
+import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.cfgCF.BasicBlockCalculator;
 
 /**
  * Marks a basic block.
@@ -23,28 +22,30 @@ public class BasicBlockMarker extends AbstractDWRMarker {
 
 
     @Override
-    public List <MarkedRegion> markWithDefaultWeavingReg (final MethodNode methodNode) {
-        final List <MarkedRegion> regions = new LinkedList <MarkedRegion> ();
-        final List <AbstractInsnNode> seperators = BasicBlockCalc.getAll (
-            methodNode.instructions, methodNode.tryCatchBlocks, isPrecise
-        );
+    public List<MarkedRegion> markWithDefaultWeavingReg(final MethodModel methodModel) {
+        final List<MarkedRegion> regions = new LinkedList<>();
 
-        final AbstractInsnNode last = Insns.REVERSE.firstRealInsn (
-            methodNode.instructions.getLast ()
-        );
+        if (methodModel.code().isEmpty()) {
+            return regions;
+        }
+        final List<CodeElement> instructions = methodModel.code().get().elementList();
 
-        seperators.add (last);
+        final List<CodeElement> separators = BasicBlockCalculator.getAll(instructions, methodModel.code().get().exceptionHandlers(), isPrecise);
 
-        for (int i = 0; i < seperators.size () - 1; i++) {
-            final AbstractInsnNode start = seperators.get (i);
-            AbstractInsnNode end = seperators.get (i + 1);
+        final Instruction last = ClassFileHelper.selectReal(instructions).getLast();
 
-            if (i != seperators.size () - 2) {
-                end = end.getPrevious ();
+        separators.add(last);
+
+        for (int i = 0; i < separators.size() - 1; i ++) {
+            final CodeElement start = separators.get(i);
+            CodeElement end = separators.get(i + 1);
+
+            if (i != separators.size() - 2) {
+                end = ClassFileHelper.previousInstruction(instructions, end);
             }
 
-            regions.add (new MarkedRegion (
-                start, Insns.REVERSE.firstRealInsn (end)
+            regions.add(new MarkedRegion(
+                    start, ClassFileHelper.firstPreviousRealInstruction(instructions, end)
             ));
         }
 
