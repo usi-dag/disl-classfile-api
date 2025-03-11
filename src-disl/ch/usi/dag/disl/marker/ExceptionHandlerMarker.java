@@ -1,14 +1,17 @@
 package ch.usi.dag.disl.marker;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.CodeModel;
+import java.lang.classfile.Label;
+import java.lang.classfile.MethodModel;
+import java.lang.classfile.instruction.ExceptionCatch;
+import java.lang.classfile.instruction.LabelTarget;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
-
-import ch.usi.dag.disl.util.AsmHelper.Insns;
-import ch.usi.dag.disl.util.cfg.CtrlFlowGraph;
+import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.cfgCF.ControlFlowGraph;
 
 /**
  * Marks an exception handler.
@@ -18,20 +21,33 @@ import ch.usi.dag.disl.util.cfg.CtrlFlowGraph;
  */
 public class ExceptionHandlerMarker extends AbstractDWRMarker {
 
+
     @Override
-    public List<MarkedRegion> markWithDefaultWeavingReg(MethodNode method) {
+    public List<MarkedRegion> markWithDefaultWeavingReg(MethodModel methodModel) {
+        List<MarkedRegion> regions = new LinkedList<>();
 
-        List<MarkedRegion> regions = new LinkedList<MarkedRegion>();
+        if (methodModel.code().isEmpty()) {
+            return regions;
+        }
 
-        CtrlFlowGraph cfg = new CtrlFlowGraph(method);
+        CodeModel code = methodModel.code().get();
+        List<CodeElement> instructions = code.elementList();
+        List<ExceptionCatch> exceptions = code.exceptionHandlers();
 
-        cfg.visit(method.instructions.getFirst());
+        ControlFlowGraph cfg = new ControlFlowGraph(methodModel);
 
-        for (TryCatchBlockNode tcb : method.tryCatchBlocks) {
+        cfg.visit(instructions.getFirst());
 
-            List<AbstractInsnNode> exits = cfg.visit(tcb.handler);
+        Map<Label, LabelTarget> labelTargetMap = ClassFileHelper.getLabelTargetMap(instructions);
+
+        for (ExceptionCatch exceptionCatch: exceptions) {
+            LabelTarget handler = labelTargetMap.get(exceptionCatch.handler());
+            if (handler == null) {
+                continue; // TODO should throw???
+            }
+            List<CodeElement> exits = cfg.visit(handler);
             regions.add(new MarkedRegion(
-                Insns.FORWARD.firstRealInsn (tcb.handler), exits
+                    ClassFileHelper.firstNextRealInstruction(instructions, handler), exits
             ));
         }
 
