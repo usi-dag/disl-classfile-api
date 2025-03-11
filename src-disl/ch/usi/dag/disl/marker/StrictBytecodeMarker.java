@@ -1,12 +1,12 @@
 package ch.usi.dag.disl.marker;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.Instruction;
+import java.lang.classfile.MethodModel;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.MethodNode;
 
 import ch.usi.dag.disl.exception.MarkerException;
 import ch.usi.dag.disl.util.AsmOpcodes;
@@ -53,19 +53,21 @@ public class StrictBytecodeMarker extends AbstractInsnMarker {
         }
     }
 
+
     @Override
-    public List<AbstractInsnNode> markInstruction(MethodNode method) {
+    public List<CodeElement> markInstruction(MethodModel methodModel) {
+        List<CodeElement> selected = new LinkedList<>();
 
-        List<AbstractInsnNode> seleted = new LinkedList<AbstractInsnNode>();
+        if (methodModel.code().isEmpty()) {
+            return selected;
+        }
 
-        for (AbstractInsnNode instruction : method.instructions.toArray()) {
-
-            if (searchedInstrNums.contains(instruction.getOpcode())) {
-
-                seleted.add(instruction);
+        for (CodeElement codeElement: methodModel.code().get().elementList()) {
+            if (codeElement instanceof Instruction && searchedInstrNums.contains(((Instruction) codeElement).opcode().bytecode())) {
+                selected.add(codeElement);
             }
         }
 
-        return seleted;
+        return selected;
     }
 }
