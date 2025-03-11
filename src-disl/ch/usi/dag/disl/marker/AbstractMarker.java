@@ -26,7 +26,7 @@ import ch.usi.dag.disl.snippet.Snippet;
 
 /**
  * Simplifies {@link Marker} implementation by providing a
- * {@link #mark(MethodNode)} method that returns a list of {@link MarkedRegion}
+ * {@link #mark(MethodModel)} method that returns a list of {@link MarkedRegion}
  * instances instead of {@link Shadow} instances. The {@link MarkedRegion} class
  * itself supports automatic computation of weaving region based on simplified
  * region specification.
@@ -39,7 +39,7 @@ public abstract class AbstractMarker implements Marker {
      */
     public static class MarkedRegion {
 
-        private CodeElement start;         // TODO -> CodeElement ????
+        private CodeElement start;
         private final List <CodeElement> ends;
 
         private WeavingRegion weavingRegion;
