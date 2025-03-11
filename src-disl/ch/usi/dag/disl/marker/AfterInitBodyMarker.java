@@ -1,19 +1,16 @@
 package ch.usi.dag.disl.marker;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.MethodModel;
+import java.lang.classfile.Opcode;
+import java.lang.classfile.instruction.InvokeInstruction;
+import java.lang.classfile.instruction.ReturnInstruction;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.commons.AdviceAdapter;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.MethodNode;
 
 import ch.usi.dag.disl.annotation.Before;
 import ch.usi.dag.disl.snippet.Shadow.WeavingRegion;
-import ch.usi.dag.disl.util.AsmHelper;
-import ch.usi.dag.disl.util.AsmHelper.Insns;
 import ch.usi.dag.disl.util.JavaNames;
 
 
@@ -30,28 +27,28 @@ import ch.usi.dag.disl.util.JavaNames;
 public class AfterInitBodyMarker extends AbstractMarker {
 
     @Override
-    public List <MarkedRegion> mark (final MethodNode method) {
-        final MarkedRegion region = new MarkedRegion (
-            __findBodyStart (method)
-        );
+    public List<MarkedRegion> mark(final MethodModel methodModel) {
+        final MarkedRegion region = new MarkedRegion(__findBodyStart(methodModel));
 
-        //
+        final List<CodeElement> instructions;
+        if (methodModel.code().isPresent()) {
+            instructions = methodModel.code().get().elementList();
+        } else {
+            instructions = new ArrayList<>();
+        }
+
         // Add all RETURN instructions as marked-region ends.
-        //
-        for (final AbstractInsnNode insn : Insns.selectAll (method.instructions)) {
-            if (AsmHelper.isReturn (insn)) {
-                region.addEnd (insn);
+        for (final CodeElement codeElement: instructions) {
+            if (codeElement instanceof ReturnInstruction) {
+                region.addEnd(codeElement);
             }
         }
 
-        final WeavingRegion wr = region.computeDefaultWeavingRegion (method);
-        wr.setAfterThrowEnd (method.instructions.getLast ());
-        region.setWeavingRegion (wr);
+        final WeavingRegion wr = region.computeDefaultWeavingRegion(methodModel);
+        wr.setAfterThrowEnd(instructions.getLast());
 
-        //
-
-        final List <MarkedRegion> result = new LinkedList <MarkedRegion> ();
-        result.add (region);
+        final List<MarkedRegion> result = new LinkedList<>();
+        result.add(region);
         return result;
     }
 
@@ -60,52 +57,32 @@ public class AfterInitBodyMarker extends AbstractMarker {
     // Finds the first instruction of a method body. For normal methods, this is
     // the first instruction of a method, but for constructor, this is the first
     // instruction after a call to the superclass constructor.
-    //
-    private static AbstractInsnNode __findBodyStart (final MethodNode method) {
-        //
-        // Fast path for non-constructor methods.
-        //
-        if (!JavaNames.isConstructorName (method.name)) {
-            return method.instructions.getFirst ();
+    private static CodeElement __findBodyStart(final MethodModel methodModel) {
+
+        if (methodModel.code().isEmpty()) {
+            return null; // TODO should it throw an exception instad???
+        }
+        List<CodeElement> instructions = methodModel.code().get().elementList();
+
+        if (!JavaNames.isConstructorName(methodModel.methodName().stringValue())) {
+            return instructions.getFirst();
         }
 
-        //
-        // ASM calls AdviceAdapter.onMethodEnter() at the beginning of a method
-        // or after a call to the superclass constructor. Use a simple adapter
-        // to detect the end of superclass initialization code.
-        //
-        final AtomicBoolean superInitialized = new AtomicBoolean (false);
-        final AdviceAdapter adapter = new AdviceAdapter (
-            Opcodes.ASM9, new MethodVisitor (Opcodes.ASM9) { /* empty */ },
-            method.access, method.name, method.desc
-        ) {
-            @Override
-            public void onMethodEnter () {
-                superInitialized.set (true);
+        // if is a constructor we skip the super(...), so we exclude all instruction until after the first invoke special TODO is this correct???
+
+        boolean methodStarted = false;
+
+        for (int i = 0; i < instructions.size(); i++) {
+            if (methodStarted) {
+                return instructions.get(i);
             }
-        };
-
-        //
-        // Initialize the adapter and feed it with the method's instructions
-        // until the superclass is considered initialized. The next instruction
-        // after a call to the superclass constructor is the first instruction
-        // of the constructor body.
-        //
-        adapter.visitCode ();
-        for (final AbstractInsnNode node : AsmHelper.Insns.selectAll (method.instructions)) {
-            node.accept (adapter);
-
-            if (superInitialized.get ()) {
-                return node.getNext ();
+            CodeElement current = instructions.get(i);
+            if (current instanceof InvokeInstruction && ((InvokeInstruction) current).opcode() == Opcode.INVOKESPECIAL) {
+                methodStarted = true;
             }
         }
 
-        //
-        // If we get here, we are in the Object constructor (there is no
-        // superclass) and ASM does not appear to call onMethodEnter() for
-        // that constructor. We just return the first instruction.
-        //
-        return method.instructions.getFirst ();
+        return null; // TODO also here should it throw???
     }
 
 }
