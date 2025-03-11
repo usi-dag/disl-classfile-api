@@ -1,15 +1,15 @@
 package ch.usi.dag.disl.marker;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.Instruction;
+import java.lang.classfile.MethodModel;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.MethodNode;
 
 import ch.usi.dag.disl.exception.MarkerException;
-import ch.usi.dag.disl.util.AsmHelper.Insns;
 import ch.usi.dag.disl.util.AsmOpcodes;
 
 
@@ -51,16 +51,17 @@ public class BytecodeMarker extends AbstractDWRMarker {
         }
     }
 
-
     @Override
-    public List <MarkedRegion> markWithDefaultWeavingReg (final MethodNode method) {
-        final List <MarkedRegion> regions = new LinkedList <MarkedRegion> ();
-        for (final AbstractInsnNode insn : Insns.selectAll (method.instructions)) {
-            if (searchedInstrNums.contains (insn.getOpcode ())) {
-                regions.add (new MarkedRegion (insn, insn));
+    public List<MarkedRegion> markWithDefaultWeavingReg(final MethodModel methodModel) {
+        final List<MarkedRegion> regions = new LinkedList<>();
+        if (methodModel.code().isEmpty()) {
+            return regions;
+        }
+        for (final CodeElement element: methodModel.code().get()) {
+            if (element instanceof Instruction && searchedInstrNums.contains(((Instruction) element).opcode().bytecode())) {
+                regions.add(new MarkedRegion(element, element));
             }
         }
-
         return regions;
     }
 }
