@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Set;
 
 
-// TODO replace all instances of ArgProcessorKind and remove it once is no longer used
 public enum ArgProcessorKind {
 
     BOOLEAN(TypeKind.BooleanType),
