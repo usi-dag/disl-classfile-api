@@ -699,4 +699,41 @@ public abstract class ClassFileHelper {
     }
 
 
+    public static void insert(CodeElement elementTarget, CodeElement elementToInsert, List<CodeElement> instructions) {
+        // TODO remove if not useful
+    }
+
+    /**
+     * Insert a code element before the given target
+     * @param elementTarget the element target inside the list
+     * @param elementToInsert the element to insert before the target
+     * @param instructions list of instructions where the element is going to be inserted
+     * @return true if successful
+     */
+    public static boolean insertBefore(CodeElement elementTarget, CodeElement elementToInsert, List<CodeElement> instructions) {
+        final int index = instructions.indexOf(elementTarget);
+        if (index >= 0) {
+            instructions.add(index, elementToInsert);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * insert a list of code elements in another list before a given target
+     * @param elementTarget the target to insert the element before
+     * @param elementsToInsert element to insert
+     * @param instructions list of element where the new instructions will be inserted
+     * @return true if successful
+     */
+    public static boolean insertAllBefore(CodeElement elementTarget, List<CodeElement> elementsToInsert, List<CodeElement> instructions) {
+        final int index = instructions.indexOf(elementTarget);
+        if (index >= 0) {
+            return instructions.addAll(index, elementsToInsert);
+        }
+        return false;
+    }
+
+
+
 }
