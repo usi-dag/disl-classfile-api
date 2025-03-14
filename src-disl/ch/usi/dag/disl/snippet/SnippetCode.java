@@ -1,14 +1,13 @@
 package ch.usi.dag.disl.snippet;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.instruction.ExceptionCatch;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.TryCatchBlockNode;
 
 import ch.usi.dag.disl.coderep.Code;
 import ch.usi.dag.disl.coderep.StaticContextMethod;
@@ -21,7 +20,7 @@ import ch.usi.dag.disl.localvar.ThreadLocalVar;
  * Represents an analyzed and partially expanded snippet code template.
  * Instances of {@link SnippetCode} are obtained from
  * {@link SnippetUnprocessedCode} instances as a result of calling the
- * {@link SnippetUnprocessedCode#process(LocalVars) process()} method on them.
+ * {@link SnippetUnprocessedCode#process process()} method on them.
  */
 public class SnippetCode {
     /**
@@ -117,12 +116,12 @@ public class SnippetCode {
 
     // Delegate the following calls.
 
-    public InsnList getInstructions () {
+    public List<CodeElement> getInstructions () {
         return __code.getInstructions ();
     }
 
 
-    public List <TryCatchBlockNode> getTryCatchBlocks () {
+    public List <ExceptionCatch> getTryCatchBlocks () {
         return __code.getTryCatchBlocks ();
     }
 
