@@ -699,8 +699,48 @@ public abstract class ClassFileHelper {
     }
 
 
-    public static void insert(CodeElement elementTarget, CodeElement elementToInsert, List<CodeElement> instructions) {
-        // TODO remove if not useful
+    /**
+     * insert an element after a specified target element
+     * @param elementTarget target to insert after, must be in the list
+     * @param elementToInsert new element to insert
+     * @param instructions list where to insert the element
+     * @return true if successful
+     */
+    public static boolean insert(CodeElement elementTarget, CodeElement elementToInsert, List<CodeElement> instructions) {
+        // add 1 since we want to insert it afterward
+        final int index = instructions.indexOf(elementTarget) + 1;
+        if (index > 0) {
+            if (index >= instructions.size()) {
+                // append it at the end if the index is outside the bound
+                instructions.add(elementToInsert);
+                return true;
+            }
+            instructions.add(index, elementToInsert);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * insert an element after a specified target element
+     * @param elementTarget target to insert after, must be in the list
+     * @param elementsToInsert new elements to insert
+     * @param instructions list where to insert the elements
+     * @return true if successful
+     */
+    public static boolean insertAll(CodeElement elementTarget, List<CodeElement> elementsToInsert, List<CodeElement> instructions) {
+        // add 1 since we want to insert it afterward
+        final int index = instructions.indexOf(elementTarget) + 1;
+        if (index > 0) {
+            if (index >= instructions.size()) {
+                // append all at the end if the index is outside the bound
+                return instructions.addAll(elementsToInsert);
+            }
+            return instructions.addAll(index, elementsToInsert);
+        }
+
+        return false;
     }
 
     /**
