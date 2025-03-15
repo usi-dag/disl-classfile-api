@@ -1,5 +1,6 @@
 package ch.usi.dag.disl.localvar;
 
+import java.lang.classfile.TypeKind;
 import java.lang.constant.ClassDesc;
 
 
@@ -39,6 +40,10 @@ public abstract class AbstractLocalVar {
 
 
     public ClassDesc getType() {return typeDesc;}
+
+    public TypeKind getTypeKind() {
+        return TypeKind.fromDescriptor(typeDesc.descriptorString());
+    }
 
     public String getDescriptor () {
         return typeDesc.descriptorString();
