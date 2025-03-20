@@ -1,6 +1,8 @@
 package ch.usi.dag.disl.coderep;
 
+import ch.usi.dag.disl.annotation.SyntheticLocal;
 import ch.usi.dag.disl.localvar.AbstractLocalVar;
+import ch.usi.dag.disl.localvar.SyntheticLocalVar;
 import ch.usi.dag.disl.localvar.ThreadLocalVar;
 import ch.usi.dag.disl.util.ClassFileHelper;
 import ch.usi.dag.disl.util.ReflectionHelper;
@@ -196,6 +198,129 @@ public class ClassFileCodeTransformer {
                             false
                     );
                 });
+            } else {
+                methodBuilder.with(methodElement);
+            }
+        };
+    }
+
+    public static MethodTransform static2Local(final Set<SyntheticLocalVar> syntheticLocalVars) {
+
+
+        return (methodBuilder, methodElement) -> {
+            if (methodElement instanceof CodeModel codeModel) {
+
+                // TODO not sure if this is true
+                // the assumption is that the ClassFile Api will recompute the max locals
+                // after every transformation
+                int maxLocals = codeModel.maxLocals();
+
+                // this should give a copy so we do not touch the original list
+                List<CodeElement> instructions = new ArrayList<>(codeModel.elementList());
+
+                final CodeElement first = instructions.getFirst();
+                // Insert code to initialize synthetic local variables (unless marked to
+                // be left uninitialized) at the beginning of a method.
+                for (SyntheticLocalVar slv: syntheticLocalVars) {
+                    if (slv.getInitialize() == SyntheticLocal.Initialize.NEVER) {
+                        continue;
+                    }
+
+                    // If the variable has initialization code, just copy it. It will
+                    // still refer to the static variable, but that will be fixed in
+                    // the next step.
+                    if (slv.hasInitCode()) {
+                        ClassFileHelper.insertAllBefore(first, slv.getInitCodeList(), instructions);
+                    } else {
+
+                        // Otherwise, just initialize it with a default value depending
+                        // on its type. The default value for arrays is null, like for
+                        // objects, but they also need an additional CHECKCAST
+                        // instruction to make the verifier happy.
+                        ClassDesc classDesc = slv.getType();
+                        TypeKind typeKind = slv.getTypeKind();
+                        if (!classDesc.isArray()) {
+                            ClassFileHelper.insertBefore(
+                                    first,
+                                    ClassFileHelper.loadDefault(typeKind),
+                                    instructions);
+                        } else {
+                            ClassFileHelper.insertBefore(
+                                    first,
+                                    ClassFileHelper.loadNull(),
+                                    instructions);
+                            ClassFileHelper.insertBefore(
+                                    first,
+                                    ClassFileHelper.checkCast(classDesc),
+                                    instructions);
+                        }
+
+                        // For now, just issue an instruction to store the value into
+                        // the original static field. The transformation to local
+                        // variable comes in the next step.
+                        ClassFileHelper.insertBefore(
+                                first,
+                                ClassFileHelper.putStatic(ClassDesc.of(slv.getOwner()).descriptorString(), slv.getName(), classDesc.descriptorString()),
+                                instructions);
+                    }
+                }
+
+                // Scan the method code for GETSTATIC/PUTSTATIC instructions accessing
+                // the static fields marked as synthetic locals. Replace all the
+                // static accesses with local variables.
+                // TODO LB: iterate over a copy unless we are sure an iterator is OK
+                for (CodeElement codeElement: instructions.toArray(instructions.toArray(new CodeElement[0]))) {
+                    if (!(codeElement instanceof FieldInstruction fieldInstruction) ||
+                            !ClassFileHelper.isStaticFieldAccess(codeElement)) {
+                        continue;
+                    }
+                    final String varId = SyntheticLocalVar.fqFieldNameFor(
+                            fieldInstruction.owner().name().stringValue(),
+                            fieldInstruction.name().stringValue()
+                    );
+
+                    // Try to find the static field being accessed among the synthetic
+                    // local fields, and determine the local variable index and local
+                    // slot index while doing that.
+                    int index = 0, count = 0;
+                    for (final SyntheticLocalVar var: syntheticLocalVars) {
+                        if (varId.equals(var.getID())) {
+                            break;
+                        }
+                        index += var.getTypeKind().slotSize();
+                        count++;
+                    }
+
+                    if (count == syntheticLocalVars.size()) {
+                        // Static field not found among the synthetic locals.
+                        continue;
+                    }
+
+                    // Replace the static field access with local variable access.
+                    final ClassDesc type = fieldInstruction.typeSymbol();
+                    final TypeKind typeKind = TypeKind.from(type);
+                    final int slot = maxLocals + index;
+                    final Opcode opcode = fieldInstruction.opcode();
+
+                    ClassFileHelper.insertBefore(
+                            fieldInstruction,
+                            (opcode == Opcode.GETSTATIC) ?
+                                    ClassFileHelper.loadVar(typeKind, slot) :
+                                    ClassFileHelper.storeVar(typeKind, slot),
+                            instructions
+                    );
+
+                    instructions.remove(fieldInstruction);
+                }
+
+                // the ClassFile Api should recompute the max local
+
+                methodBuilder.withCode(codeBuilder -> {
+                    for (CodeElement codeElement: instructions) {
+                        codeBuilder.with(codeElement);
+                    }
+                });
+
             } else {
                 methodBuilder.with(methodElement);
             }

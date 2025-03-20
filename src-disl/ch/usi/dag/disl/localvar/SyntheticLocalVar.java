@@ -11,7 +11,7 @@ public class SyntheticLocalVar extends AbstractLocalVar {
 
     private final SyntheticLocal.Initialize initialize;
 
-    private List<CodeElement> initCodeList; // TODO is a list sufficient to replace InsnList
+    private List<CodeElement> initCodeList;
 
 
     public SyntheticLocalVar(
