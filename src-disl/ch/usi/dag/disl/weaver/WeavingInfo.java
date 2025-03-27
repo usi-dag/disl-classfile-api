@@ -1,81 +1,73 @@
 package ch.usi.dag.disl.weaver;
 
+import java.lang.classfile.*;
+import java.lang.classfile.instruction.ExceptionCatch;
+import java.lang.classfile.instruction.LoadInstruction;
+import java.lang.classfile.instruction.StoreInstruction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
-import org.objectweb.asm.tree.analysis.BasicValue;
-import org.objectweb.asm.tree.analysis.Frame;
-import org.objectweb.asm.tree.analysis.SourceValue;
+import ch.usi.dag.disl.CustomCodeElements.FutureLabelTarget;
+import ch.usi.dag.disl.util.ClassFileAnalyzer.BasicValue;
+import ch.usi.dag.disl.util.ClassFileAnalyzer.Frame;
+import ch.usi.dag.disl.util.ClassFileAnalyzer.SourceValue;
+import ch.usi.dag.disl.util.ClassFileFrameHelper;
+import ch.usi.dag.disl.util.ClassFileHelper;
 
 import ch.usi.dag.disl.snippet.Shadow;
 import ch.usi.dag.disl.snippet.Shadow.WeavingRegion;
 import ch.usi.dag.disl.snippet.Snippet;
-import ch.usi.dag.disl.util.AsmHelper;
-import ch.usi.dag.disl.util.AsmHelper.Insns;
-import ch.usi.dag.disl.util.FrameHelper;
 
 public class WeavingInfo {
 
     private ArrayList<Snippet> sortedSnippets;
 
-    private Map<AbstractInsnNode, Frame<BasicValue>> basicFrameMap;
-    private Map<AbstractInsnNode, Frame<SourceValue>> sourceFrameMap;
+    private Map<CodeElement, Frame<BasicValue>> basicFrameMap;
+    private Map<CodeElement, Frame<SourceValue>> sourceFrameMap;
 
     private Frame<BasicValue> retFrame;
 
-    public WeavingInfo(ClassNode classNode, MethodNode methodNode,
-            Map<Snippet, List<Shadow>> snippetMarkings) {
+    public WeavingInfo(ClassModel classModel,
+                       MethodModel methodModel,
+                       Map<Snippet, List<Shadow>> snippetMarkings,
+                       List<CodeElement> instructionsToInstrument,
+                       List<ExceptionCatch> exceptions) {
 
-        sortedSnippets = new ArrayList<Snippet>(snippetMarkings.keySet());
+        sortedSnippets = new ArrayList<>(snippetMarkings.keySet());
         Collections.sort(sortedSnippets);
 
-        InsnList instructions = methodNode.instructions;
+        List<Label> tcbEnd = new LinkedList<>();
 
-        List<LabelNode> tcb_ends = new LinkedList<LabelNode>();
-
-        for (TryCatchBlockNode tcb : methodNode.tryCatchBlocks) {
-            tcb_ends.add(tcb.end);
+        for (ExceptionCatch exceptionCatch: exceptions) {
+            tcbEnd.add(exceptionCatch.tryEnd());
         }
 
         // initialize weaving start
-        for (Snippet snippet : sortedSnippets) {
-
-            for (Shadow shadow : snippetMarkings.get(snippet)) {
-
+        for (Snippet snippet: sortedSnippets) {
+            for (Shadow shadow: snippetMarkings.get(snippet)) {
                 WeavingRegion region = shadow.getWeavingRegion();
-                AbstractInsnNode start = region.getStart();
-                LabelNode lstart = new LabelNode();
-                instructions.insertBefore(start, lstart);
-                region.setStart(lstart);
+                CodeElement start = region.getStart();
+                FutureLabelTarget lStart = new FutureLabelTarget();
+                ClassFileHelper.insertBefore(start, lStart, instructionsToInstrument);
+                region.setStart(lStart);
             }
         }
 
         // first pass: adjust weaving end for one-instruction shadow
-        for (Snippet snippet : sortedSnippets) {
-
-            for (Shadow shadow : snippetMarkings.get(snippet)) {
-
+        for (Snippet snippet: sortedSnippets) {
+            for (Shadow shadow: snippetMarkings.get(snippet)) {
                 WeavingRegion region = shadow.getWeavingRegion();
 
                 if (region.getEnds() == null) {
-
-                    List<AbstractInsnNode> ends = new LinkedList<AbstractInsnNode>();
-
-                    for (AbstractInsnNode end : shadow.getRegionEnds()) {
-
-                        if (AsmHelper.isBranch(end)) {
-                            end = end.getPrevious();
+                    List<CodeElement> ends = new LinkedList<>();
+                    for (CodeElement end: shadow.getRegionEnds()) {
+                        if (ClassFileHelper.isBranch(end)) {
+                            // TODO should I pass the original list instead???
+                            end = ClassFileHelper.previousInstruction(instructionsToInstrument, end);
                         }
-
                         ends.add(end);
                     }
 
@@ -85,39 +77,35 @@ public class WeavingInfo {
         }
 
         // second pass: calculate weaving location
-        for (Snippet snippet : sortedSnippets) {
-
-            for (Shadow shadow : snippetMarkings.get(snippet)) {
-
+        for (Snippet snippet: sortedSnippets) {
+            for (Shadow shadow: snippetMarkings.get(snippet)) {
                 WeavingRegion region = shadow.getWeavingRegion();
-                List<AbstractInsnNode> ends = new LinkedList<AbstractInsnNode>();
+                List<CodeElement> ends = new LinkedList<>();
 
-                for (AbstractInsnNode end : region.getEnds()) {
-
-                    LabelNode lend = new LabelNode();
-                    instructions.insert(end, lend);
-                    ends.add(lend);
+                for (CodeElement end: region.getEnds()) {
+                    FutureLabelTarget lEnd = new FutureLabelTarget();
+                    ClassFileHelper.insert(end, lEnd, instructionsToInstrument);
+                    ends.add(lEnd);
                 }
 
                 region.setEnds(ends);
 
-                LabelNode lthrowstart = new LabelNode();
-                instructions.insertBefore(region.getAfterThrowStart(),
-                        lthrowstart);
-                region.setAfterThrowStart(lthrowstart);
+                FutureLabelTarget lThrowStart = new FutureLabelTarget();
+                ClassFileHelper.insertBefore(region.getAfterThrowStart(), lThrowStart, instructionsToInstrument);
+                region.setAfterThrowStart(lThrowStart);
 
-                LabelNode lthrowend = new LabelNode();
-                instructions.insert(region.getAfterThrowEnd(), lthrowend);
-                region.setAfterThrowEnd(lthrowend);
+                FutureLabelTarget lThrowEnd = new FutureLabelTarget();
+                ClassFileHelper.insert(region.getAfterThrowEnd(), lThrowEnd, instructionsToInstrument);
+                region.setAfterThrowEnd(lThrowEnd);
+
             }
         }
 
-        basicFrameMap = FrameHelper.createBasicMapping(classNode.name,
-                methodNode);
-        sourceFrameMap = FrameHelper.createSourceMapping(classNode.name,
-                methodNode);
+        basicFrameMap = ClassFileFrameHelper.createBasicMapping(classModel.thisClass().asSymbol(), methodModel);
+        sourceFrameMap = ClassFileFrameHelper.createSourceMapping(classModel.thisClass().asSymbol(), methodModel);
 
-        AbstractInsnNode last = Insns.REVERSE.firstRealInsn (instructions.getLast());
+        Instruction last = ClassFileHelper.firstPreviousRealInstruction(instructionsToInstrument, instructionsToInstrument.getLast());
+
         retFrame = basicFrameMap.get(last);
     }
 
@@ -125,7 +113,7 @@ public class WeavingInfo {
         return sortedSnippets;
     }
 
-    public Frame<BasicValue> getBasicFrame(AbstractInsnNode instr) {
+    public Frame<BasicValue> getBasicFrame(CodeElement instr) {
         return basicFrameMap.get(instr);
     }
 
@@ -133,24 +121,24 @@ public class WeavingInfo {
         return retFrame;
     }
 
-    public Frame<SourceValue> getSourceFrame(AbstractInsnNode instr) {
+    public Frame<SourceValue> getSourceFrame(CodeElement instr) {
         return sourceFrameMap.get(instr);
     }
 
-    public boolean stackNotEmpty(AbstractInsnNode loc) {
+    public boolean stackNotEmpty(CodeElement loc) {
         return basicFrameMap.get(loc).getStackSize() > 0;
     }
 
-    public InsnList backupStack(AbstractInsnNode loc, int startFrom) {
-        return FrameHelper.enter(basicFrameMap.get(loc), startFrom);
+    public List<StoreInstruction> backupStack(CodeElement loc, int startFrom) {
+        return ClassFileFrameHelper.enter(basicFrameMap.get(loc), startFrom);
     }
 
-    public InsnList restoreStack(AbstractInsnNode loc, int startFrom) {
-        return FrameHelper.exit(basicFrameMap.get(loc), startFrom);
+    public List<LoadInstruction> restoreStack(CodeElement loc, int startFrom) {
+        return ClassFileFrameHelper.exit(basicFrameMap.get(loc), startFrom);
     }
 
-    public int getStackHeight(AbstractInsnNode loc) {
-        return FrameHelper.getOffset(basicFrameMap.get(loc));
+    public int getStackHeight(CodeElement loc) {
+        return ClassFileFrameHelper.getOffset(basicFrameMap.get(loc));
     }
 
 }
