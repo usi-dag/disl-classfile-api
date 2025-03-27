@@ -41,7 +41,7 @@ public class ClassFileCodeTransformer {
         final MethodTypeDesc methodDesc = oldMethod.methodTypeSymbol();
 
         // create a new class equivalent as the old one but with the method transformed
-        byte[] transformedClass = ClassFile.of().transform(oldMethod.parent().get(), (classBuilder, element) -> {
+        byte[] transformedClass = ClassFile.of().transformClass(oldMethod.parent().get(), (classBuilder, element) -> {
             if (element instanceof MethodModel) {
                 if (// if the name and signature are the same (there could be more methods with the same name)
                         ((MethodModel) element).methodName().equalsString(name) &&
@@ -204,19 +204,25 @@ public class ClassFileCodeTransformer {
         };
     }
 
-    public static MethodTransform static2Local(final Set<SyntheticLocalVar> syntheticLocalVars) {
-
+    /**
+     * Transform the access of the slv from static to local, the method descriptor and flags are used to compute the
+     * max locals
+     * @param syntheticLocalVars set of synthetic local variables
+     * @param methodTypeDesc descriptor of the method
+     * @param flags access flags of the methods
+     * @return the MethodTransform
+     */
+    public static MethodTransform static2Local(final Set<SyntheticLocalVar> syntheticLocalVars, MethodTypeDesc methodTypeDesc, AccessFlags flags) {
 
         return (methodBuilder, methodElement) -> {
             if (methodElement instanceof CodeModel codeModel) {
 
-                // TODO not sure if this is true
-                // the assumption is that the ClassFile Api will recompute the max locals
-                // after every transformation
-                int maxLocals = codeModel.maxLocals();
-
                 // this should give a copy so we do not touch the original list
                 List<CodeElement> instructions = new ArrayList<>(codeModel.elementList());
+
+                // since the classFile api does not compute automatically the max locals until the last transformation there is
+                // no guarantee that we can get them here from the methodModem (parent of the codeModel) so we compute them manually
+                int maxLocals = ClassFileHelper.getMaxLocals(instructions, methodTypeDesc, flags);
 
                 final CodeElement first = instructions.getFirst();
                 // Insert code to initialize synthetic local variables (unless marked to
