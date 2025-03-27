@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-public class BasicBlockCF {
+public class BasicBlockCF implements Iterable<CodeElement> {
     private final List<CodeElement> instructions; // pointer to the complete list of instruction of the method used to navigate
 
     /** Index of this basic block within a method. */
@@ -63,6 +63,7 @@ public class BasicBlockCF {
         return joints;
     }
 
+    @Override
     public Iterator<CodeElement> iterator() {
         return new BasicBlockIterator();
     }
@@ -74,6 +75,7 @@ public class BasicBlockCF {
         }
         return null;
     }
+
 
     class BasicBlockIterator implements Iterator<CodeElement> {
         private CodeElement current;
