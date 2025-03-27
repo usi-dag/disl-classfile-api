@@ -1,0 +1,161 @@
+package ch.usi.dag.disl.util;
+
+import ch.usi.dag.disl.exception.DiSLFatalException;
+import ch.usi.dag.disl.util.ClassFileAnalyzer.*;
+
+import java.lang.classfile.*;
+import java.lang.classfile.instruction.LoadInstruction;
+import java.lang.classfile.instruction.StackInstruction;
+import java.lang.classfile.instruction.StoreInstruction;
+import java.lang.constant.ClassDesc;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ClassFileFrameHelper {
+
+    public static Analyzer<BasicValue> getBasicAnalyzer() {
+        return new Analyzer<>(new BasicInterpreter());
+    }
+
+    public static int getOffset(Frame<BasicValue> frame) {
+        int offset = 0;
+
+        for (int i = frame.getStackSize() - 1; i >= 0; i--) {
+            BasicValue value = frame.getStack(i);
+            offset += value.getSize();
+        }
+        return offset;
+    }
+
+    // generate an instruction list to back up the stack
+    public static List<StoreInstruction> enter(Frame<BasicValue> frame, int offset) {
+        List<StoreInstruction> storeList = new ArrayList<>();
+        for (int i = frame.getStackSize() -1; i >= 0; i--) {
+            BasicValue value = frame.getStack(i);
+            storeList.add(
+                    StoreInstruction.of(value.getTypeKind(), offset)
+            );
+            offset += value.getSize();
+        }
+        return storeList;
+    }
+
+    // generate an instruction list to restore the stack
+    public static List<LoadInstruction> exit(Frame<BasicValue> frame, int offset) {
+        List<LoadInstruction> loadList = new ArrayList<>();
+        for (int i = frame.getStackSize() -1; i >= 0; i--) {
+            BasicValue value = frame.getStack(i);
+            loadList.addFirst(
+                    LoadInstruction.of(value.getTypeKind(), offset)
+            );
+            offset += value.getSize();
+        }
+        return loadList;
+    }
+
+    public static Analyzer<SourceValue> getSourceAnalyzer() {
+        return new Analyzer<SourceValue>(new SourceInterpreter());
+    }
+
+    public static <T extends Value> T getStack(Frame<T> frame, int depth) {
+        int index = 0;
+        while (depth > 0) {
+
+            depth -= frame.getStack(frame.getStackSize() - 1 - index).getSize();
+            index++;
+        }
+        return frame.getStack(frame.getStackSize() - 1 - index);
+    }
+
+    public static <T extends Value> T getStackByIndex(Frame<T> frame, int index) {
+        return frame.getStack(frame.getStackSize() - 1 - index);
+    }
+
+    public static int dupStack(Frame<SourceValue> frame, List<CodeElement> instructions,
+                               int operand, ClassDesc type, int slot) {
+        SourceValue source = getStackByIndex(frame, operand);
+        for (final CodeElement codeElement: source.instructions) {
+            // if the instruction duplicates two-size operand(s), weaver should
+            // be careful that the operand might be either 2 one-size operands,
+            // or 1 two-size operand.
+            if (codeElement instanceof Instruction instruction) {
+                switch (instruction.opcode()) {
+                    case DUP2 -> {
+                        if (source.size != 1) {
+                            break;
+                        }
+                        dupStack(frame, instructions, operand + 2, type, slot);
+                    }
+                    case DUP2_X1 -> {
+                        if (source.size != 1) {
+                            break;
+                        }
+
+                        dupStack (frame, instructions, operand + 3, type, slot);
+                    }
+                    case DUP2_X2 -> {
+                        if (source.size != 1) {
+                            break;
+                        }
+                        SourceValue x2 = getStackByIndex (frame, operand + 2);
+                        dupStack (frame, instructions, operand + (4 - x2.size), type, slot);
+                    }
+                    case SWAP -> {
+                        if (operand > 0 &&
+                                getStackByIndex(frame, operand -1).instructions.contains(instruction)) {
+                            ClassFileHelper.insertBefore(
+                                    instruction,
+                                    StackInstruction.of(Opcode.DUP),
+                                    instructions);
+                            ClassFileHelper.insertBefore(
+                                    instruction,
+                                    ClassFileHelper.storeVar(TypeKind.from(type), slot),
+                                    instructions);
+                        }
+                    }
+                    // TODO what about DUP_X1 and DUP_X2
+                    default -> {
+                        // Do nothing
+                    }
+                }
+            }
+        }
+        return source.size;
+    }
+
+    public static <V extends Value> Frame<V>[] getFrames(Analyzer<V> analyzer, ClassDesc owner, MethodModel methodModel) {
+        try {
+            analyzer.analyze(owner, methodModel);
+        } catch (AnalyzerException e) {
+            throw new DiSLFatalException("Cause by AnalyzerException : \n"
+                    + e.getMessage());
+        }
+        return analyzer.getFrames();
+    }
+
+    public static <V extends Value> Map<CodeElement, Frame<V>> createMapping(
+            Analyzer<V> analyzer, ClassDesc owner, MethodModel methodModel
+    ) {
+        Map<CodeElement, Frame<V>> mapping = new HashMap<>();
+
+        Frame<V>[] frames = getFrames(analyzer, owner, methodModel);
+        List<CodeElement> instructions = methodModel.code().orElseThrow().elementList();
+        for (int i = 0; i < frames.length; i++) {
+            mapping.put(instructions.get(i), frames[i]);
+        }
+        return mapping;
+    }
+
+    public static Map<CodeElement, Frame<BasicValue>> createBasicMapping(
+            ClassDesc owner, MethodModel method) {
+        return createMapping(getBasicAnalyzer(), owner, method);
+    }
+
+    public static Map<CodeElement, Frame<SourceValue>> createSourceMapping(
+            ClassDesc owner, MethodModel method) {
+        return createMapping(getSourceAnalyzer(), owner, method);
+    }
+
+}
