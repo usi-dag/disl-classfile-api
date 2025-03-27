@@ -12,37 +12,37 @@ import java.util.Set;
 
 
 public enum ArgProcessorKind {
+    
+    BOOLEAN(TypeKind.BOOLEAN),
 
-    BOOLEAN(TypeKind.BooleanType),
-
-    BYTE(TypeKind.ByteType) {
+    BYTE(TypeKind.BYTE) {
         @Override
         public EnumSet<ArgProcessorKind> secondaryTypes() {
             return EnumSet.of(ArgProcessorKind.BOOLEAN);
         }
     },
 
-    CHAR(TypeKind.CharType),
-    DOUBLE(TypeKind.DoubleType),
-    FLOAT(TypeKind.FloatType),
+    CHAR(TypeKind.CHAR),
+    DOUBLE(TypeKind.DOUBLE),
+    FLOAT(TypeKind.FLOAT),
 
-    INT(TypeKind.IntType) {
+    INT(TypeKind.INT) {
         @Override
         public Set<ArgProcessorKind> secondaryTypes() {
             return EnumSet.of(BOOLEAN, BYTE, SHORT);
         }
     },
 
-    LONG(TypeKind.LongType),
+    LONG(TypeKind.LONG),
 
-    SHORT(TypeKind.ShortType) {
+    SHORT(TypeKind.SHORT) {
         @Override
         public Set<ArgProcessorKind> secondaryTypes() {
             return EnumSet.of(BOOLEAN, BYTE);
         }
     },
 
-    OBJECT(TypeKind.ReferenceType);
+    OBJECT(TypeKind.REFERENCE);
 
     private final TypeKind __primaryType;
     private ArgProcessorKind(final TypeKind primaryType) {
@@ -64,7 +64,7 @@ public enum ArgProcessorKind {
         }
         // with this constructor only the void type is not accepted
         throw new DiSLFatalException(
-                "conversion from %s not defined", type.typeName()
+                "conversion from %s not defined", type.toString()
         );
     }
 
