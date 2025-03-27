@@ -175,7 +175,7 @@ public abstract class ClassFileHelper {
     }
 
     public static LoadInstruction loadObjectVar(final int slot) {
-        return loadVar(TypeKind.ReferenceType, slot);
+        return loadVar(TypeKind.REFERENCE, slot);
     }
 
     public static LoadInstruction loadVar(final TypeKind typeKind, final int slot) {
@@ -184,7 +184,7 @@ public abstract class ClassFileHelper {
 
 
     public static StoreInstruction storeObjectVar(final int slot) {
-        return storeVar(TypeKind.ReferenceType, slot);
+        return storeVar(TypeKind.REFERENCE, slot);
     }
 
     public static StoreInstruction storeVar(final TypeKind typeKind, final int slot) {
@@ -192,20 +192,20 @@ public abstract class ClassFileHelper {
     }
 
     public static ConstantInstruction.IntrinsicConstantInstruction loadNull() {
-        return loadDefault(TypeKind.ReferenceType);
+        return loadDefault(TypeKind.REFERENCE);
     }
 
     public static ConstantInstruction.IntrinsicConstantInstruction loadDefault(final TypeKind typeKind) {
         Opcode opcode;
         switch (typeKind) {
-            case BooleanType, ByteType, CharType, IntType, ShortType -> {
+            case BOOLEAN, BYTE, CHAR, INT, SHORT -> {
                 opcode = Opcode.ICONST_0;
             }
-            case LongType -> opcode = Opcode.LCONST_0;
-            case FloatType -> opcode = Opcode.FCONST_0;
-            case DoubleType -> opcode = Opcode.DCONST_0;
+            case LONG -> opcode = Opcode.LCONST_0;
+            case FLOAT -> opcode = Opcode.FCONST_0;
+            case DOUBLE -> opcode = Opcode.DCONST_0;
             // this type is for both object and array
-            case ReferenceType -> opcode = Opcode.ACONST_NULL;
+            case REFERENCE -> opcode = Opcode.ACONST_NULL;
             default -> {
                 throw new DiSLFatalException(
                         "No default value for type: "+ typeKind.name()
@@ -471,7 +471,7 @@ public abstract class ClassFileHelper {
     // TODO this should be correct, but it should also give true to
     //  encapsulated primitive such as Integer
     public static boolean isReferenceType(TypeKind typeKind) {
-        return typeKind.equals(TypeKind.ReferenceType);
+        return typeKind.equals(TypeKind.REFERENCE);
     }
 
     public static boolean isStaticFieldAccess(final CodeElement codeElement) {
@@ -562,33 +562,33 @@ public abstract class ClassFileHelper {
 
     public static InvokeInstruction boxValueOnStack(TypeKind typeKind) {
         switch (typeKind) {
-            case TypeKind.BooleanType -> {
+            case TypeKind.BOOLEAN -> {
                 return __constructValueOf(Boolean.class, boolean.class);
             }
-            case TypeKind.ByteType -> {
+            case TypeKind.BYTE -> {
                 return __constructValueOf(Byte.class, byte.class);
             }
-            case TypeKind.CharType -> {
+            case TypeKind.CHAR -> {
                 return __constructValueOf(Character.class, char.class);
             }
-            case TypeKind.DoubleType -> {
+            case TypeKind.DOUBLE -> {
                 return __constructValueOf(Double.class, double.class);
             }
-            case TypeKind.FloatType -> {
+            case TypeKind.FLOAT -> {
                 return __constructValueOf(Float.class, float.class);
             }
-            case TypeKind.IntType -> {
+            case TypeKind.INT -> {
                 return __constructValueOf(Integer.class, int.class);
             }
-            case TypeKind.LongType -> {
+            case TypeKind.LONG -> {
                 return __constructValueOf(Long.class, long.class);
             }
-            case TypeKind.ShortType -> {
+            case TypeKind.SHORT -> {
                 return __constructValueOf(Short.class, short.class);
             }
             default -> {
                 throw new DiSLFatalException (
-                        "Impossible to box type: "+ typeKind.descriptor()
+                        "Impossible to box type: "+ typeKind
                 );
             }
         }
@@ -772,6 +772,97 @@ public abstract class ClassFileHelper {
             return instructions.addAll(index, elementsToInsert);
         }
         return false;
+    }
+
+
+    /**
+     *
+     * @param methodTypeDesc descriptor of the method
+     * @return the size of arguments and return like the asm version Type.getArgumentAndReturnSize(method)
+     */
+    public static int getArgumentAndReturnSize(final MethodTypeDesc methodTypeDesc) {
+        int argumentSize = 1;
+        for (ClassDesc argument: methodTypeDesc.parameterList()) {
+            argumentSize += TypeKind.from(argument).slotSize();
+        }
+        return argumentSize << 2 | TypeKind.from(methodTypeDesc.returnType()).slotSize();
+    }
+
+
+    /**
+     * Get the number of max locals
+     * @param method the method we want to calculate the max locals
+     * @return the max locals
+     */
+    public static int getMaxLocals(MethodModel method) {
+        return getMaxLocals(
+                method.code().orElseThrow().elementList(),
+                method.methodTypeSymbol(),
+                method.flags());
+    }
+
+    /**
+     * Get the number of max locals
+     * @param codeElementList list of instruction of the method
+     * @param methodDescriptor the descriptor of the method
+     * @param flags the flags of the method
+     * @return the max locals
+     */
+    public static int getMaxLocals(List<CodeElement> codeElementList, MethodTypeDesc methodDescriptor, AccessFlags flags) {
+        int maxLocals = getArgumentAndReturnSize(methodDescriptor) >> 2;
+        if (flags.has(AccessFlag.STATIC)) {
+            maxLocals -= 1;
+        }
+        for (CodeElement codeElement: codeElementList) {
+            switch (codeElement) {
+                case LoadInstruction loadInstruction -> {
+                    int local = loadInstruction.slot();
+                    int size;
+                    switch (loadInstruction.opcode()) {
+                        case LLOAD,
+                             LLOAD_0,
+                             LLOAD_1,
+                             LLOAD_2,
+                             LLOAD_3,
+                             LLOAD_W,
+                             DLOAD,
+                             DLOAD_0,
+                             DLOAD_1,
+                             DLOAD_2,
+                             DLOAD_3,
+                             DLOAD_W -> size = 2;
+                        default -> size = 1;
+                    }
+                    maxLocals = Math.max(maxLocals, local + size);
+                }
+                case StoreInstruction storeInstruction -> {
+                    int local = storeInstruction.slot();
+                    int size;
+                    switch (storeInstruction.opcode()) {
+                        case LSTORE,
+                             LSTORE_0,
+                             LSTORE_1,
+                             LSTORE_2,
+                             LSTORE_3,
+                             LSTORE_W,
+                             DSTORE,
+                             DSTORE_0,
+                             DSTORE_1,
+                             DSTORE_2,
+                             DSTORE_3,
+                             DSTORE_W -> size = 2;
+                        default -> size = 1;
+                    }
+                    maxLocals = Math.max(maxLocals, local + size);
+                }
+                case IncrementInstruction incrementInstruction -> {
+                    int local = incrementInstruction.slot();
+                    maxLocals = Math.max(maxLocals, local + 1);
+                }
+                default -> {}
+            }
+        }
+        return maxLocals;
     }
 
 
