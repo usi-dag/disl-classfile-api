@@ -1,6 +1,8 @@
 package ch.usi.dag.disl.util;
 
 import ch.usi.dag.disl.exception.DiSLFatalException;
+import ch.usi.dag.disl.util.cfgCF.BasicBlockCF;
+import ch.usi.dag.disl.util.cfgCF.ControlFlowGraph;
 
 import java.lang.classfile.*;
 import java.lang.classfile.attribute.RuntimeInvisibleAnnotationsAttribute;
@@ -775,6 +777,9 @@ public abstract class ClassFileHelper {
     }
 
 
+    // these methods are for getting max locals and max stack, they were originally
+    // in MaxCalculator.java
+
     /**
      *
      * @param methodTypeDesc descriptor of the method
@@ -865,6 +870,113 @@ public abstract class ClassFileHelper {
         return maxLocals;
     }
 
+
+    public static int getMaxStack(MethodModel method) {
+        if (method.code().isEmpty()) {
+            return 0;
+        }
+        CodeModel code = method.code().get();
+        return getMaxStack(code.elementList(), code.exceptionHandlers());
+    }
+
+    public static int getMaxStack(List<CodeElement> codeElementList, List<ExceptionCatch> tryCatchBlocks) {
+
+        ControlFlowGraph cfg = ControlFlowGraph.build(codeElementList, tryCatchBlocks);
+        List<BasicBlockCF> unvisited = cfg.getNodes();
+
+        int maxStack = getMaxStack(0, cfg.getBasicBlock(codeElementList.getFirst()), unvisited);
+
+        Map<Label, LabelTarget> labelTargetMap = ClassFileHelper.getLabelTargetMap(codeElementList);
+
+        for (ExceptionCatch exceptionCatch: tryCatchBlocks) {
+            maxStack = Math.max(
+                    getMaxStack(1, cfg.getBasicBlock(labelTargetMap.get(exceptionCatch.handler())), unvisited),
+                    maxStack
+            );
+        }
+
+        return maxStack;
+    }
+
+    private static int getMaxStack(int currentStackSize, BasicBlockCF bb, List<BasicBlockCF> unvisited) {
+        if (!unvisited.remove(bb)) {
+            return 0;
+        }
+
+        int maxStack = currentStackSize;
+
+        for (CodeElement element: bb) {
+            currentStackSize = execute(currentStackSize, element);
+            maxStack = Math.max(currentStackSize, maxStack);
+        }
+
+        for (BasicBlockCF next: bb.getSuccessors()) {
+            maxStack = Math.max(getMaxStack(currentStackSize, next, unvisited), maxStack);
+        }
+
+        return maxStack;
+    }
+
+    // From org.objectweb.asm.Frame
+    /**
+     * The stack size variation corresponding to each JVM instruction. This
+     * stack variation is equal to the size of the values produced by an
+     * instruction, minus the size of the values consumed by this instruction.
+     */
+    static final int[] SIZE;
+
+    /**
+     * Computes the stack size variation corresponding to each JVM instruction.
+     */
+    static {
+        int i;
+        int[] b = new int[202];
+        String s = "EFFFFFFFFGGFFFGGFFFEEFGFGFEEEEEEEEEEEEEEEEEEEEDEDEDDDDD"
+                + "CDCDEEEEEEEEEEEEEEEEEEEEBABABBBBDCFFFGGGEDCDCDCDCDCDCDCDCD"
+                + "CDCEEEEDDDDDDDCDCDCEFEFDDEEFFDEDEEEBDDBBDDDDDDCCCCCCCCEFED"
+                + "DDCDCDEEEEEEEEEEFEEEEEEDDEEDDEE";
+        for (i = 0; i < b.length; ++i) {
+            b[i] = s.charAt(i) - 'E';
+        }
+        SIZE = b;
+    }
+
+
+    private static int execute(int currentStackSize, CodeElement codeElement) {
+        switch (codeElement) {
+            case FieldInstruction fieldInstruction -> {
+                if (fieldInstruction.opcode() == Opcode.GETFIELD || fieldInstruction.opcode() == Opcode.PUTFIELD) {
+                    return currentStackSize + TypeKind.from(fieldInstruction.typeSymbol()).slotSize() -1;
+                } else {
+                    // for getstatic and putstatic
+                    return currentStackSize + TypeKind.from(fieldInstruction.typeSymbol()).slotSize();
+                }
+            }
+            case NewMultiArrayInstruction newMultiArrayInstruction -> {
+                return currentStackSize + 1 - newMultiArrayInstruction.dimensions();
+            }
+            case InvokeInstruction invokeInstruction -> {
+                if (invokeInstruction.opcode() == Opcode.INVOKESTATIC) {
+                    int argSize = getArgumentAndReturnSize(invokeInstruction.typeSymbol());
+                    return currentStackSize - (argSize >> 2) + (argSize & 0x03) + 1;
+                } else {
+                    // for invokeVirtual, invokespecial, invokeinterface
+                    int argSize = getArgumentAndReturnSize(invokeInstruction.typeSymbol());
+                    return currentStackSize - (argSize >> 2) + (argSize & 0x03);
+                }
+            }
+            case InvokeDynamicInstruction invokeDynamicInstruction -> {
+                int argSize = getArgumentAndReturnSize(invokeDynamicInstruction.typeSymbol());
+                return currentStackSize - (argSize >> 2) + (argSize & 0x03) + 1;
+            }
+            case Instruction instruction -> {
+                return currentStackSize + SIZE[instruction.opcode().bytecode()];
+            }
+            default -> {
+                return currentStackSize;
+            }
+        }
+    }
 
 
 }
