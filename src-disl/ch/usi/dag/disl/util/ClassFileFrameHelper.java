@@ -4,10 +4,12 @@ import ch.usi.dag.disl.exception.DiSLFatalException;
 import ch.usi.dag.disl.util.ClassFileAnalyzer.*;
 
 import java.lang.classfile.*;
+import java.lang.classfile.instruction.ExceptionCatch;
 import java.lang.classfile.instruction.LoadInstruction;
 import java.lang.classfile.instruction.StackInstruction;
 import java.lang.classfile.instruction.StoreInstruction;
 import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -135,6 +137,28 @@ public class ClassFileFrameHelper {
         return analyzer.getFrames();
     }
 
+    public static <V extends Value> Frame<V>[] getFrames(Analyzer<V> analyzer, ClassDesc owner,
+                                                         List<CodeElement> instructions,
+                                                         List<ExceptionCatch> exceptionCatches,
+                                                         AccessFlags accessFlags, int maxLocals,
+                                                         int maxStack, MethodTypeDesc methodTypeDesc) {
+        try {
+            analyzer.analyze(
+                    owner,
+                    instructions,
+                    exceptionCatches,
+                    accessFlags,
+                    maxLocals,
+                    maxStack,
+                    methodTypeDesc
+                    );
+        } catch (AnalyzerException e) {
+            throw new DiSLFatalException("Cause by AnalyzerException : \n"
+                    + e.getMessage());
+        }
+        return analyzer.getFrames();
+    }
+
     public static <V extends Value> Map<CodeElement, Frame<V>> createMapping(
             Analyzer<V> analyzer, ClassDesc owner, MethodModel methodModel
     ) {
@@ -142,6 +166,21 @@ public class ClassFileFrameHelper {
 
         Frame<V>[] frames = getFrames(analyzer, owner, methodModel);
         List<CodeElement> instructions = methodModel.code().orElseThrow().elementList();
+        for (int i = 0; i < frames.length; i++) {
+            mapping.put(instructions.get(i), frames[i]);
+        }
+        return mapping;
+    }
+
+    public static <V extends Value> Map<CodeElement, Frame<V>> createMapping(
+            Analyzer<V> analyzer, ClassDesc owner, List<CodeElement> instructions,
+            List<ExceptionCatch> exceptionCatches, MethodTypeDesc methodDescriptor, AccessFlags flags
+    ) {
+        int maxStack = ClassFileHelper.getMaxStack(instructions, exceptionCatches);
+        int maxLocals = ClassFileHelper.getMaxLocals(instructions, methodDescriptor, flags);
+        Map<CodeElement, Frame<V>> mapping = new HashMap<>();
+        Frame<V>[] frames = getFrames(analyzer, owner, instructions, exceptionCatches, flags, maxLocals, maxStack, methodDescriptor);
+
         for (int i = 0; i < frames.length; i++) {
             mapping.put(instructions.get(i), frames[i]);
         }
