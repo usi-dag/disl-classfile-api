@@ -34,6 +34,7 @@ import java.lang.classfile.attribute.CodeAttribute;
 import java.lang.classfile.constantpool.ClassEntry;
 import java.lang.classfile.instruction.*;
 import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 import java.lang.reflect.AccessFlag;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -98,37 +99,62 @@ public class Analyzer<V extends Value> {
      */
     @SuppressWarnings("unchecked")
     public Frame<V>[] analyze(final ClassDesc owner, final MethodModel method) throws AnalyzerException {
-
         if (method.flags().has(AccessFlag.NATIVE) || method.flags().has(AccessFlag.ABSTRACT) ||
                 method.code().isEmpty()
         ) {
             frames = (Frame<V>[]) new Frame<?>[0];
             return frames;
         }
-
-        CodeModel codeModel = method.code().get();
-        instructions = codeModel.elementList();
-        instructionListSize = instructions.size();
-        handlers = (List<ExceptionCatch>[]) new List<?>[instructionListSize];
-        frames = (Frame<V>[]) new Frame<?>[instructionListSize];
-        subroutines = new Subroutine[instructionListSize];
-        inInstructionsToProcess = new boolean[instructionListSize];
-        instructionsToProcess = new int[instructionListSize];
-        numInstructionsToProcess = 0;
-        labelTargetMap = instructions.stream()
-                .filter(e -> e instanceof LabelTarget)
-                .map(e -> (LabelTarget)e)
-                .collect(Collectors.toMap(LabelTarget::label, v -> v));
         // TODO in case there is no code attribute compute the maxLocals by a function
         //  is max stack even useful ?
         CodeAttribute codeAttribute = method.findAttribute(Attributes.code()).orElseThrow();
-        maxLocals = codeAttribute.maxLocals();
-        maxStack = codeAttribute.maxStack();
+        return analyze(
+                owner,
+                method.code().get().elementList(),
+                method.code().get().exceptionHandlers(),
+                method.flags(),
+                codeAttribute.maxLocals(),
+                codeAttribute.maxStack(),
+                method.methodTypeSymbol()
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    public Frame<V>[] analyze(final ClassDesc owner,
+                              final List<CodeElement> instructions,
+                              List<ExceptionCatch> exceptionCatchList,
+                              AccessFlags accessFlags,
+                              int maxLocals,
+                              int maxStack,
+                              MethodTypeDesc methodDescriptor
+    ) throws AnalyzerException {
+
+        if (accessFlags.has(AccessFlag.NATIVE) ||accessFlags.has(AccessFlag.ABSTRACT) ||
+                instructions.isEmpty()
+        ) {
+            frames = (Frame<V>[]) new Frame<?>[0];
+            return frames;
+        }
+
+        this.instructions = instructions;
+        this.instructionListSize = instructions.size();
+        this.handlers = (List<ExceptionCatch>[]) new List<?>[instructionListSize];
+        this.frames = (Frame<V>[]) new Frame<?>[instructionListSize];
+        this.subroutines = new Subroutine[instructionListSize];
+        this.inInstructionsToProcess = new boolean[instructionListSize];
+        this.instructionsToProcess = new int[instructionListSize];
+        this.numInstructionsToProcess = 0;
+        this.labelTargetMap = instructions.stream()
+                .filter(e -> e instanceof LabelTarget)
+                .map(e -> (LabelTarget)e)
+                .collect(Collectors.toMap(LabelTarget::label, v -> v));
+        this.maxLocals = maxLocals;
+        this.maxStack = maxStack;
 
         // For each exception handler, and each instruction within its range, record in 'handlers' the
         // fact that execution can flow from this instruction to the exception handler.
-        for (int i = 0; i < codeModel.exceptionHandlers().size(); ++i) {
-            ExceptionCatch exceptionCatch = codeModel.exceptionHandlers().get(i);
+        for (int i = 0; i < exceptionCatchList.size(); ++i) {
+            ExceptionCatch exceptionCatch = exceptionCatchList.get(i);
             Label startLabel = exceptionCatch.tryStart();
             Label endLabel = exceptionCatch.tryEnd();
             int startIndex = instructions.indexOf(labelTargetMap.get(startLabel));
@@ -149,9 +175,8 @@ public class Analyzer<V extends Value> {
         // Initializes the data structures for the control flow analysis.
         Frame<V> currentFrame;
         try {
-            currentFrame = computeInitialFrame(owner, method);
+            currentFrame = computeInitialFrame(owner, accessFlags, methodDescriptor);
             merge(0, currentFrame, null);
-            init(owner, method);
         } catch (RuntimeException e) {
             throw new AnalyzerException(instructions.getFirst(), "Error at instruction 0: " + e.getMessage(), e);
         }
@@ -167,7 +192,7 @@ public class Analyzer<V extends Value> {
             // Simulate the execution of this instruction.
             CodeElement codeElement = null;
             try {
-                codeElement = method.code().orElseThrow().elementList().get(instructionIndex);
+                codeElement = instructions.get(instructionIndex);
                 if (codeElement instanceof PseudoInstruction) {
                     currentFrame.init(oldFrame);
                     merge(instructionIndex + 1, oldFrame, subroutine);
@@ -425,7 +450,7 @@ public class Analyzer<V extends Value> {
         ArrayList<Integer> instructionIndicesToProcess = new ArrayList<>();
         instructionIndicesToProcess.add(instructionIndex);
         while (!instructionIndicesToProcess.isEmpty()) {
-            int currentInstructionIndex = instructionIndicesToProcess.remove(instructionIndicesToProcess.size() -1);
+            int currentInstructionIndex = instructionIndicesToProcess.removeLast();
             if (currentInstructionIndex < 0 || currentInstructionIndex >= instructionListSize) {
                 throw new AnalyzerException(null, "Execution can fall off the end of the code");
             }
@@ -515,22 +540,22 @@ public class Analyzer<V extends Value> {
      * Computes the initial execution stack frame of the given method.
      *
      * @param owner the classDesc of the class to which 'method' belongs.
-     * @param method the method to be analyzed.
+     * @param flags the flags of the method.
+     * @param methodDescriptor the descriptor of the method
      * @return the initial execution stack frame of the 'method'.
      */
-    private Frame<V> computeInitialFrame(final ClassDesc owner, final MethodModel method) {
-        CodeModel cm = method.code().orElseThrow();
+    private Frame<V> computeInitialFrame(final ClassDesc owner, final AccessFlags flags, MethodTypeDesc methodDescriptor) {
         Frame<V> frame = newFrame(maxLocals, maxStack);
         int currentLocal = 0;
         // TODO are there other flags that must be excluded????
-        boolean isInstanceMethod = !method.flags().has(AccessFlag.STATIC);
+        boolean isInstanceMethod = !flags.has(AccessFlag.STATIC);
         if (isInstanceMethod) {
             frame.setLocal(
                     currentLocal, interpreter.newParameterValue(isInstanceMethod,currentLocal, TypeKind.from(owner))
             );
             currentLocal++;
         }
-        ClassDesc[] argumentTypes = method.methodTypeSymbol().parameterArray();
+        ClassDesc[] argumentTypes = methodDescriptor.parameterArray();
         for (ClassDesc argumentType: argumentTypes) {
             frame.setLocal(
                     currentLocal,
@@ -546,7 +571,7 @@ public class Analyzer<V extends Value> {
             frame.setLocal(currentLocal, interpreter.newEmptyValue(currentLocal));
             currentLocal++;
         }
-        frame.setReturn(interpreter.newReturnTypeValue(TypeKind.from(method.methodTypeSymbol().returnType())));
+        frame.setReturn(interpreter.newReturnTypeValue(TypeKind.from(methodDescriptor.returnType())));
         return frame;
     }
 
@@ -675,18 +700,6 @@ public class Analyzer<V extends Value> {
      */
     protected Frame<V> newFrame(final Frame<? extends V> frame) {
         return new Frame<>(frame);
-    }
-
-    /**
-     * Initializes this analyzer. This method is called just before the execution of control flow
-     * analysis loop in {@link #analyze}. The default implementation of this method does nothing.
-     *
-     * @param owner the class to which the method belongs .
-     * @param method the method to be analyzed.
-     * @throws AnalyzerException if a problem occurs.
-     */
-    protected void init(final ClassDesc owner, final MethodModel method) throws AnalyzerException {
-        // Nothing to do.
     }
 
     /**
