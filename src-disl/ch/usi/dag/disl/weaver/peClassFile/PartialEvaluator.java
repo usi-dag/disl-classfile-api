@@ -97,7 +97,7 @@ public class PartialEvaluator {
     }
 
 
-    private boolean conditionalReduction1(
+    private boolean conditionalReduction(
             Map<CodeElement, Frame<ConstValue>> frames
     ) throws AnalyzerException {
         boolean isOptimized = false;
@@ -382,7 +382,7 @@ public class PartialEvaluator {
     }
 
 
-    private boolean removeDeadStore1() {
+    private boolean removeDeadStore() {
 
         ControlFlowGraph cfg = ControlFlowGraph.build(instructions, exceptionCatches);
         boolean isOptimized = false;
@@ -517,7 +517,7 @@ public class PartialEvaluator {
     }
 
 
-    private boolean removePop1() {
+    private boolean removePop() {
         Map<CodeElement, Frame<SourceValue>> frames =
                 ClassFileFrameHelper.createMapping(
                         ClassFileFrameHelper.getSourceAnalyzer(),
@@ -575,7 +575,7 @@ public class PartialEvaluator {
     }
 
 
-    private boolean removeUnusedJump1() {
+    private boolean removeUnusedJump() {
         boolean isOptimized = false;
 
         for (CodeElement instr: instructions.toArray(new CodeElement[0])) {
@@ -639,7 +639,7 @@ public class PartialEvaluator {
     }
 
 
-    private boolean removeUnusedHandler1() {
+    private boolean removeUnusedHandler() {
         ControlFlowGraph cfg = ControlFlowGraph.build(instructions, exceptionCatches);
         boolean isOptimized = false;
 
@@ -656,7 +656,7 @@ public class PartialEvaluator {
     }
 
 
-    public boolean evaluate1() throws AnalyzerException {
+    public boolean evaluate() throws AnalyzerException {
         instructions.add(ReturnInstruction.of(Opcode.RETURN));
         Analyzer<ConstValue> constAnalyzer = new Analyzer<ConstValue>(ConstInterpreter.getInstance());
 
@@ -664,18 +664,18 @@ public class PartialEvaluator {
                 constAnalyzer, ClassDesc.ofDescriptor(PartialEvaluator.class.descriptorString()), instructions, exceptionCatches, methodTypeDesc, flags
         );
 
-        boolean isOptimized = conditionalReduction1(frames);
+        boolean isOptimized = conditionalReduction(frames);
         isOptimized |= replaceLoadWithLDC(frames);
 
         boolean removed;
 
         do {
-            removed = removeDeadStore1();
-            removed |= removePop1();
+            removed = removeDeadStore();
+            removed |= removePop();
         } while (removed);
 
-        isOptimized |= removeUnusedJump1();
-        isOptimized |= removeUnusedHandler1();
+        isOptimized |= removeUnusedJump();
+        isOptimized |= removeUnusedHandler();
 
         instructions.remove(instructions.getLast());
 
