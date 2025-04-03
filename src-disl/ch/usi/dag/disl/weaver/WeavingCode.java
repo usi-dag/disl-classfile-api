@@ -62,7 +62,8 @@ public class WeavingCode {
 
     public WeavingCode(
             final WeavingInfo weavingInfo, final MethodModel methodModel, final SnippetCode src,
-            final Snippet snippet, final Shadow shadow, final CodeElement location, final List<CodeElement> instructionsToInstrument
+            final Snippet snippet, final Shadow shadow, final CodeElement location, final List<CodeElement> instructionsToInstrument,
+            int maxLocals, List<ExceptionCatch> exceptionCatches
     ) {
         this.info = weavingInfo;
         this.methodModel = methodModel;
@@ -72,8 +73,8 @@ public class WeavingCode {
         this.weavingLocation = location;
         this.instructionsToInstrument = instructionsToInstrument;
         this.instructionsArray = instructionsToInstrument.toArray(new CodeElement[0]);
-        this.maxLocals = getOriginalMaxLocals(methodModel);
-        this.exceptionCatches = methodModel.code().orElseThrow().exceptionHandlers();
+        this.maxLocals = maxLocals;
+        this.exceptionCatches = exceptionCatches;
     }
 
 
@@ -931,17 +932,6 @@ public class WeavingCode {
         return result;
     }
 
-
-    // This is just an helper function to make the calculation less confusing
-    private static int getOriginalMaxLocals(MethodModel methodModel) {
-        try {
-            CodeAttribute codeAttribute = methodModel.findAttribute(Attributes.code()).orElseThrow();
-            return codeAttribute.maxLocals();
-        } catch (Exception _) {
-            return ClassFileHelper.getMaxLocals(methodModel);
-        }
-    }
-
     // combine processors into an instruction list
     // NOTE that these processors are for the callee
     private List<CodeElement> procAtCallSite(final ProcInstance processor) throws InvalidContextUsageException {
@@ -1259,6 +1249,15 @@ public class WeavingCode {
         return instructionsToInstrument;
     }
 
+    public List<ExceptionCatch> getExceptionCatches() {
+        return exceptionCatches;
+    }
+
+    public int getMaxLocals() {
+        return maxLocals;
+    }
+
+    // TODO might remove later
     public List <ExceptionCatch> getTCBs () {
         return code.getTryCatchBlocks ();
     }
