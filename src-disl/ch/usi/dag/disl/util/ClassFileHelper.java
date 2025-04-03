@@ -731,7 +731,7 @@ public abstract class ClassFileHelper {
      * @param instructions list where to insert the elements
      * @return true if successful
      */
-    public static boolean insertAll(CodeElement elementTarget, List<CodeElement> elementsToInsert, List<CodeElement> instructions) {
+    public static boolean insertAll(CodeElement elementTarget, List<? extends CodeElement> elementsToInsert, List<CodeElement> instructions) {
         // add 1 since we want to insert it afterward
         final int index = instructions.indexOf(elementTarget) + 1;
         if (index > 0) {
@@ -768,7 +768,7 @@ public abstract class ClassFileHelper {
      * @param instructions list of element where the new instructions will be inserted
      * @return true if successful
      */
-    public static boolean insertAllBefore(CodeElement elementTarget, List<CodeElement> elementsToInsert, List<CodeElement> instructions) {
+    public static boolean insertAllBefore(CodeElement elementTarget, List<? extends CodeElement> elementsToInsert, List<CodeElement> instructions) {
         final int index = instructions.indexOf(elementTarget);
         if (index >= 0) {
             return instructions.addAll(index, elementsToInsert);
