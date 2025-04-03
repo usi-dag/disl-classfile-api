@@ -1,24 +1,24 @@
 package ch.usi.dag.disl.weaver;
 
+import java.lang.classfile.*;
+import java.lang.classfile.attribute.CodeAttribute;
+import java.lang.classfile.constantpool.ConstantPoolBuilder;
+import java.lang.classfile.constantpool.LoadableConstantEntry;
+import java.lang.classfile.instruction.*;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDesc;
+import java.lang.constant.MethodTypeDesc;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.AccessFlag;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.IincInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.LdcInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
-import org.objectweb.asm.tree.TypeInsnNode;
-import org.objectweb.asm.tree.VarInsnNode;
-import org.objectweb.asm.tree.analysis.BasicValue;
-import org.objectweb.asm.tree.analysis.Frame;
-import org.objectweb.asm.tree.analysis.SourceValue;
-
+import ch.usi.dag.disl.util.*;
+import ch.usi.dag.disl.util.ClassFileAnalyzer.AnalyzerException;
+import ch.usi.dag.disl.util.ClassFileAnalyzer.BasicValue;
+import ch.usi.dag.disl.util.ClassFileAnalyzer.Frame;
+import ch.usi.dag.disl.util.ClassFileAnalyzer.SourceValue;
+import ch.usi.dag.disl.weaver.peClassFile.PartialEvaluator;
 import ch.usi.dag.disl.classcontext.ClassContext;
 import ch.usi.dag.disl.coderep.Code;
 import ch.usi.dag.disl.dynamiccontext.DynamicContext;
@@ -35,47 +35,45 @@ import ch.usi.dag.disl.snippet.Snippet;
 import ch.usi.dag.disl.snippet.SnippetCode;
 import ch.usi.dag.disl.staticcontext.StaticContext;
 import ch.usi.dag.disl.staticcontext.generator.SCGenerator;
-import ch.usi.dag.disl.util.AsmHelper;
 import ch.usi.dag.disl.util.AsmHelper.Insns;
-import ch.usi.dag.disl.util.FrameHelper;
-import ch.usi.dag.disl.util.Insn;
-import ch.usi.dag.disl.util.JavaNames;
 import ch.usi.dag.disl.weaver.pe.MaxCalculator;
-import ch.usi.dag.disl.weaver.pe.PartialEvaluator;
 
 public class WeavingCode {
 
     final static String PROP_PE = "disl.parteval";
 
     private final WeavingInfo info;
-    private final MethodNode method;
     private final SnippetCode code;
     private final Snippet snippet;
     private final Shadow shadow;
-    private final AbstractInsnNode weavingLoc;
 
+    private final MethodModel methodModel;
+    private final CodeElement weavingLocation;
+    private final List<CodeElement> instructionsToInstrument;
+    private final CodeElement[] instructionsArray;
     //
 
-    private final InsnList insnList;
-    private final AbstractInsnNode[] insnArray;
     private int maxLocals;
+    private final List<ExceptionCatch> exceptionCatches; // this will be updated and used later in the PartialEvaluator, in the end when we will build the new class everything will be re-computed by the
+    // ClassFile, such as max-locals and max-stacks
 
     //
+
 
     public WeavingCode(
-        final WeavingInfo weavingInfo, final MethodNode method, final SnippetCode src,
-        final Snippet snippet, final Shadow shadow, final AbstractInsnNode loc
+            final WeavingInfo weavingInfo, final MethodModel methodModel, final SnippetCode src,
+            final Snippet snippet, final Shadow shadow, final CodeElement location, final List<CodeElement> instructionsToInstrument
     ) {
         this.info = weavingInfo;
-        this.method = method;
+        this.methodModel = methodModel;
         this.code = src.clone();
         this.snippet = snippet;
         this.shadow = shadow;
-        this.weavingLoc = loc;
-
-        this.insnList = code.getInstructions();
-        this.insnArray = insnList.toArray();
-        this.maxLocals = MaxCalculator.getMaxLocal (insnList, method.desc, method.access);
+        this.weavingLocation = location;
+        this.instructionsToInstrument = instructionsToInstrument;
+        this.instructionsArray = instructionsToInstrument.toArray(new CodeElement[0]);
+        this.maxLocals = getOriginalMaxLocals(methodModel);
+        this.exceptionCatches = methodModel.code().orElseThrow().exceptionHandlers();
     }
 
 
@@ -83,104 +81,110 @@ public class WeavingCode {
      * Replaces instruction sequences representing invocations of methods in
      * {@link StaticContext} classes with precomputed constants.
      */
-    private void rewriteStaticContextCalls (
-        final SCGenerator staticInfoHolder, final InsnList insns
+    private void rewriteStaticContextCalls(
+            final SCGenerator staticInfoHolder, final List<CodeElement> instructions
     ) {
         // Iterate over a copy -- we will be modifying the underlying list.
-        for (final AbstractInsnNode insn : insns.toArray ()) {
-            //
+        for (final CodeElement element: instructions.toArray(new CodeElement[0])) {
             // Look for virtual method invocations on static-context classes.
-            //
-            if (!Insn.INVOKEVIRTUAL.matches (insn)) {
+            if (!(element instanceof InvokeInstruction invokeInstruction)
+                    || invokeInstruction.opcode() != Opcode.INVOKEVIRTUAL) {
                 continue;
             }
 
             // TODO LB: If owner implements StaticContext, should not missing info be an error?
-            final MethodInsnNode invokeInsn = (MethodInsnNode) insn;
-            if (! staticInfoHolder.contains (shadow, invokeInsn.owner, invokeInsn.name)) {
+            if (!staticInfoHolder.contains(shadow,
+                    invokeInstruction.owner().name().stringValue(),
+                    invokeInstruction.name().stringValue())) {
                 continue;
             }
 
-            //
             // Lookup the results for the given method.
             // If none is found, return null to the client code.
-            //
-            final Object staticInfo = staticInfoHolder.get (
-                shadow, invokeInsn.owner, invokeInsn.name
-            );
+            final Object staticInfo = staticInfoHolder.get(
+                    shadow,
+                    invokeInstruction.owner().name().stringValue(),
+                    invokeInstruction.name().stringValue());
 
             // TODO LB: Why insert into code.getInstructions() instead of insns?
-            code.getInstructions ().insert (insn,
-                (staticInfo != null) ?
-                    AsmHelper.loadConst (staticInfo) :
-                    AsmHelper.loadNull ()
+            ClassFileHelper.insert(
+                    invokeInstruction,
+                    (staticInfo != null) ?
+                            ClassFileHelper.loadConst(staticInfo) :
+                            ClassFileHelper.loadNull(),
+                    code.getInstructions()
             );
 
-
             // Remove the invocation sequence.
-            __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (invokeInsn), insns);
-            insns.remove (invokeInsn);
+            __removeInstruction(Opcode.ALOAD,
+                    ClassFileHelper.nextInstruction(
+                            instructions,
+                            invokeInstruction
+                    ),
+                    instructions
+            );
+            instructions.remove(invokeInstruction);
         }
     }
 
 
     private static final String __CLASS_CONTEXT_INTERNAL_NAME__ =
-        Type.getInternalName (ClassContext.class);
+        ClassContext.class.getName().replace('.', '/');
 
 
     /**
      * Replaces instruction sequences representing invocations of methods on the
      * {@link ClassContext} interface with constants.
      */
-    private void rewriteClassContextCalls (
-        final InsnList insns
-    ) throws InvalidContextUsageException {
+    private void rewriteClassContextCalls(final List<CodeElement> instructions) throws InvalidContextUsageException {
         // Iterate over a copy -- we will be modifying the underlying list.
-        for (final AbstractInsnNode insn : insns.toArray ()) {
-            //
+        for (CodeElement element: instructions.toArray(new CodeElement[0])) {
             // Look for invocations on the ClassContext interface.
-            //
-            final MethodInsnNode invokeInsn = __getInvokeInterfaceInsn (
-                insn, __CLASS_CONTEXT_INTERNAL_NAME__
+            final InvokeInstruction invokeInstruction = __getInvokeInterfaceInstruction(
+                    element, __CLASS_CONTEXT_INTERNAL_NAME__
             );
 
-            if (invokeInsn == null) {
+            if (invokeInstruction == null) {
                 continue;
             }
 
-            //
             // Handle individual methods.
-            //
-            final String methodName = invokeInsn.name;
-            if ("asClass".equals (methodName)) {
-                //
-                //               ALOAD (ClassContext interface reference)
-                //               LDC (String class name)
-                // invokeInsn => INVOKEINTERFACE
-                //
-                final AbstractInsnNode classNameInsn = Insns.REVERSE.nextRealInsn (invokeInsn);
-                final String internalName = __expectStringConstLoad (
-                    classNameInsn, "ClassContext", methodName, "internalName"
+            final String methodName = invokeInstruction.name().stringValue();
+            if ("asClass".equals(methodName)) {
+                //                      ALOAD (ClassContext interface reference)
+                //                      LDC (String class name)
+                // invokeInstruction => INVOKEINTERFACE
+                final Instruction classNameInstruction = ClassFileHelper.previousRealInstruction(
+                        instructions, invokeInstruction
+                );
+                final String internalName = __expectStringConstLoad(
+                        classNameInstruction, "ClassContext", methodName, "internalName"
                 );
 
-                // TODO Check that the literal is actually an internal name.
+                // TODO LB Check that the literal is actually an internal name.
 
-                //
                 // Convert the literal to a type and replace the LDC of the
                 // String literal with LDC of a class literal. Then remove the
                 // invocation sequence instructions.
-                //
-                final Type type = Type.getObjectType (internalName);
-                insns.insert (invokeInsn, new LdcInsnNode (type));
 
-                __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (classNameInsn), insns);
-                insns.remove (classNameInsn);
-                insns.remove (invokeInsn);
+                // TODO does this work? is the internal name treated equally by asm and the classfile
+                ClassDesc classDesc = ClassDesc.ofInternalName(internalName);
+                LoadableConstantEntry entry = ConstantPoolBuilder.of().loadableConstantEntry(classDesc);
+                ConstantInstruction constantInstruction = ConstantInstruction.ofLoad(Opcode.LDC, entry);
+                ClassFileHelper.insert(invokeInstruction, constantInstruction, instructions);
+
+                __removeInstruction(
+                        Opcode.ALOAD,
+                        ClassFileHelper.previousRealInstruction(instructions, classNameInstruction),
+                        instructions
+                        );
+                instructions.remove(classNameInstruction);
+                instructions.remove(invokeInstruction);
 
             } else {
                 throw new DiSLFatalException (
-                    "%s: unsupported ClassContext method %s()",
-                    __location (snippet, invokeInsn), methodName
+                        "%s: unsupported ClassContext method %s()",
+                        __location (snippet, invokeInstruction), methodName
                 );
             }
         }
@@ -193,37 +197,32 @@ public class WeavingCode {
     private static final Set <String>
         PRIMITIVE_TYPE_NAMES = AsmHelper.PRIMITIVE_TYPES.keySet ();
 
+
     private static final String __DYNAMIC_CONTEXT_INTERNAL_NAME__ =
-        Type.getInternalName (DynamicContext.class);
+        DynamicContext.class.getName().replace('.', '/');
 
     // Search for an instruction sequence that stands for a request for dynamic
     // information, and replace them with a load instruction.
     // NOTE that if the user requests for the stack value, some store
     // instructions will be inserted to the target method, and new local slot
     // will be used for storing this.
-    private void rewriteDynamicContextCalls (
-        final boolean throwing, final InsnList insns
+    private void rewriteDynamicContextCalls(
+            final boolean throwing, final List<CodeElement> instructions
     ) throws InvalidContextUsageException {
-        Frame <BasicValue> basicFrame = info.getBasicFrame (weavingLoc);
-        final Frame <SourceValue> sourceFrame = info.getSourceFrame (weavingLoc);
+        Frame<BasicValue> basicFrame = info.getBasicFrame(weavingLocation);
+        final Frame<SourceValue> sourceFrame = info.getSourceFrame(weavingLocation);
 
-        // Reserve a local variable slot for the exception being thrown.
-        final int exceptionSlot = throwing ? method.maxLocals++ : INVALID_SLOT;
+        // TODO the original code increase the max locals of the method
+        final int exceptionSlot = throwing? maxLocals++ : INVALID_SLOT;
 
         // Iterate over a copy -- we will be modifying the underlying list.
-        for (final AbstractInsnNode insn : insns.toArray ()) {
-            //
-            // Look for DynamicContext interface method invocations.
-            //
-            final MethodInsnNode invokeInsn = __getInvokeInterfaceInsn (
-                insn, __DYNAMIC_CONTEXT_INTERNAL_NAME__
-            );
 
-            if (invokeInsn == null) {
+        for (CodeElement element: instructions.toArray(new CodeElement[0])) {
+            // Look for DynamicContext interface method invocations.
+            final InvokeInstruction invokeInstruction = __getInvokeInterfaceInstruction(element, __DYNAMIC_CONTEXT_INTERNAL_NAME__);
+            if (invokeInstruction == null) {
                 continue;
             }
-
-            //
             // Handle individual method invocations.
             //
             // The instructions preceding the INVOKEINTERFACE instruction load
@@ -235,124 +234,119 @@ public class WeavingCode {
             //
             // TODO LB: Is this still true? fixLocalIndex() is called after this method!
             // TODO LB: Split up switch legs into separate handler classes.
-            //
-            final String methodName = invokeInsn.name;
-            final Type methodType = Type.getMethodType (invokeInsn.desc);
-            final AbstractInsnNode insnAfterInvoke = invokeInsn.getNext ();
+            final String methodName = invokeInstruction.name().stringValue();
+            final MethodTypeDesc methodType = invokeInstruction.typeSymbol();
+            final CodeElement afterInvoke = ClassFileHelper.nextInstruction(instructions, invokeInstruction);
 
-            if ("getThis".equals (methodName)) {
-                //
+            if ("getThis".equals(methodName)) {
                 //               ALOAD (DynamicContext interface reference)
                 // invokeInsn => INVOKEINTERFACE
-                //
-
                 // Ensure getThis() returns null in static methods.
-                final boolean isStatic = (method.access & Opcodes.ACC_STATIC) != 0;
-                insns.insert (invokeInsn,
-                    isStatic ? AsmHelper.loadNull () : AsmHelper.loadThis ()
-                );
+                final boolean isStatic = methodModel.flags().has(AccessFlag.STATIC);
+                ClassFileHelper.insert(invokeInstruction,
+                        isStatic ? ClassFileHelper.loadNull(): ClassFileHelper.loadThis(),
+                        instructions);
 
                 // Remove the invocation sequence.
-                __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (invokeInsn), insns);
-                insns.remove (invokeInsn);
-
-            } else if ("getException".equals (methodName)) {
-                //
+                __removeInstruction(Opcode.ALOAD,
+                        ClassFileHelper.previousRealInstruction(instructions, invokeInstruction),
+                        instructions);
+                instructions.remove(invokeInstruction);
+            } else if ("getException".equals(methodName)) {
                 //               ALOAD (DynamicContext interface reference)
                 // invokeInsn => INVOKEINTERFACE
-                //
 
                 // Ensure getException() returns null outside an exception block.
-                insns.insert (invokeInsn,
-                    throwing ?
-                        AsmHelper.loadObjectVar (exceptionSlot) :
-                        AsmHelper.loadNull ()
+                ClassFileHelper.insert(invokeInstruction,
+                        throwing?
+                                ClassFileHelper.loadObjectVar(exceptionSlot) :
+                                ClassFileHelper.loadNull(),
+                        instructions
                 );
-
                 // Remove the invocation sequence.
-                __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (invokeInsn), insns);
-                insns.remove (invokeInsn);
-
-            } else if ("getStackValue".equals (methodName)) {
-                //
+                __removeInstruction(Opcode.ALOAD,
+                        ClassFileHelper.previousRealInstruction(instructions, invokeInstruction),
+                        instructions);
+                instructions.remove(invokeInstruction);
+            } else if ("getStackValue".equals(methodName)) {
                 //               ALOAD (DynamicContext interface reference)
                 //               ICONST/BIPUSH/LDC (stack item index)
                 //               LDC/GETSTATIC (expected object type)
                 // invokeInsn => INVOKEINTERFACE
-                //
-                final AbstractInsnNode valueTypeInsn = Insns.REVERSE.nextRealInsn (invokeInsn);
-                final AbstractInsnNode itemIndexInsn = Insns.REVERSE.nextRealInsn (valueTypeInsn);
+                final Instruction valueTypeIns = ClassFileHelper.previousRealInstruction(
+                        instructions, invokeInstruction);
+                final Instruction itemIndexIns = ClassFileHelper.previousRealInstruction(
+                        instructions, valueTypeIns);
+                ConstantDesc expectedType = __expectTypeConstLoad(valueTypeIns, "DynamicContext", methodName, "type");
+                TypeKind realExpectedType;
+                try {
+                    realExpectedType = TypeKind.from(expectedType.resolveConstantDesc(MethodHandles.lookup()).getClass());
+                } catch (Exception e) {
+                    throw new InvalidContextUsageException (
+                            "%s: Could not resolve ConstantDesc %s when accessing stack",
+                            __location (snippet, invokeInstruction), expectedType
+                    );
+                }
 
-                final Type expectedType = __expectTypeConstLoad (
-                    valueTypeInsn, "DynamicContext", methodName, "type"
-                );
 
                 if (basicFrame != null) {
-                    final int itemIndex = __expectIntConstLoad (
-                        itemIndexInsn, "DynamicContext", methodName, "itemIndex"
-                    );
-
+                    final int itemIndex = __expectIntConstLoad(itemIndexIns, "DynamicContext", methodName, "itemIndex");
                     final int itemCount = basicFrame.getStackSize();
 
                     // Prevent accessing slots outside the stack frame.
                     if (itemIndex < 0 || itemCount <= itemIndex) {
                         throw new InvalidContextUsageException (
-                            "%s: accessing stack (item %d) outside the stack frame (%d items)",
-                            __location (snippet, invokeInsn), itemIndex, itemCount
+                                "%s: accessing stack (item %d) outside the stack frame (%d items)",
+                                __location (snippet, invokeInstruction), itemIndex, itemCount
                         );
                     }
 
                     // Check that the expected type matches the actual type.
-                    final Type actualType = FrameHelper.getStackByIndex (basicFrame, itemIndex).getType ();
-                    if (expectedType.getSort () != actualType.getSort ()) {
+                    TypeKind actualType = ClassFileFrameHelper.getStackByIndex(basicFrame, itemIndex).getTypeKind();
+                    if (!realExpectedType.equals(actualType)) {
                         throw new InvalidContextUsageException (
-                            "%s: expected %s but found %s when accessing stack item %d",
-                            __location (snippet, invokeInsn), expectedType, actualType, itemIndex
+                                "%s: expected %s but found %s when accessing stack item %d",
+                                __location (snippet, invokeInstruction), expectedType, actualType, itemIndex
                         );
                     }
 
-                    //
                     // Duplicate the desired stack value and store it in a local
                     // variable. Then load it back from there in place of the
                     // context method invocation.
-                    //
-                    final int varSize = FrameHelper.dupStack (
-                        sourceFrame, method, itemIndex, expectedType, method.maxLocals
+                    // TODO here I am passing maxLocals, the original pass method.maxLocals
+                    final int varSize = ClassFileFrameHelper.dupStack(
+                            sourceFrame, instructions, itemIndex, realExpectedType.upperBound(), maxLocals
                     );
-
-                    insns.insertBefore (
-                        insnAfterInvoke, AsmHelper.loadVar (expectedType, method.maxLocals)
-                    );
-
-                    method.maxLocals += varSize;
-
+                    // TODO also here I am passing maxLocals instead of method.maxLocals
+                    ClassFileHelper.insertBefore(
+                            afterInvoke, ClassFileHelper.loadVar(realExpectedType, maxLocals), instructions);
+                    maxLocals += varSize; // TODO and here I am updating maxLocals, in the original is method.maxLocals
                 } else {
-                    //
                     // Cannot access the stack -- return type-specific default.
-                    //
                     // TODO warn user that weaving location is unreachable.
-                    insns.insertBefore (insnAfterInvoke, AsmHelper.loadDefault (expectedType));
+                    ClassFileHelper.insertBefore(afterInvoke, ClassFileHelper.loadDefault(realExpectedType), instructions);
                 }
 
-                __boxIfPrimitiveBefore (expectedType, insnAfterInvoke, insns);
-
+                __boxIfPrimitiveBefore(realExpectedType, afterInvoke, instructions);
                 // Remove the invocation sequence.
-                __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (itemIndexInsn), insns);
-                insns.remove (itemIndexInsn);
-                insns.remove (valueTypeInsn);
-                insns.remove (invokeInsn);
-
-                __removeIfCheckCast (insnAfterInvoke, insns);
-
+                __removeInstruction(
+                        Opcode.ALOAD,
+                        ClassFileHelper.previousRealInstruction(
+                                instructions, itemIndexIns),
+                        instructions);
+                instructions.remove(itemIndexIns);
+                instructions.remove(valueTypeIns);
+                instructions.remove(invokeInstruction);
+                __removeIfCheckCast(afterInvoke, instructions);
             } else if ("getMethodArgumentValue".equals (methodName)) {
-                //
                 //               ALOAD (DynamicContext interface reference)
                 //               ICONST/BIPUSH/LDC (argument index)
                 //               LDC/GETSTATIC (expected object type)
                 // invokeInsn => INVOKEINTERFACE
-                //
-                final AbstractInsnNode valueTypeInsn = Insns.REVERSE.nextRealInsn (invokeInsn);
-                final AbstractInsnNode paramIndexInsn = Insns.REVERSE.nextRealInsn (valueTypeInsn);
+                final Instruction valueTypeIns = ClassFileHelper.previousRealInstruction(
+                        instructions, invokeInstruction);
+                final Instruction paramIndexIns = ClassFileHelper.previousRealInstruction(
+                        instructions, valueTypeIns);
 
                 if (basicFrame == null) {
                     // TODO warn user that weaving location is unreachable.
@@ -360,165 +354,180 @@ public class WeavingCode {
                 }
 
                 // Prevent accessing invalid arguments.
-                final int paramIndex = __expectIntConstLoad (
-                    paramIndexInsn, "DynamicContext", methodName, "argumentIndex"
-                );
+                final int paramIndex = __expectIntConstLoad(
+                        paramIndexIns, "DynamicContext", methodName, "argumentIndex");
 
-                final int paramCount = Type.getArgumentTypes (method.desc).length;
+                final int paramCount = methodModel.methodTypeSymbol().parameterCount();
 
                 if (paramIndex < 0 || paramCount <= paramIndex) {
                     throw new InvalidContextUsageException (
-                        "%s: accessing invalid parameter %d (method only has %d)",
-                        __location (snippet, invokeInsn), paramIndex, paramCount
+                            "%s: accessing invalid parameter %d (method only has %d)",
+                            __location (snippet, invokeInstruction), paramIndex, paramCount
                     );
                 }
 
                 // Check that the expected type matches the actual argument type.
-                final Type expectedType = __expectTypeConstLoad (
-                    valueTypeInsn, "DynamicContext", methodName, "type"
-                );
-
-                final int paramSlot = AsmHelper.getParameterSlot (method, paramIndex);
-                final Type actualType = basicFrame.getLocal (paramSlot).getType ();
-
-                if (expectedType.getSort () != actualType.getSort ()) {
+                final ConstantDesc expectedType = __expectTypeConstLoad(
+                        valueTypeIns, "DynamicContext", methodName, "type");
+                final TypeKind realExpectedType;
+                try {
+                    realExpectedType = TypeKind.from(expectedType.resolveConstantDesc(MethodHandles.lookup()).getClass());
+                } catch (Exception e) {
                     throw new InvalidContextUsageException (
-                        "%s: expected %s but found %s when accessing method parameter %d",
-                        __location (snippet, invokeInsn), expectedType, actualType, paramIndex
+                            "%s: Could not resolve ConstantDesc %s when accessing stack",
+                            __location (snippet, invokeInstruction), expectedType
                     );
                 }
 
-                //
+                final int paramSlot = ClassFileHelper.getParameterSlot(methodModel, paramIndex);
+                final TypeKind actualType = basicFrame.getLocal(paramSlot).getTypeKind();
+
+                if (!realExpectedType.equals(actualType)) {
+                    throw new InvalidContextUsageException (
+                            "%s: expected %s but found %s when accessing method parameter %d",
+                            __location (snippet, invokeInstruction), expectedType, actualType, paramIndex
+                    );
+                }
                 // Load the argument from a local variable slot. Box primitive
                 // values -- we remove unnecessary boxing later.
-                //
-                insns.insertBefore (insnAfterInvoke, AsmHelper.loadVar (expectedType, paramSlot));
-                __boxIfPrimitiveBefore (expectedType, insnAfterInvoke, insns);
+                ClassFileHelper.insertBefore(
+                        afterInvoke,
+                        ClassFileHelper.loadVar(realExpectedType, paramSlot),
+                        instructions);
+                __boxIfPrimitiveBefore(realExpectedType, afterInvoke, instructions);
 
                 // Remove the invocation sequence.
-                __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (paramIndexInsn), insns);
-                insns.remove (paramIndexInsn);
-                insns.remove (valueTypeInsn);
-                insns.remove (invokeInsn);
-
-                __removeIfCheckCast (insnAfterInvoke, insns);
-
+                __removeInstruction(Opcode.ALOAD,
+                        ClassFileHelper.previousRealInstruction(instructions, paramIndexIns),
+                        instructions);
+                instructions.remove(paramIndex);
+                instructions.remove(valueTypeIns);
+                instructions.remove(invokeInstruction);
+                __removeIfCheckCast(afterInvoke, instructions);
             } else if ("getLocalVariableValue".equals (methodName)) {
-                //
                 //               ALOAD (DynamicContext interface reference)
                 //               ICONST/BIPUSH/LDC (variable slot argument)
                 //               LDC/GETSTATIC (expected object type)
                 // invokeInsn => INVOKEINTERFACE
-                //
-                final AbstractInsnNode valueTypeInsn = Insns.REVERSE.nextRealInsn (invokeInsn);
-                final AbstractInsnNode slotIndexInsn = Insns.REVERSE.nextRealInsn (valueTypeInsn);
+                final Instruction valueTypeIns = ClassFileHelper.previousRealInstruction(
+                        instructions, invokeInstruction);
+                final Instruction slotIndexIns = ClassFileHelper.previousRealInstruction(
+                        instructions, valueTypeIns);
 
                 if (basicFrame == null) {
                     // TODO warn user that weaving location is unreachable.
-                    basicFrame = info.getRetFrame ();
+                    basicFrame = info.getRetFrame();
                 }
 
                 // Prevent accessing invalid variable slots.
                 final int varSlot = __expectIntConstLoad (
-                    slotIndexInsn, "DynamicContext", methodName, "slotIndex"
+                       slotIndexIns, "DynamicContext", methodName, "slotIndex"
                 );
 
-                final int varSlotCount = basicFrame.getLocals ();
+                final int varSlotCount = basicFrame.getLocals();
 
                 if (varSlot < 0 || varSlotCount <= varSlot) {
                     throw new InvalidContextUsageException (
-                        "%s: accessing invalid variable slot (%d) -- method only has %d slots",
-                        __location (snippet, invokeInsn), varSlot, varSlotCount
+                            "%s: accessing invalid variable slot (%d) -- method only has %d slots",
+                            __location (snippet, invokeInstruction), varSlot, varSlotCount
                     );
                 }
 
                 // Check that the expected type matches the actual argument type.
-                final Type expectedType = __expectTypeConstLoad (
-                    valueTypeInsn, "DynamicContext", methodName, "type"
-                );
-                final Type actualType = basicFrame.getLocal (varSlot).getType ();
-
-                if (expectedType.getSort () != actualType.getSort ()) {
+                final ConstantDesc expectedType = __expectTypeConstLoad(
+                        valueTypeIns, "DynamicContext", methodName, "type");
+                final TypeKind realExpectedType;
+                try {
+                    realExpectedType = TypeKind.from(expectedType.resolveConstantDesc(MethodHandles.lookup()).getClass());
+                } catch (Exception e) {
                     throw new InvalidContextUsageException (
-                        "%s: expected %s but found %s when accessing variable slot %d",
-                        __location (snippet, invokeInsn), expectedType, actualType, varSlot
+                            "%s: Could not resolve ConstantDesc %s when accessing stack",
+                            __location (snippet, invokeInstruction), expectedType
+                    );
+                }
+                final TypeKind actualType = basicFrame.getLocal(varSlot).getTypeKind();
+
+                if (!realExpectedType.equals(actualType)) {
+                    throw new InvalidContextUsageException (
+                            "%s: expected %s but found %s when accessing variable slot %d",
+                            __location (snippet, invokeInstruction), expectedType, actualType, varSlot
                     );
                 }
 
-                //
                 // Load the variable from a local variable slot. Box primitive
                 // values -- we remove unnecessary boxing later.
-                //
-                insns.insertBefore (insnAfterInvoke, AsmHelper.loadVar (expectedType, varSlot));
-                __boxIfPrimitiveBefore (expectedType, insnAfterInvoke, insns);
-
+                ClassFileHelper.insertBefore(afterInvoke,
+                        ClassFileHelper.loadVar(realExpectedType, varSlot),
+                        instructions);
+                __boxIfPrimitiveBefore(realExpectedType, afterInvoke, instructions);
                 // Remove the invocation sequence.
-                __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (slotIndexInsn), insns);
-                insns.remove (slotIndexInsn);
-                insns.remove (valueTypeInsn);
-                insns.remove (invokeInsn);
-
-                __removeIfCheckCast (insnAfterInvoke, insns);
-
-            } else if (
-                "getInstanceFieldValue".equals (methodName)
-                && methodType.getArgumentTypes ().length == 4
+                __removeInstruction(Opcode.ALOAD,
+                        ClassFileHelper.previousRealInstruction(instructions, slotIndexIns),
+                        instructions);
+                instructions.remove(slotIndexIns);
+                instructions.remove(valueTypeIns);
+                instructions.remove(invokeInstruction);
+                __removeIfCheckCast(afterInvoke, instructions);
+            } else  if (
+                    "getInstanceFieldValue".equals (methodName)
+                    && methodType.parameterCount() == 4
             ) {
-                //
                 //               ALOAD (DynamicContext interface reference)
                 //               ALOAD (owner reference)
                 //               LDC/GETSTATIC (owner type)
                 //               LDC (field name String)
                 //               LDC/GETSTATIC (field type)
                 // invokeInsn => INVOKEINTERFACE
-                //
-                final AbstractInsnNode fieldTypeInsn = Insns.REVERSE.nextRealInsn (invokeInsn);
-                final AbstractInsnNode fieldNameInsn = Insns.REVERSE.nextRealInsn (fieldTypeInsn);
-                final AbstractInsnNode ownerTypeInsn = Insns.REVERSE.nextRealInsn (fieldNameInsn);
+                final Instruction fieldTypeIns = ClassFileHelper.previousRealInstruction(instructions, invokeInstruction);
+                final Instruction fieldNameIns = ClassFileHelper.previousRealInstruction(instructions, fieldTypeIns);
+                final Instruction ownerTypeIns = ClassFileHelper.previousRealInstruction(instructions, fieldNameIns);
 
-                final Type fieldType = __expectTypeConstLoad (
-                    fieldTypeInsn, "DynamicContext", methodName, "fieldType"
-                );
-
-                //
+                final ConstantDesc fieldType = __expectTypeConstLoad(
+                        fieldTypeIns, "DynamicContext", methodName, "fieldType");
                 // Get the field value. Box primitive values (based on
                 // the field type, not the expected type) -- we remove
                 // unnecessary boxing later.
-                //
+                final String fieldName = __expectStringConstLoad(
+                        fieldNameIns, "DynamicContext", methodName, "fieldName");
+                final ConstantDesc ownerType = __expectTypeConstLoad(
+                        ownerTypeIns, "DynamicContext", methodName, "ownerType");
+                final ClassDesc realFieldDesc;
+                final ClassDesc realOwnerType;
+                try {
+                    realFieldDesc = ClassDesc.ofDescriptor(fieldType.resolveConstantDesc(MethodHandles.lookup()).getClass().descriptorString());
+                    realOwnerType = ClassDesc.ofDescriptor(ownerType.resolveConstantDesc(MethodHandles.lookup()).getClass().descriptorString());
+                } catch (Exception e) {
+                    throw new InvalidContextUsageException (
+                            "%s: Could not resolve ConstantDesc %s or %s when accessing stack",
+                            __location (snippet, invokeInstruction), fieldType, ownerType
+                    );
+                }
 
-                final String fieldName = __expectStringConstLoad (
-                    fieldNameInsn, "DynamicContext", methodName, "fieldName"
-                );
-
-                final Type ownerType = __expectTypeConstLoad (
-                    ownerTypeInsn, "DynamicContext", methodName, "ownerType"
-                );
-
-                insns.insertBefore (insnAfterInvoke, AsmHelper.getField (ownerType, fieldName, fieldType));
-                __boxIfPrimitiveBefore (fieldType, insnAfterInvoke, insns);
-
-                //
+                ClassFileHelper.insertBefore(
+                        afterInvoke,
+                        ClassFileHelper.getField(realOwnerType.descriptorString(), fieldName, realFieldDesc.descriptorString()),
+                        instructions);
+                __boxIfPrimitiveBefore(TypeKind.from(realFieldDesc), afterInvoke, instructions);
                 // Remove the invocation sequence.
                 //
                 // BUT, keep the owner reference load instruction.
-                //
-                final AbstractInsnNode ownerLoadInsn = Insns.REVERSE.nextRealInsn (ownerTypeInsn);
-                final AbstractInsnNode ifaceLoadInsn = Insns.REVERSE.nextRealInsn (ownerLoadInsn);
+                final Instruction ownerLoadIns = ClassFileHelper.previousRealInstruction(
+                        instructions, ownerTypeIns);
+                final Instruction ifaceLoadIns = ClassFileHelper.previousRealInstruction(
+                        instructions, ownerLoadIns);
 
-                __removeInsn  (Insn.ALOAD, ifaceLoadInsn, insns);
+                __removeInstruction(Opcode.ALOAD, ifaceLoadIns, instructions);
                 // keep the owner load instruction
-                insns.remove (ownerTypeInsn);
-                insns.remove (fieldNameInsn);
-                insns.remove (fieldTypeInsn);
-                insns.remove (invokeInsn);
+                instructions.remove(ownerTypeIns);
+                instructions.remove(fieldNameIns);
+                instructions.remove(fieldTypeIns);
+                instructions.remove(invokeInstruction);
 
-                __removeIfCheckCast (insnAfterInvoke, insns);
-
+                __removeIfCheckCast(afterInvoke, instructions);
             } else if (
-                "getInstanceFieldValue".equals (methodName)
-                && methodType.getArgumentTypes ().length == 5
+                    "getInstanceFieldValue".equals(methodName)
+                    && methodType.parameterCount() == 5
             ) {
-                //
                 //               ALOAD (DynamicContext interface reference)
                 //               ALOAD (owner reference)
                 //               LDC (owner name String)
@@ -526,183 +535,164 @@ public class WeavingCode {
                 //               LDC (field descriptor String)
                 //               LDC/GETSTATIC (expected value type)
                 // invokeInsn => INVOKEINTERFACE
-                //
-                final AbstractInsnNode valueTypeInsn = Insns.REVERSE.nextRealInsn (invokeInsn);
-                final AbstractInsnNode fieldDescInsn = Insns.REVERSE.nextRealInsn (valueTypeInsn);
-                final AbstractInsnNode fieldNameInsn = Insns.REVERSE.nextRealInsn (fieldDescInsn);
-                final AbstractInsnNode ownerNameInsn = Insns.REVERSE.nextRealInsn (fieldNameInsn);
+                final Instruction valueTypeIns = ClassFileHelper.previousRealInstruction(instructions, invokeInstruction);
+                final Instruction fieldDescIns = ClassFileHelper.previousRealInstruction(instructions, valueTypeIns);
+                final Instruction fieldNameIns = ClassFileHelper.previousRealInstruction(instructions, fieldDescIns);
+                final Instruction ownerNameIns = ClassFileHelper.previousRealInstruction(instructions, fieldNameIns);
 
                 // TODO Check that the expected type matches the described field type.
-                final Type valueType = __expectTypeConstLoad (
-                    valueTypeInsn, "DynamicContext", methodName, "type"
-                );
+                final ConstantDesc valueType = __expectTypeConstLoad(
+                        valueTypeIns, "DynamicContext", methodName, "type");
 
-                //
                 // Get the field value. Box primitive values (based on
                 // the field type, not the expected type) -- we remove
                 // unnecessary boxing later.
                 //
                 final String fieldDesc = __expectStringConstLoad (
-                    fieldDescInsn, "DynamicContext", methodName, "fieldDesc"
-                );
-
+                        fieldDescIns, "DynamicContext", methodName, "fieldDesc");
                 final String fieldName = __expectStringConstLoad (
-                    fieldNameInsn, "DynamicContext", methodName, "fieldName"
-                );
-
+                        fieldNameIns, "DynamicContext", methodName, "fieldName");
                 final String ownerName = __expectStringConstLoad (
-                    ownerNameInsn, "DynamicContext", methodName, "ownerName"
-                );
+                        ownerNameIns, "DynamicContext", methodName, "ownerName");
 
-                insns.insertBefore (insnAfterInvoke, AsmHelper.getField (ownerName, fieldName, fieldDesc));
-                __boxIfPrimitiveBefore (Type.getType (fieldDesc), insnAfterInvoke, insns);
+                ClassFileHelper.insertBefore(
+                        afterInvoke,
+                        ClassFileHelper.getField(ownerName,fieldName, fieldDesc),
+                        instructions);
+                __boxIfPrimitiveBefore(TypeKind.fromDescriptor(fieldDesc), afterInvoke, instructions);
 
-                //
                 // Remove the invocation sequence.
-                //
                 // BUT, keep the owner reference load instruction.
-                //
-                final AbstractInsnNode ownerLoadInsn = Insns.REVERSE.nextRealInsn (ownerNameInsn);
-                final AbstractInsnNode ifaceLoadInsn = Insns.REVERSE.nextRealInsn (ownerLoadInsn);
+                final Instruction ownerLoadIns = ClassFileHelper.previousRealInstruction(instructions, ownerNameIns);
+                final Instruction ifaceLoadIns = ClassFileHelper.previousRealInstruction(instructions, ownerLoadIns);
 
-                __removeInsn  (Insn.ALOAD, ifaceLoadInsn, insns);
-                // keep the owner load instruction
-                insns.remove (ownerNameInsn);
-                insns.remove (fieldNameInsn);
-                insns.remove (fieldDescInsn);
-                insns.remove (valueTypeInsn);
-                insns.remove (invokeInsn);
-
-                __removeIfCheckCast (insnAfterInvoke, insns);
-
+                __removeInstruction(Opcode.ALOAD, ifaceLoadIns, instructions);
+                instructions.remove(ownerNameIns);
+                instructions.remove(fieldNameIns);
+                instructions.remove(fieldDescIns);
+                instructions.remove(valueTypeIns);
+                instructions.remove(invokeInstruction);
+                __removeIfCheckCast(afterInvoke, instructions);
             } else if (
-                "getStaticFieldValue".equals (methodName)
-                && methodType.getArgumentTypes ().length == 3
+                    "getStaticFieldValue".equals (methodName)
+                            && methodType.parameterCount() == 3
             ) {
-                //
                 //               ALOAD (interface reference)
                 //               LDC/GETSTATIC (owner type)
                 //               LDC (field name String)
                 //               LDC/GETSTATIC (field type)
                 // invokeInsn => INVOKEINTERFACE
-                //
-                final AbstractInsnNode fieldTypeInsn = Insns.REVERSE.nextRealInsn (invokeInsn);
-                final AbstractInsnNode fieldNameInsn = Insns.REVERSE.nextRealInsn (fieldTypeInsn);
-                final AbstractInsnNode ownerTypeInsn = Insns.REVERSE.nextRealInsn (fieldNameInsn);
+                final Instruction fieldTypeIns = ClassFileHelper.previousRealInstruction(instructions, invokeInstruction);
+                final Instruction fieldNameIns = ClassFileHelper.previousRealInstruction(instructions, fieldTypeIns);
+                final Instruction ownerTypeIns = ClassFileHelper.previousRealInstruction(instructions, fieldNameIns);
 
-                //
-
-                final Type ownerType = __expectTypeConstLoad (
-                    ownerTypeInsn, "DynamicContext", methodName, "ownerType"
+                final ConstantDesc ownerType = __expectTypeConstLoad(
+                        ownerTypeIns, "DynamicContext", methodName, "ownerType");
+                final String fieldName = __expectStringConstLoad(
+                        fieldNameIns, "DynamicContext", methodName, "fieldName");
+                final ConstantDesc fieldType = __expectTypeConstLoad(
+                        fieldTypeIns, "DynamicContext", methodName, "fieldType"
                 );
-
-                final String fieldName = __expectStringConstLoad (
-                    fieldNameInsn, "DynamicContext", methodName, "fieldName"
-                );
-
-                final Type fieldType = __expectTypeConstLoad (
-                    fieldTypeInsn, "DynamicContext", methodName, "fieldType"
-                );
-
-                //
+                final ClassDesc realFieldDesc;
+                final ClassDesc realOwnerType;
+                try {
+                    realFieldDesc = ClassDesc.ofDescriptor(fieldType.resolveConstantDesc(MethodHandles.lookup()).getClass().descriptorString());
+                    realOwnerType = ClassDesc.ofDescriptor(ownerType.resolveConstantDesc(MethodHandles.lookup()).getClass().descriptorString());
+                } catch (Exception e) {
+                    throw new InvalidContextUsageException (
+                            "%s: Could not resolve ConstantDesc %s or %s when accessing stack",
+                            __location (snippet, invokeInstruction), fieldType, ownerType
+                    );
+                }
                 // Get the static field value. Box primitive values (based on
                 // the field type, not the expected type) -- we remove
                 // unnecessary boxing later.
-                //
-
-                insns.insertBefore (insnAfterInvoke, AsmHelper.getStatic (ownerType, fieldName, fieldType));
-                __boxIfPrimitiveBefore (fieldType, insnAfterInvoke, insns);
-
+                ClassFileHelper.insertBefore(
+                        afterInvoke,
+                        ClassFileHelper.getStatic(realOwnerType.descriptorString(), fieldName, realFieldDesc.descriptorString()),
+                        instructions);
+                __boxIfPrimitiveBefore(TypeKind.fromDescriptor(realFieldDesc.descriptorString()), afterInvoke, instructions);
                 // Remove the invocation sequence.
-                __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (ownerTypeInsn), insns);
-                insns.remove (ownerTypeInsn);
-                insns.remove (fieldNameInsn);
-                insns.remove (fieldTypeInsn);
-                insns.remove (invokeInsn);
-
-                __removeIfCheckCast (insnAfterInvoke, insns);
-
+                __removeInstruction(Opcode.ALOAD,
+                        ClassFileHelper.previousRealInstruction(instructions, ownerTypeIns),
+                        instructions);
+                instructions.remove(ownerTypeIns);
+                instructions.remove(fieldNameIns);
+                instructions.remove(fieldTypeIns);
+                instructions.remove(invokeInstruction);
+                __removeIfCheckCast(afterInvoke, instructions);
             } else if (
-                "getStaticFieldValue".equals (methodName)
-                && methodType.getArgumentTypes ().length == 4
+                    "getStaticFieldValue".equals (methodName)
+                            && methodType.parameterCount() == 4
             ) {
-                //
                 //               ALOAD (interface reference)
                 //               LDC (owner name String)
                 //               LDC (field name String)
                 //               LDC (field descriptor String)
                 //               LDC/GETSTATIC (expected value type)
                 // invokeInsn => INVOKEINTERFACE
-                //
-                final AbstractInsnNode valueTypeInsn = Insns.REVERSE.nextRealInsn (invokeInsn);
-                final AbstractInsnNode fieldDescInsn = Insns.REVERSE.nextRealInsn (valueTypeInsn);
-                final AbstractInsnNode fieldNameInsn = Insns.REVERSE.nextRealInsn (fieldDescInsn);
-                final AbstractInsnNode ownerNameInsn = Insns.REVERSE.nextRealInsn (fieldNameInsn);
+                final Instruction valueTypeIns = ClassFileHelper.previousRealInstruction(instructions, invokeInstruction);
+                final Instruction fieldDescIns = ClassFileHelper.previousRealInstruction(instructions, valueTypeIns);
+                final Instruction fieldNameIns = ClassFileHelper.previousRealInstruction(instructions, fieldDescIns);
+                final Instruction ownerNameIns = ClassFileHelper.previousRealInstruction(instructions, fieldNameIns);
 
                 // TODO Check that the expected type matches the described field type.
-                final Type valueType = __expectTypeConstLoad (
-                    valueTypeInsn, "DynamicContext", methodName, "valueType"
+                final ConstantDesc valueType = __expectTypeConstLoad (
+                        valueTypeIns, "DynamicContext", methodName, "valueType"
                 );
-
-                //
                 // Get the static field value. Box primitive values (based on
                 // the field type, not the expected type) -- we remove
                 // unnecessary boxing later.
-                //
                 final String fieldDesc = __expectStringConstLoad (
-                    fieldDescInsn, "DynamicContext", methodName, "fieldDesc"
-                );
-
+                        fieldDescIns, "DynamicContext", methodName, "fieldDesc");
                 final String fieldName = __expectStringConstLoad (
-                    fieldNameInsn, "DynamicContext", methodName, "fieldName"
-                );
-
+                        fieldNameIns, "DynamicContext", methodName, "fieldName");
                 final String ownerName = __expectStringConstLoad (
-                    ownerNameInsn, "DynamicContext", methodName, "ownerName"
-                );
+                        ownerNameIns, "DynamicContext", methodName, "ownerName");
 
-                insns.insertBefore (insnAfterInvoke, AsmHelper.getStatic (ownerName, fieldName, fieldDesc));
-                __boxIfPrimitiveBefore (Type.getType (fieldDesc), insnAfterInvoke, insns);
-
+                ClassFileHelper.insertBefore(afterInvoke,
+                        ClassFileHelper.getStatic(ownerName, fieldName, fieldDesc),
+                        instructions);
+                __boxIfPrimitiveBefore(TypeKind.fromDescriptor(fieldDesc), afterInvoke, instructions);
                 // Remove the invocation sequence.
-                __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (ownerNameInsn), insns);
-                insns.remove (ownerNameInsn);
-                insns.remove (fieldNameInsn);
-                insns.remove (fieldDescInsn);
-                insns.remove (valueTypeInsn);
-                insns.remove (invokeInsn);
+                __removeInstruction(Opcode.ALOAD,
+                        ClassFileHelper.previousRealInstruction(instructions, ownerNameIns),
+                        instructions);
+                instructions.remove(ownerNameIns);
+                instructions.remove(fieldNameIns);
+                instructions.remove(fieldDescIns);
+                instructions.remove(valueTypeIns);
+                instructions.remove(invokeInstruction);
 
-                __removeIfCheckCast (insnAfterInvoke, insns);
-
+                __removeIfCheckCast(afterInvoke, instructions);
             } else {
                 throw new DiSLFatalException (
-                    "%s: unsupported DynamicContext method %s%s",
-                    __location (snippet, invokeInsn), methodName, methodType
+                        "%s: unsupported DynamicContext method %s%s",
+                        __location (snippet, invokeInstruction), methodName, methodType
                 );
             }
         }
 
-
-        __removeUnecessaryBoxing (insns);
-
-        //
+        __removeUnecessaryBoxing(instructions);
         // In a throwing context, store the exception being thrown into a local
         // variable at the beginning, and re-throw the exception at the end.
-        //
         if (throwing) {
-            insns.insert (AsmHelper.storeObjectVar (exceptionSlot));
-
-            insns.add (AsmHelper.loadObjectVar (exceptionSlot));
-            insns.add (new InsnNode (Opcodes.ATHROW));
+            instructions.addFirst(ClassFileHelper.storeObjectVar(exceptionSlot));
+            instructions.add(ClassFileHelper.loadObjectVar(exceptionSlot));
+            instructions.add(ThrowInstruction.of());
         }
     }
 
 
-    private void __boxIfPrimitiveBefore (
-        final Type type, final AbstractInsnNode location, final InsnList insns
+    private void __boxIfPrimitiveBefore(
+            final TypeKind typeKind, final CodeElement location, final List<CodeElement> instructions
     ) {
-        if (!AsmHelper.isReferenceType (type)) {
-            insns.insertBefore (location, AsmHelper.boxValueOnStack (type));
+        if (!typeKind.equals(TypeKind.REFERENCE)) {
+            ClassFileHelper.insertBefore(
+                    location,
+                    ClassFileHelper.boxValueOnStack(typeKind),
+                    instructions
+            );
         }
     }
 
@@ -713,12 +703,13 @@ public class WeavingCode {
      * instruction leaves its argument on the stack, so there is no need to
      * adjust the stack.
      */
-    private static void __removeIfCheckCast (
-        final AbstractInsnNode insn, final InsnList insns
+    private static void __removeIfCheckCast(
+            final CodeElement element, final List<CodeElement> instructions
     ) {
-        final AbstractInsnNode checkCastInsn = Insns.FORWARD.firstRealInsn (insn);
-        if (Insn.CHECKCAST.matches (checkCastInsn)) {
-            insns.remove (checkCastInsn);
+        final Instruction checkCastInstruction = ClassFileHelper.firstNextRealInstruction(
+                instructions, element);
+        if (checkCastInstruction.opcode().equals(Opcode.CHECKCAST)) {
+            instructions.remove(checkCastInstruction);
         }
     }
 
@@ -731,63 +722,58 @@ public class WeavingCode {
      * argument type of the valueOf() method matching the return type of the
      * <i>primitiveType</i>Value() method.
      */
-    private void __removeUnecessaryBoxing (final InsnList insns) {
+    private void __removeUnecessaryBoxing(final List<CodeElement> instructions) {
         // Iterate over a copy -- we will be modifying the underlying list.
-        for (final AbstractInsnNode head : insns.toArray ()) {
-            //
+        for (CodeElement head: instructions.toArray(new CodeElement[0])) {
+            if (!(head instanceof InvokeInstruction toValueIns)) {
+                continue;
+            }
+
             // Check for INVOKEVIRTUAL (head) following INVOKESTATIC (tail).
-            //
-            if (!Insn.INVOKEVIRTUAL.matches (head)) {
+            if (!(toValueIns.opcode() == Opcode.INVOKEVIRTUAL)) {
+                continue;
+            }
+            final Instruction tail = ClassFileHelper.previousRealInstruction(
+                    instructions, head
+            );
+            if (!(tail instanceof InvokeInstruction valueOfIns)) {
+                continue;
+            }
+            if (!(valueOfIns.opcode() == Opcode.INVOKESTATIC)) {
                 continue;
             }
 
-            final AbstractInsnNode tail = Insns.REVERSE.nextRealInsn (head);
-            if (!Insn.INVOKESTATIC.matches (tail)) {
-                continue;
-            }
-
-            //
             // Check method names.
-            //
-            final MethodInsnNode toValueInsn = (MethodInsnNode) head;
-            if (!toValueInsn.name.endsWith ("Value")) {
+            if (!toValueIns.name().stringValue().endsWith("Value")) {
                 continue;
             }
 
-            final MethodInsnNode valueOfInsn = (MethodInsnNode) tail;
-            if (!valueOfInsn.name.equals ("valueOf")) {
+            if (!valueOfIns.name().stringValue().endsWith("valueOf")) {
                 continue;
             }
 
-            //
             // Check that the valueOf() invocation is done on a class
             // corresponding to a primitive type and that both methods
             // have the same owner class.
-            //
-            if (! PRIMITIVE_TYPE_NAMES.contains (valueOfInsn.owner)) {
+            if (!valueOfIns.owner().asSymbol().isPrimitive()) {
+                continue;
+            }
+            if (!valueOfIns.owner().asSymbol().equals(toValueIns.owner().asSymbol())) {
                 continue;
             }
 
-            if (! valueOfInsn.owner.equals (toValueInsn.owner)) {
-                continue;
-            }
-
-            //
             // Check that the argument of the valueOf() method matches
             // the return type of the <targetType>Value() method.
-            //
-            final Type valueOfArgType = Type.getArgumentTypes (valueOfInsn.desc) [0];
-            final Type toValueRetType = Type.getReturnType (toValueInsn.desc);
+            final ClassDesc valueOfArgType = valueOfIns.typeSymbol().parameterType(0);
+            final ClassDesc toValueRetType = toValueIns.typeSymbol().returnType();
 
-            if (! valueOfArgType.equals (toValueRetType)) {
+            if (!valueOfArgType.equals(toValueRetType)) {
                 continue;
             }
 
-            //
             // The match is complete -- remove the pair of invocations.
-            //
-            insns.remove (valueOfInsn);
-            insns.remove (toValueInsn);
+            instructions.remove(valueOfIns);
+            instructions.remove(toValueIns);
         }
     }
 
@@ -796,90 +782,85 @@ public class WeavingCode {
     // according to the maximum number of locals in the target method node.
     // NOTE that the field maxLocals of the method node will be automatically
     // updated.
-    private int fixLocalIndex (final int currentMax, final InsnList insns) {
-        __shiftLocalSlots (currentMax, insns);
-        return __calcMaxLocals (currentMax, insns);
+    private int fixLocalIndex(final int currentMax, final List<CodeElement> instructions) {
+        __shiftLocalSlots(currentMax, instructions);
+        return __calcMaxLocals(currentMax, instructions);
     }
 
 
-    private int __calcMaxLocals (final int initial, final InsnList insns) {
-        //
-        // Calculates the maximum number of referenced local variable slots.
-        // TODO LB: Consider reusing MaxCalculator.
-        //
+    // TODO I also made a similar function in ClassFileHelper, maybe I can use only one
+    //  the one in ClassFileHelper (getMaxLocals) also take in consideration if the method is
+    //  static or not
+    private int __calcMaxLocals(final int initial, final List<CodeElement> instructions) {
         int result = initial;
-        for (final AbstractInsnNode insn : Insns.selectAll (insns)) {
-            if (insn instanceof VarInsnNode) {
-                final VarInsnNode varInsn = (VarInsnNode) insn;
-
-                switch (varInsn.getOpcode()) {
-                case Opcodes.LLOAD:
-                case Opcodes.DLOAD:
-                case Opcodes.LSTORE:
-                case Opcodes.DSTORE:
-                    result = Math.max (varInsn.var + 2, result);
-                    break;
-
-                default:
-                    result = Math.max (varInsn.var + 1, result);
-                    break;
-                }
-
-            } else if (insn instanceof IincInsnNode) {
-                final IincInsnNode iincInsn = (IincInsnNode) insn;
-
-                result = Math.max (iincInsn.var + 1, result);
+        for (CodeElement element: instructions) {
+            switch (element) {
+                case LoadInstruction loadInstruction ->
+                        result = switch (loadInstruction.opcode()) {
+                    case Opcode.LLOAD, Opcode.LLOAD_0, Opcode.LLOAD_1, Opcode.LLOAD_2, Opcode.LLOAD_3,
+                         Opcode.LLOAD_W, Opcode.DLOAD, Opcode.DLOAD_0, Opcode.DLOAD_1, Opcode.DLOAD_2,
+                         Opcode.DLOAD_3, Opcode.DLOAD_W -> Math.max(loadInstruction.slot() + 2, result);
+                    default -> Math.max(loadInstruction.slot() + 1, result);
+                };
+                case StoreInstruction storeInstruction ->
+                        result = switch (storeInstruction.opcode()) {
+                    case Opcode.LSTORE, Opcode.LSTORE_0, Opcode.LSTORE_1, Opcode.LSTORE_2, Opcode.LSTORE_3,
+                         Opcode.LSTORE_W, Opcode.DSTORE, Opcode.DSTORE_0, Opcode.DSTORE_1, Opcode.DSTORE_2,
+                         Opcode.DSTORE_3, Opcode.DSTORE_W -> Math.max(storeInstruction.slot() + 2, result);
+                    default -> Math.max(storeInstruction.slot() + 1, result);
+                };
+                case IncrementInstruction incrementInstruction -> result = Math.max(incrementInstruction.slot() + 1, result);
+                default -> {}
             }
         }
 
         return result;
     }
 
-
-    private void __shiftLocalSlots (final int amount, final InsnList insns) {
-        //
-        // Shifts all local variable slot references by a specified amount.
-        //
-        for (final AbstractInsnNode insn : Insns.selectAll (insns)) {
-            if (insn instanceof VarInsnNode) {
-                final VarInsnNode varInsn = (VarInsnNode) insn;
-                varInsn.var += amount;
-
-            } else if (insn instanceof IincInsnNode) {
-                final IincInsnNode iincInsn = (IincInsnNode) insn;
-                iincInsn.var += amount;
+    private void __shiftLocalSlots(final int amount, final List<CodeElement> instructions) {
+        for (int index = 0; index < instructions.size(); index++) {
+            switch (instructions.get(index)) {
+                case LoadInstruction loadInstruction -> instructions.set(
+                        index,
+                        LoadInstruction.of(loadInstruction.opcode(), loadInstruction.slot() + amount)
+                );
+                case StoreInstruction storeInstruction -> instructions.set(
+                        index,
+                        StoreInstruction.of(storeInstruction.opcode(), storeInstruction.slot() + amount)
+                );
+                case IncrementInstruction incrementInstruction -> instructions.set(
+                        index,
+                        IncrementInstruction.of(incrementInstruction.slot() + amount, incrementInstruction.constant())
+                );
+                default -> {}
             }
         }
     }
 
     //
 
-    private static String __ARGUMENT_CONTEXT_INTERNAL_NAME__ =
-        Type.getInternalName (ArgumentContext.class);
+    private static final String __ARGUMENT_CONTEXT_INTERNAL_NAME__ =
+        ArgumentContext.class.getName().replace('.', '/');
 
 
     /**
      * Replaces instruction sequences invoking the {@link ArgumentContext}
      * interface methods with context-specific constants.
      */
-    private void rewriteArgumentContextCalls (
-        final int position, final int totalCount, final Type type,
-        final InsnList insns
-    ) throws InvalidContextUsageException {
+    private void rewriteArgumentContextCalls(int position, final int totalCount, TypeKind type,
+                                             final List<CodeElement> instructions) {
         // Iterate over a copy -- we will be modifying the underlying list.
-        for (final AbstractInsnNode insn : insns.toArray ()) {
-            //
+        for (final CodeElement element: instructions.toArray(new CodeElement[0])) {
+
             // Look for ArgumentContext interface method invocations.
-            //
-            final MethodInsnNode invokeInsn = __getInvokeInterfaceInsn (
-                insn, __ARGUMENT_CONTEXT_INTERNAL_NAME__
+            final InvokeInstruction invokeInstruction = __getInvokeInterfaceInstruction(
+                    element, __ARGUMENT_CONTEXT_INTERNAL_NAME__
             );
 
-            if (invokeInsn == null) {
+            if (invokeInstruction == null) {
                 continue;
             }
 
-            //
             // Handle individual methods.
             //
             // They are all parameter-less and invoked using the same byte-code
@@ -887,134 +868,174 @@ public class WeavingCode {
             //
             //               ALOAD (ArgumentContext interface reference)
             // invokeInsn => INVOKEINTERFACE
-            //
-            final String methodName = invokeInsn.name;
-            if ("getPosition".equals (methodName)) {
-                insns.insert (insn, AsmHelper.loadConst (position));
-
-            } else if ("getTotalCount".equals (methodName)) {
-                insns.insert (insn, AsmHelper.loadConst (totalCount));
-
-            } else if ("getTypeDescriptor".equals (methodName)) {
-                insns.insert (insn, AsmHelper.loadConst (type.toString ()));
-
-            } else {
-                throw new DiSLFatalException (
-                    "%s: unsupported ArgumentContext method %s()",
-                    __location (snippet, invokeInsn), methodName
+            final String methodName = invokeInstruction.name().stringValue();
+            switch (methodName) {
+                case "getPosition" -> ClassFileHelper.insert(
+                        element,
+                        ClassFileHelper.loadConst(position),
+                        instructions);
+                case "getTotalCount" -> ClassFileHelper.insert(
+                        element,
+                        ClassFileHelper.loadConst(totalCount),
+                        instructions);
+                case "getTypeDescriptor" -> ClassFileHelper.insert(
+                        element,
+                        ClassFileHelper.loadConst(type.upperBound().descriptorString()),
+                        instructions);
+                default -> throw new DiSLFatalException (
+                        "%s: unsupported ArgumentContext method %s()",
+                        __location (snippet, invokeInstruction), methodName
                 );
             }
 
-            // Remove the invocation sequence.
-            __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (invokeInsn), insns);
-            insns.remove (invokeInsn);
+            Instruction toRemove = ClassFileHelper.previousRealInstruction(instructions, invokeInstruction);
+            __removeInstruction(Opcode.ALOAD, toRemove, instructions);
+            instructions.remove(invokeInstruction);
         }
     }
 
 
     // combine processors into an instruction list
     // NOTE that these processors are for the current method
-    private InsnList procInMethod (
-        final ProcInstance processor
-    ) throws InvalidContextUsageException {
-        final InsnList result = new InsnList();
+    private List<CodeElement> procInMethod(final ProcInstance processor) throws InvalidContextUsageException {
+        final List<CodeElement> result = new ArrayList<>();
 
-        for (final ProcMethodInstance processorMethod : processor.getMethods ()) {
-            final Code code = processorMethod.getCode().clone();
+        for (final ProcMethodInstance processorMethod: processor.getMethods()) {
+            final Code code = processorMethod.getCode(); // TODO I believe that clone does nothing with the classFile api
 
-            final int position = processorMethod.getArgIndex ();
-            final int totalCount = processorMethod.getArgsCount ();
-            final Type type = processorMethod.getKind ().primaryType ();
-            final InsnList insns = code.getInstructions();
-            rewriteArgumentContextCalls (position, totalCount, type, insns);
+            final int position = processorMethod.getArgIndex();
+            final int totalCount = processorMethod.getArgsCount();
+            final TypeKind typekind = processorMethod.getKind().primaryType();
+            final List<CodeElement> instructions = code.getInstructions();
+            rewriteArgumentContextCalls(position, totalCount, typekind, instructions);
 
-            insns.insert (AsmHelper.storeVar (type, 0));
-            __shiftLocalSlots (maxLocals, insns);
-            maxLocals = __calcMaxLocals (maxLocals + type.getSize (), insns);
-            insns.insert (AsmHelper.loadVar (type,
-                AsmHelper.getParameterSlot (method, processorMethod.getArgIndex ()) - method.maxLocals
-            ));
+            instructions.add(ClassFileHelper.storeVar(typekind, 0));
+            __shiftLocalSlots(maxLocals, instructions);
+            maxLocals = __calcMaxLocals(maxLocals + typekind.slotSize(), instructions);
+            instructions.addFirst(
+                    ClassFileHelper.loadVar(
+                            typekind,
+                            ClassFileHelper.getParameterSlot(
+                                    methodModel,
+                                    processorMethod.getArgIndex()) - maxLocals
+                    )
+            );
 
-            result.add (insns);
-            method.tryCatchBlocks.addAll (code.getTryCatchBlocks ());
+            result.addAll(instructions);
+            exceptionCatches.addAll(code.getTryCatchBlocks());
+            // TODO Since the classFile every element in the classFile is immutable we cannot add new try-catch block
+            //  so the idea is to store them in a temporary list, in the end the class will all be re-computed by
+            //  the ClassFile, but this list will be used in the PartialEvaluator
+
         }
-
         return result;
+    }
+
+
+    // This is just an helper function to make the calculation less confusing
+    private static int getOriginalMaxLocals(MethodModel methodModel) {
+        try {
+            CodeAttribute codeAttribute = methodModel.findAttribute(Attributes.code()).orElseThrow();
+            return codeAttribute.maxLocals();
+        } catch (Exception _) {
+            return ClassFileHelper.getMaxLocals(methodModel);
+        }
     }
 
     // combine processors into an instruction list
     // NOTE that these processors are for the callee
-    private InsnList procAtCallSite(final ProcInstance processor) throws InvalidContextUsageException {
+    private List<CodeElement> procAtCallSite(final ProcInstance processor) throws InvalidContextUsageException {
 
-        final Frame <SourceValue> frame = info.getSourceFrame (weavingLoc);
+        final Frame<SourceValue> frame = info.getSourceFrame(weavingLocation);
 
-        final InsnList result = new InsnList();
-        for (final ProcMethodInstance pmi : processor.getMethods ()) {
-            final Code code = pmi.getCode ().clone ();
+        final List<CodeElement> result = new ArrayList<>();
+        for (final ProcMethodInstance pmi: processor.getMethods()) {
+            final Code code = pmi.getCode().clone();
 
-            final int index = pmi.getArgIndex ();
-            final int total = pmi.getArgsCount ();
-            final Type type = pmi.getKind ().primaryType (); // TODO LB: Why not get the type directly from pmi?
-            final InsnList insns = code.getInstructions ();
-            rewriteArgumentContextCalls (index, total, type, insns);
+            final int index = pmi.getArgIndex();
+            final int total = pmi.getArgsCount();
+            TypeKind type = pmi.getKind().primaryType(); // TODO LB: Why not get the type directly from pmi?
+            final List<CodeElement> instructionsList = code.getInstructions();
+            rewriteArgumentContextCalls(index, total, type, instructionsList);
 
             // Duplicate call site arguments and store them into local vars.
-            final SourceValue source = FrameHelper.getStackByIndex (frame, total - 1 - index);
-            for (final AbstractInsnNode argLoadInsn : source.insns) {
+            final SourceValue sourceValue = ClassFileFrameHelper.getStackByIndex(frame, total -1 -index);
+            for (final CodeElement argLoadIns: sourceValue.instructions) {
+                // TODO the original version directly insert the instructions in the original method
+                //  this is the original comment:
                 // TRICK: the value has to be set properly because
                 // method code will be not adjusted by fixLocalIndex
-                method.instructions.insert (argLoadInsn, AsmHelper.storeVar (type, method.maxLocals + maxLocals));
-                method.instructions.insert (argLoadInsn, new InsnNode (type.getSize () == 2 ? Opcodes.DUP2 : Opcodes.DUP));
+                ClassFileHelper.insert(
+                        argLoadIns,
+                        // TODO the original is (method.maxLocals + maxLocals), but in this case I only use max locals since
+                        //  they are updated afterwards and here we are inserting the same store variable everywere
+                        ClassFileHelper.storeVar(type, maxLocals),
+                        instructionsToInstrument);
+                ClassFileHelper.insert(
+                        argLoadIns,
+                        StackInstruction.of(type.slotSize() == 2? Opcode.DUP2 : Opcode.DUP),
+                        instructionsToInstrument);
             }
 
-            __shiftLocalSlots (maxLocals, insns);
-            maxLocals = __calcMaxLocals (maxLocals + type.getSize(), insns);
-
-            result.add (insns);
-            method.tryCatchBlocks.addAll (code.getTryCatchBlocks ());
+            __shiftLocalSlots(maxLocals, instructionsList);
+            maxLocals = __calcMaxLocals(maxLocals + type.slotSize(), instructionsList);
+            result.addAll(instructionsList);
+            // TODO the original also edit the method to add all the try catch blocks, but
+            //  is not possible with the classFile
         }
 
         return result;
     }
 
     // rewrite calls to ArgumentProcessorContext.apply()
-    private void rewriteArgumentProcessorContextApplications (
-        final PIResolver piResolver, final InsnList insns
-    ) throws InvalidContextUsageException {
-        for (final int insnIndex : code.getInvokedProcessors ().keySet ()) {
-            final AbstractInsnNode insn = insnArray [insnIndex];
 
-            final ProcInstance processor = piResolver.get (shadow, insnIndex);
+    private void rewriteArgumentProcessorContextApplications(
+            final PIResolver piResolver, final List<CodeElement> instructions
+    ) throws InvalidContextUsageException {
+        for (final int instructionIndex: code.getInvokedProcessors().keySet()) {
+            // TODO will this be correct???
+            final CodeElement element = instructionsArray[instructionIndex];
+
+            final ProcInstance processor = piResolver.get(shadow, instructionIndex);
             if (processor != null) {
                 if (processor.getMode() == ArgumentProcessorMode.METHOD_ARGS) {
-                    insns.insert (insn, procInMethod (processor));
+                    ClassFileHelper.insertAll(element, procInMethod(processor), instructions);
                 } else {
-                    insns.insert (insn, procAtCallSite (processor));
+                    ClassFileHelper.insertAll(element, procAtCallSite(processor), instructions);
                 }
+            } else {
+                // TODO remove this once tested!!!
+                System.out.println("!!!!Warning: processor is null!!!!");
             }
 
             // Remove the invocation sequence.
-            insns.remove (insn.getPrevious ());
-            insns.remove (insn.getPrevious ());
-            insns.remove (insn.getPrevious ());
-            insns.remove (insn);
+            // TODO will this work????
+            final int index = instructions.indexOf(element);
+            List<CodeElement> elementsToRemove = new ArrayList<>();
+            for (int i = index; i >= index - 3; i--) {
+                elementsToRemove.add(instructions.get(i));
+            }
+            instructions.removeAll(elementsToRemove);
         }
     }
 
 
-    private InsnList __createGetArgsCode (
-        final String methodDescriptor, final int firstSlot
-    ) {
-        final InsnList result = new InsnList ();
+    private List<CodeElement> __createGetArgsCode(final String methodDescriptor,
+                                                  final int firstSlot) {
+        final List<CodeElement> result = new ArrayList<>();
+        MethodTypeDesc methodTypeDesc = MethodTypeDesc.ofDescriptor(methodDescriptor);
 
-        // Allocate a new array for the arguments.
-        final Type [] argTypes = Type.getArgumentTypes (methodDescriptor);
-        result.add (AsmHelper.loadConst (argTypes.length));
-        result.add (new TypeInsnNode (Opcodes.ANEWARRAY, "java/lang/Object"));
+        ClassDesc[] argTypes = methodTypeDesc.parameterArray();
+        result.add(ClassFileHelper.loadConst(argTypes.length));
+        result.add(NewReferenceArrayInstruction.of(
+                ConstantPoolBuilder.of().classEntry(
+                        ClassDesc.ofDescriptor(Object.class.descriptorString())
+                )
+        ));
+
 
         int argSlot = firstSlot;
         for (int argIndex = 0; argIndex < argTypes.length; argIndex++) {
-            //
             // Top of the stack contains the array reference.
             // Store method argument into an array:
             //
@@ -1023,21 +1044,25 @@ public class WeavingCode {
             //      xLOAD from argument slot
             //      optional: box primitive-type values
             // AASTORE
-            //
-            result.add (new InsnNode (Opcodes.DUP));
-            result.add (AsmHelper.loadConst (argIndex));
+            result.add(StackInstruction.of(Opcode.DUP));
+            result.add(ClassFileHelper.loadConst(argIndex));
 
-                final Type argType = argTypes [argIndex];
-                result.add (AsmHelper.loadVar (argType, argSlot));
-                if (!AsmHelper.isReferenceType (argType)) {
-                    result.add (AsmHelper.boxValueOnStack (argType));
-                }
+            final ClassDesc argType = argTypes[argIndex];
+            TypeKind typeKind = TypeKind.fromDescriptor(argType.descriptorString());
+            result.add(
+                    ClassFileHelper.loadVar(
+                            typeKind, argSlot
+                    )
+            );
+            if (!ClassFileHelper.isReferenceType(typeKind)) {
+                result.add(ClassFileHelper.boxValueOnStack(typeKind));
+            }
 
-            result.add (new InsnNode (Opcodes.AASTORE));
-
+            result.add(ArrayStoreInstruction.of(Opcode.AASTORE));
             // advance argument slot according to argument size
-            argSlot += argType.getSize ();
+            argSlot += typeKind.slotSize();
         }
+
 
         return result;
     }
@@ -1045,138 +1070,132 @@ public class WeavingCode {
     //
 
     private static final String __ARGUMENT_PROCESSOR_CONTEXT_INTERNAL_NAME__ =
-        Type.getInternalName (ArgumentProcessorContext.class);
+        ArgumentProcessorContext.class.getName().replace('.', '/');
 
-    private void rewriteArgumentProcessorContextCalls (
-        final InsnList insns
-    ) throws InvalidContextUsageException {
+    private void rewriteArgumentProcessorContextCalls(final List<CodeElement> instructions) throws InvalidContextUsageException{
         // Iterate over a copy -- we will be modifying the underlying list.
-        for (final AbstractInsnNode insn : insns.toArray ()) {
-            //
-            // Look for ArgumentProcessorContext interface method invocations.
-            //
-            final MethodInsnNode invokeInsn = __getInvokeInterfaceInsn (
-                insn, __ARGUMENT_PROCESSOR_CONTEXT_INTERNAL_NAME__
-            );
-
-            if (invokeInsn == null) {
+        for (final CodeElement element: instructions.toArray(new CodeElement[0])) {
+            // Iterate over a copy -- we will be modifying the underlying list.
+            InvokeInstruction invokeIns = __getInvokeInterfaceInstruction(
+                    element, __ARGUMENT_PROCESSOR_CONTEXT_INTERNAL_NAME__);
+            if (invokeIns == null) {
                 continue;
             }
-
-            //
             // Handle individual methods.
-            //
-            final String methodName = invokeInsn.name;
-            final boolean isStatic = (method.access & Opcodes.ACC_STATIC) != 0;
+            final String methodName = invokeIns.name().stringValue();
+            final boolean isStatic = invokeIns.opcode() == Opcode.INVOKESTATIC;
 
-            if ("getArgs".equals (methodName)) {
-                //
+            if ("getArgs".equals(methodName)) {
                 //               ALOAD (ArgumentProcessorContext reference)
                 //               GETSTATIC (ArgumentProcessorMode enum reference)
                 // invokeInsn => INVOKEINTERFACE
-                //
-                final AbstractInsnNode enumLoadInsn = Insns.REVERSE.nextRealInsn (invokeInsn);
-                final ArgumentProcessorMode mode = __expectEnumConstLoad (
-                    ArgumentProcessorMode.class, enumLoadInsn,
-                    "ArgumentProcessorContext", methodName, "mode"
-                );
+                final Instruction enumLoadIns = ClassFileHelper.previousRealInstruction(instructions, invokeIns);
+                final ArgumentProcessorMode mode = __expectEnumConstLoad(
+                        ArgumentProcessorMode.class, enumLoadIns,
+                        "ArgumentProcessorContext", methodName, "mode");
 
-                InsnList getArgsInsns = null;
+                List<CodeElement> getArgIns = null;
                 if (mode == ArgumentProcessorMode.METHOD_ARGS) {
                     final int thisOffset = isStatic ? 0 : 1;
-                    final int firstSlot = thisOffset - method.maxLocals;
-                    getArgsInsns = __createGetArgsCode (method.desc, firstSlot);
-
+                    final int firstSlot = thisOffset - maxLocals; // TODO in the original it uses method.maxLocals
+                    getArgIns = __createGetArgsCode(methodModel.methodTypeSymbol().descriptorString(), firstSlot);
                 } else if (mode == ArgumentProcessorMode.CALLSITE_ARGS) {
-                    final AbstractInsnNode calleeInsn = Insns.FORWARD.firstRealInsn (shadow.getRegionStart());
-                    if (!(calleeInsn instanceof MethodInsnNode)) {
+                    final Instruction calleeIns = ClassFileHelper.firstNextRealInstruction(instructions, shadow.getRegionStart());
+                    if (!(calleeIns instanceof InvokeInstruction callee)) {
                         throw new DiSLFatalException (
-                            "%s: unexpected bytecode at call site in %s.%s() "+
-                            "when applying ArgumentProcessorContext.getArgs() ",
-                            __location (snippet, invokeInsn),
-                            JavaNames.internalToType (shadow.getClassNode ().name),
-                            shadow.getMethodNode ().name
+                                "%s: unexpected bytecode at call site in %s.%s() "+
+                                        "when applying ArgumentProcessorContext.getArgs() ",
+                                __location (snippet, invokeIns),
+                                JavaNames.internalToType (shadow.getClassModel().thisClass().asInternalName()),
+                                shadow.getMethodModel().methodName().stringValue()
                         );
                     }
 
-                    final String calleeDesc = ((MethodInsnNode) calleeInsn).desc;
-                    final Type [] argTypes = Type.getArgumentTypes (calleeDesc);
+                    final MethodTypeDesc calleeDesc = callee.typeSymbol();
+                    final ClassDesc[] argTypes = calleeDesc.parameterArray();
 
-                    final Frame <SourceValue> frame = info.getSourceFrame (calleeInsn);
+                    final Frame<SourceValue> frame = info.getSourceFrame(calleeIns);
                     if (frame == null) {
                         throw new DiSLFatalException (
-                            "%s: failed to obtain source frame at call site in %s.%s() "+
-                            "when applying ArgumentProcessorContext.getArgs() ",
-                            __location (snippet, invokeInsn),
-                            JavaNames.internalToType (shadow.getClassNode ().name),
-                            shadow.getMethodNode ().name
+                                "%s: failed to obtain source frame at call site in %s.%s() "+
+                                        "when applying ArgumentProcessorContext.getArgs() ",
+                                __location (snippet, invokeIns),
+                                JavaNames.internalToType (shadow.getClassModel().thisClass().asInternalName()),
+                                shadow.getMethodModel().methodName().stringValue()
                         );
                     }
 
                     int argSlot = 0;
                     for (int argIndex = 0; argIndex < argTypes.length; argIndex++) {
-                        final SourceValue source = FrameHelper.getStackByIndex (frame, argTypes.length - 1 - argIndex);
-                        final Type argType = argTypes [argIndex];
+                        final SourceValue source = ClassFileFrameHelper.getStackByIndex(frame, argTypes.length - 1 - argIndex);
+                        final ClassDesc argType = argTypes[argIndex];
 
-                        for (final AbstractInsnNode itr : source.insns) {
+                        for (final CodeElement itr: source.instructions) {
+                            // TODO this is the original comment, is it still valid for the classFile?
                             // TRICK: the value has to be set properly because
                             // method code will be not adjusted by fixLocalIndex
-                            method.instructions.insert (itr, AsmHelper.storeVar (argType, method.maxLocals + maxLocals + argSlot));
-                            method.instructions.insert (itr, new InsnNode (argType.getSize() == 2 ? Opcodes.DUP2 : Opcodes.DUP));
+                            // TODO also in the original the instructions are inserted into method.instructions. Why there instead of simply
+                            //  inserting them in the list passed to this method????
+                            ClassFileHelper.insert(
+                                    itr,
+                                    ClassFileHelper.storeVar(
+                                            TypeKind.from(argType),
+                                            maxLocals + argSlot // TODO the original: method.maxLocals + maxLocals + argSlot
+                                                                //  here I used only max locals since it is updated later
+                                    ),
+                                    instructionsToInstrument);
+                            ClassFileHelper.insert(
+                                    itr,
+                                    StackInstruction.of(TypeKind.from(argType).slotSize() == 2? Opcode.DUP2 : Opcode.DUP),
+                                    instructionsToInstrument);
                         }
 
-                        argSlot += argType.getSize();
+                        argSlot += TypeKind.from(argType).slotSize();
                     }
-
-                    getArgsInsns = __createGetArgsCode (calleeDesc, maxLocals);
-                    maxLocals = __calcMaxLocals (maxLocals + argSlot, getArgsInsns);
+                    getArgIns = __createGetArgsCode(calleeDesc.descriptorString(), maxLocals);
+                    maxLocals = __calcMaxLocals(maxLocals + argSlot, getArgIns);
 
                 } else {
                     throw new DiSLFatalException (
-                        "%s: unsupported argument processor mode: %s",
-                        __location (snippet, invokeInsn), mode
+                            "%s: unsupported argument processor mode: %s",
+                            __location (snippet, invokeIns), mode
                     );
                 }
 
-                //
                 // Insert getArgs() code and remove the invocation sequence.
-                //
-                insns.insert (invokeInsn, getArgsInsns);
+                ClassFileHelper.insertAll(invokeIns, getArgIns, instructions);
 
-                __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (enumLoadInsn), insns);
-                insns.remove (enumLoadInsn);
-                insns.remove (invokeInsn);
+                __removeInstruction(Opcode.ALOAD, ClassFileHelper.previousRealInstruction(instructions, enumLoadIns), instructions);
+                instructions.remove(enumLoadIns);
+                instructions.remove(invokeIns);
 
-            } else if ("getReceiver".equals (methodName)) {
-                //
+            } else if ("getReceiver".equals(methodName)) {
                 //               ALOAD (ArgumentProcessorContext reference)
                 //               GETSTATIC (ArgumentProcessorMode enum reference)
                 // invokeInsn => INVOKEINTERFACE
-                //
-                final AbstractInsnNode enumLoadInsn = Insns.REVERSE.nextRealInsn (invokeInsn);
+                final Instruction enumLoadIns = ClassFileHelper.previousRealInstruction(instructions, invokeIns);
                 final ArgumentProcessorMode mode = __expectEnumConstLoad (
-                    ArgumentProcessorMode.class, enumLoadInsn,
-                    "ArgumentProcessorContext", methodName, "mode"
+                        ArgumentProcessorMode.class, enumLoadIns,
+                        "ArgumentProcessorContext", methodName, "mode"
                 );
 
                 if (mode == ArgumentProcessorMode.METHOD_ARGS) {
                     // Return null as receiver for static methods.
-                    insns.insert (invokeInsn,
-                        isStatic ? AsmHelper.loadNull ()
-                        : AsmHelper.loadObjectVar (-method.maxLocals)
-                    );
-
+                    ClassFileHelper.insert(invokeIns,
+                            isStatic ? ClassFileHelper.loadNull() :
+                                    ClassFileHelper.loadObjectVar(-maxLocals),
+                            // TODO ins the original is: -method.maxLocals
+                            //  Why is NEGATIVE and also why is not simply maxLocals ??????????
+                            instructions);
                 } else if (mode == ArgumentProcessorMode.CALLSITE_ARGS) {
-                    final AbstractInsnNode callee = Insns.FORWARD.firstRealInsn (shadow.getRegionStart());
-
-                    if (!(callee instanceof MethodInsnNode)) {
+                    final Instruction callee = ClassFileHelper.firstNextRealInstruction(instructions, shadow.getRegionStart());
+                    if (!(callee instanceof InvokeInstruction calleeInvoke)) {
                         throw new DiSLFatalException("In snippet "
                                 + snippet.getOriginClassName() + "."
                                 + snippet.getOriginMethodName()
                                 + " - unexpected bytecode when applying"
                                 + " \"ArgumentProcessorContext.getReceiver\"");
                     }
-
                     final Frame<SourceValue> frame = info.getSourceFrame(callee);
 
                     if (frame == null) {
@@ -1187,24 +1206,30 @@ public class WeavingCode {
                                 + " \"ArgumentProcessorContext.getReceiver\"");
                     }
 
-                    if (Insn.INVOKESTATIC.matches (callee)) {
+                    if (invokeIns.opcode() == Opcode.INVOKESTATIC) {
                         // Return null receiver for static method invocations.
-                        insns.insert (insn, AsmHelper.loadNull ());
-
+                        ClassFileHelper.insert(element, ClassFileHelper.loadNull(), instructions);
                     } else {
-                        final String desc = ((MethodInsnNode) callee).desc;
-                        final SourceValue source = FrameHelper.getStackByIndex (
-                            frame, Type.getArgumentTypes (desc).length
-                        );
+                        final MethodTypeDesc methodTypeDesc = calleeInvoke.typeSymbol();
+                        final SourceValue source = ClassFileFrameHelper.getStackByIndex(
+                                frame, methodTypeDesc.parameterCount());
 
-                        for (final AbstractInsnNode itr : source.insns) {
+                        for (final CodeElement itr: source.instructions) {
+                            // TODO original comment:
                             // TRICK: the slot has to be set properly because
                             // method code will be not adjusted by fixLocalIndex
-                            method.instructions.insert (itr, AsmHelper.storeObjectVar (method.maxLocals + maxLocals));
-                            method.instructions.insert (itr, new InsnNode (Opcodes.DUP));
+                            ClassFileHelper.insert(
+                                    itr,
+                                    ClassFileHelper.storeObjectVar(maxLocals), // TODO original: method.maxLocals + maxLocals
+                                    instructionsToInstrument);
+                            // TODO also why are they inserted into the method.instructions in the original version??
+                            ClassFileHelper.insert(
+                                    itr,
+                                    StackInstruction.of(Opcode.DUP),
+                                    instructionsToInstrument);
                         }
 
-                        insns.insert (insn, AsmHelper.loadObjectVar (maxLocals));
+                        ClassFileHelper.insert(element, ClassFileHelper.loadObjectVar(maxLocals), instructions);
                         maxLocals++;
                     }
 
@@ -1213,125 +1238,114 @@ public class WeavingCode {
                 }
 
                 // Remove the invocation sequence.
-                __removeInsn (Insn.ALOAD, Insns.REVERSE.nextRealInsn (enumLoadInsn), insns);
-                insns.remove (enumLoadInsn);
-                insns.remove (invokeInsn);
+                __removeInstruction(Opcode.ALOAD,
+                        ClassFileHelper.previousRealInstruction(instructions, enumLoadIns),
+                        instructions);
+                instructions.remove(enumLoadIns);
+                instructions.remove(invokeIns);
+
 
             } else {
                 throw new DiSLFatalException (
-                    "%s: unsupported ArgumentProcessorContext method %s()",
-                    __location (snippet, invokeInsn), methodName
+                        "%s: unsupported ArgumentProcessorContext method %s()",
+                        __location (snippet, invokeIns), methodName
                 );
             }
         }
     }
 
 
-    public InsnList getiList () {
-        return insnList;
+    public List<CodeElement> getInstrumentedInstructions() {
+        return instructionsToInstrument;
     }
 
-
-    public List <TryCatchBlockNode> getTCBs () {
+    public List <ExceptionCatch> getTCBs () {
         return code.getTryCatchBlocks ();
     }
 
 
-    public void transform (
-        final SCGenerator staticInfo, final PIResolver piResolver, final boolean throwing
-    ) throws InvalidContextUsageException {
-        // TODO LB: Document rewriter ordering and make dependency explicit!
-        // TODO LB: Consider augmenting exceptions with location information here.
+    public void transform(
+            final SCGenerator staticInfo, final PIResolver piResolver, final boolean throwing
+    ) throws InvalidContextUsageException, AnalyzerException {
+        rewriteArgumentProcessorContextApplications(piResolver, instructionsToInstrument);
+        rewriteArgumentProcessorContextCalls(instructionsToInstrument);
+        rewriteStaticContextCalls(staticInfo, instructionsToInstrument);
+        rewriteClassContextCalls(instructionsToInstrument);
 
-        rewriteArgumentProcessorContextApplications (piResolver, insnList);
-        rewriteArgumentProcessorContextCalls (insnList);
-        rewriteStaticContextCalls (staticInfo, insnList);
-        rewriteClassContextCalls (insnList);
+        // TODO the original update the maxLocals of the method, since the classFile
+        //  is immutable I will update the current maxLocals, but is not really useful
+        maxLocals = fixLocalIndex(maxLocals, instructionsToInstrument);
 
-        method.maxLocals = fixLocalIndex (method.maxLocals, insnList);
-        optimize (insnList);
-
-        rewriteDynamicContextCalls (throwing, insnList);
+        optimize(instructionsToInstrument);
+        rewriteDynamicContextCalls(throwing, instructionsToInstrument);
     }
 
 
-    private void optimize (final InsnList insns) {
+    private void optimize(final List<CodeElement> instructions) throws AnalyzerException {
         final String peConfig = System.getProperty (PROP_PE, "");
-        if ((peConfig.length() < 2) || (!peConfig.toUpperCase ().startsWith ("O"))) {
+        if ((peConfig.length() < 2) || (!peConfig.toUpperCase ().startsWith("O"))) {
             return;
         }
+        final char option = peConfig.charAt(1);
 
-        final char option = peConfig.charAt (1);
-        final PartialEvaluator pe = new PartialEvaluator (
-            insns, code.getTryCatchBlocks(), method.desc, method.access
-        );
+        final PartialEvaluator pe = new PartialEvaluator(
+                instructions, exceptionCatches, methodModel.methodTypeSymbol(), methodModel.flags());
 
-        if (option >= '1' && option <= '3') {
-            OPTIMIZE: for (int i = 0; i < (option - '0'); i++) {
-                if (!pe.evaluate ()) {
-                    break OPTIMIZE;
+
+        if (option >= '1' && option <= '3')  {
+            for (int i = 0; i < (option - '0'); i++) {
+                if (!pe.evaluate()) {
+                    break;
                 }
             }
-
         } else if (option == 'x') {
-            // Optimize until no changes have been made.
-            OPTIMIZE: while (true) {
-                if (!pe.evaluate ()) {
-                    break OPTIMIZE;
+            while (true) {
+                if (!pe.evaluate()) {
+                    break;
                 }
             }
         }
     }
 
-    //
 
-    private <T extends Enum <T>> T __expectEnumConstLoad (
-        final Class <T> enumType, final AbstractInsnNode insn,
-        final String iface, final String method, final String param
-    ) throws InvalidContextUsageException {
-        final T result = AsmHelper.getEnumConstOperand (enumType, insn);
-        __ensureOperandNotNull (result, insn, iface, method, param, enumType.getSimpleName ());
-        return result;
-    }
-
-    private int __expectIntConstLoad (
-        final AbstractInsnNode insn,
-        final String iface, final String method, final String param
-    ) throws InvalidContextUsageException {
-        final Integer result = AsmHelper.getIntConstOperand (insn);
-        __ensureOperandNotNull (result, insn, iface, method, param, "integer");
-        return result;
+    private <T extends Enum<T>> T __expectEnumConstLoad(
+            final Class<T> enumType, final CodeElement codeElement, final String iFace,
+            final String method, final String param) throws InvalidContextUsageException {
+            final T result = ClassFileHelper.getEnumConstOperand(enumType, codeElement);
+            __ensureOperandNotNull(result, codeElement, iFace, method, param, enumType.getSimpleName());
+            return result;
     }
 
 
-    private String __expectStringConstLoad (
-        final AbstractInsnNode insn,
-        final String iface, final String method, final String param
-    ) throws InvalidContextUsageException{
-        final String result = AsmHelper.getStringConstOperand (insn);
-        __ensureOperandNotNull (result, insn, iface, method, param, "String");
+    private int __expectIntConstLoad(final CodeElement codeElement, final String iFace,
+                                     final String method, final String param) throws InvalidContextUsageException {
+        final Integer result = ClassFileHelper.getIntConstantOperand(codeElement);
+        __ensureOperandNotNull(result, codeElement, iFace, method, param, "integer");
         return result;
     }
 
-
-    private Type __expectTypeConstLoad (
-        final AbstractInsnNode insn,
-        final String iface, final String method, final String param
-    ) throws InvalidContextUsageException {
-        final Type result = AsmHelper.getTypeConstOperand (insn);
-        __ensureOperandNotNull (result, insn, iface, method, param, "Class");
+    private String __expectStringConstLoad(final CodeElement codeElement, final String iFace,
+                                           final String method, final String param) throws InvalidContextUsageException {
+        final String result = ClassFileHelper.getStringConstOperand(codeElement);
+        __ensureOperandNotNull(result, codeElement, iFace, method, param, "String");
         return result;
     }
 
+    private ConstantDesc __expectTypeConstLoad(final CodeElement codeElement, final String iFace,
+                                               final String method, final String param) throws InvalidContextUsageException {
+        final ConstantDesc result = ClassFileHelper.getTypeConstOperand(codeElement);
+        __ensureOperandNotNull(result, codeElement, iFace, method, param, "Class");
+        return result;
+    }
 
-    private void __ensureOperandNotNull (
-        final Object operand, final AbstractInsnNode insn, final String iface,
-        final String method, final String param, final String kind
+    private void __ensureOperandNotNull(
+            final Object operand, final CodeElement codeElement, final String iFace,
+            final String method, final String param, final String kind
     ) throws InvalidContextUsageException {
         if (operand == null) {
             throw new InvalidContextUsageException (
-                "%s: the '%s' argument of %s.%s() MUST be a %s literal",
-                __location (snippet, insn), param, iface, method, kind
+                    "%s: the '%s' argument of %s.%s() MUST be a %s literal",
+                    __location (snippet, codeElement), param, iFace, method, kind
             );
         }
     }
@@ -1339,23 +1353,19 @@ public class WeavingCode {
     //
 
     /**
-     * Returns a {@link MethodInsnNode} instance if the given instruction
+     * Returns a {@link InvokeInstruction} instance if the given instruction
      * invokes the specified interface, {@code null} otherwise. The interface
      * name needs to be in JVM internal representation.
      */
-    private static MethodInsnNode __getInvokeInterfaceInsn (
-        final AbstractInsnNode insn, final String internalIfName
-    ) {
-        if (!Insn.INVOKEINTERFACE.matches (insn)) {
-            return null;
+    private static InvokeInstruction __getInvokeInterfaceInstruction(final CodeElement codeElement, final String internalIfName) {
+        if (codeElement instanceof InvokeInstruction invokeInstruction) {
+                                                                                                // TODO is asInternalName the correct name to check???
+            if (invokeInstruction.opcode() == Opcode.INVOKEINTERFACE && internalIfName.equals(invokeInstruction.owner().asInternalName())) {
+                return invokeInstruction;
+            }
         }
 
-        final MethodInsnNode invokeInsn = (MethodInsnNode) insn;
-        if (!internalIfName.equals (invokeInsn.owner)) {
-            return null;
-        }
-
-        return invokeInsn;
+        return null;
     }
 
 
@@ -1363,28 +1373,25 @@ public class WeavingCode {
      * Removes a matching instruction from the instruction list, otherwise
      * throws a {@link DiSLFatalException}.
      */
-    private static void __removeInsn (
-        final Insn expectedInsn, final AbstractInsnNode insn, final InsnList insns
-    ) {
-        final Insn actualInsn = Insn.forNode (insn);
-        if (actualInsn == expectedInsn) {
-            insns.remove (insn);
-
+    private static void __removeInstruction(final Opcode expected, final CodeElement element, final List<CodeElement> instructions) {
+        // TODO what if the opcode is ALOAD but the instruction is ALOAD_0
+        //  should it match too??? do I need to make an helper for this????
+        if (element instanceof Instruction instruction && instruction.opcode().equals(expected)) {
+            instructions.remove(instruction);
         } else {
             throw new DiSLFatalException (
-                "refusing to remove instruction: expected %s, found %s",
-                expectedInsn, actualInsn
+                    "refusing to remove instruction: expected %s, found %s",
+                    expected.name(), element.toString()
             );
         }
+
     }
 
-    private static String __location (
-        final Snippet snippet, final AbstractInsnNode insn
-    ) {
+    private static String __location(final Snippet snippet, final CodeElement codeElement) {
         return String.format (
-            "snippet %s.%s%s",
-            snippet.getOriginClassName(), snippet.getOriginMethodName(),
-            AsmHelper.formatLineNo (" at line %d ", insn)
+                "snippet %s.%s%s",
+                snippet.getOriginClassName(), snippet.getOriginMethodName(),
+                ClassFileHelper.formatLineNo(" at line %d ", codeElement, snippet.getCode().getInstructions())
         );
     }
 }
