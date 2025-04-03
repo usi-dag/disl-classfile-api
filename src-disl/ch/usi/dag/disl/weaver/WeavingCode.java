@@ -49,11 +49,16 @@ public class WeavingCode {
 
     private final MethodModel methodModel;
     private final CodeElement weavingLocation;
-    private final List<CodeElement> instructionsToInstrument;
+    //private final List<CodeElement> instructionsToInstrument;
+
+    private final List<CodeElement> snippetInstructions;
+    private final List<CodeElement> methodInstructions;
+
     private final CodeElement[] instructionsArray;
     //
 
-    private int maxLocals;
+    private int snippetMaxLocals;
+    private int methodMaxLocals;
     private final List<ExceptionCatch> exceptionCatches; // this will be updated and used later in the PartialEvaluator, in the end when we will build the new class everything will be re-computed by the
     // ClassFile, such as max-locals and max-stacks
 
@@ -62,8 +67,8 @@ public class WeavingCode {
 
     public WeavingCode(
             final WeavingInfo weavingInfo, final MethodModel methodModel, final SnippetCode src,
-            final Snippet snippet, final Shadow shadow, final CodeElement location, final List<CodeElement> instructionsToInstrument,
-            int maxLocals, List<ExceptionCatch> exceptionCatches
+            final Snippet snippet, final Shadow shadow, final CodeElement location, final List<CodeElement> methodInstructions,
+            List<ExceptionCatch> exceptionCatches
     ) {
         this.info = weavingInfo;
         this.methodModel = methodModel;
@@ -71,10 +76,15 @@ public class WeavingCode {
         this.snippet = snippet;
         this.shadow = shadow;
         this.weavingLocation = location;
-        this.instructionsToInstrument = instructionsToInstrument;
-        this.instructionsArray = instructionsToInstrument.toArray(new CodeElement[0]);
-        this.maxLocals = maxLocals;
+
+        this.methodInstructions = methodInstructions;
+        this.snippetInstructions = code.getInstructions();
+        this.instructionsArray = snippetInstructions.toArray(new CodeElement[0]);
         this.exceptionCatches = exceptionCatches;
+
+        this.methodMaxLocals = ClassFileHelper.getMaxLocals(methodInstructions, methodModel.methodTypeSymbol(), methodModel.flags());
+        this.snippetMaxLocals = ClassFileHelper.getMaxLocals(snippetInstructions, methodModel.methodTypeSymbol(), methodModel.flags());
+
     }
 
 
@@ -213,8 +223,7 @@ public class WeavingCode {
         Frame<BasicValue> basicFrame = info.getBasicFrame(weavingLocation);
         final Frame<SourceValue> sourceFrame = info.getSourceFrame(weavingLocation);
 
-        // TODO the original code increase the max locals of the method
-        final int exceptionSlot = throwing? maxLocals++ : INVALID_SLOT;
+        final int exceptionSlot = throwing? methodMaxLocals++ : INVALID_SLOT;
 
         // Iterate over a copy -- we will be modifying the underlying list.
 
@@ -314,14 +323,12 @@ public class WeavingCode {
                     // Duplicate the desired stack value and store it in a local
                     // variable. Then load it back from there in place of the
                     // context method invocation.
-                    // TODO here I am passing maxLocals, the original pass method.maxLocals
                     final int varSize = ClassFileFrameHelper.dupStack(
-                            sourceFrame, instructions, itemIndex, realExpectedType.upperBound(), maxLocals
+                            sourceFrame, instructions, itemIndex, realExpectedType.upperBound(), methodMaxLocals
                     );
-                    // TODO also here I am passing maxLocals instead of method.maxLocals
                     ClassFileHelper.insertBefore(
-                            afterInvoke, ClassFileHelper.loadVar(realExpectedType, maxLocals), instructions);
-                    maxLocals += varSize; // TODO and here I am updating maxLocals, in the original is method.maxLocals
+                            afterInvoke, ClassFileHelper.loadVar(realExpectedType, methodMaxLocals), instructions);
+                    methodMaxLocals += varSize;
                 } else {
                     // Cannot access the stack -- return type-specific default.
                     // TODO warn user that weaving location is unreachable.
@@ -902,7 +909,7 @@ public class WeavingCode {
         final List<CodeElement> result = new ArrayList<>();
 
         for (final ProcMethodInstance processorMethod: processor.getMethods()) {
-            final Code code = processorMethod.getCode(); // TODO I believe that clone does nothing with the classFile api
+            final Code code = processorMethod.getCode();
 
             final int position = processorMethod.getArgIndex();
             final int totalCount = processorMethod.getArgsCount();
@@ -911,14 +918,14 @@ public class WeavingCode {
             rewriteArgumentContextCalls(position, totalCount, typekind, instructions);
 
             instructions.add(ClassFileHelper.storeVar(typekind, 0));
-            __shiftLocalSlots(maxLocals, instructions);
-            maxLocals = __calcMaxLocals(maxLocals + typekind.slotSize(), instructions);
+            __shiftLocalSlots(snippetMaxLocals, instructions);
+            snippetMaxLocals = __calcMaxLocals(snippetMaxLocals + typekind.slotSize(), instructions);
             instructions.addFirst(
                     ClassFileHelper.loadVar(
                             typekind,
                             ClassFileHelper.getParameterSlot(
                                     methodModel,
-                                    processorMethod.getArgIndex()) - maxLocals
+                                    processorMethod.getArgIndex()) - methodMaxLocals
                     )
             );
 
@@ -957,21 +964,22 @@ public class WeavingCode {
                 // method code will be not adjusted by fixLocalIndex
                 ClassFileHelper.insert(
                         argLoadIns,
-                        // TODO the original is (method.maxLocals + maxLocals), but in this case I only use max locals since
-                        //  they are updated afterwards and here we are inserting the same store variable everywere
-                        ClassFileHelper.storeVar(type, maxLocals),
-                        instructionsToInstrument);
+                        // TODO the original is (method.maxLocals + maxLocals), in this case I tried to replicate by keeping
+                        //  two separate count for the max locals
+                        ClassFileHelper.storeVar(type, methodMaxLocals + snippetMaxLocals),
+                        methodInstructions);
                 ClassFileHelper.insert(
                         argLoadIns,
                         StackInstruction.of(type.slotSize() == 2? Opcode.DUP2 : Opcode.DUP),
-                        instructionsToInstrument);
+                        methodInstructions);
             }
 
-            __shiftLocalSlots(maxLocals, instructionsList);
-            maxLocals = __calcMaxLocals(maxLocals + type.slotSize(), instructionsList);
+            __shiftLocalSlots(snippetMaxLocals, instructionsList);
+            snippetMaxLocals = __calcMaxLocals(snippetMaxLocals + type.slotSize(), instructionsList);
             result.addAll(instructionsList);
             // TODO the original also edit the method to add all the try catch blocks, but
-            //  is not possible with the classFile
+            //  is not possible with the classFile, so I am adding them in a list to keep track of them
+            exceptionCatches.addAll(code.getTryCatchBlocks());
         }
 
         return result;
@@ -983,7 +991,7 @@ public class WeavingCode {
             final PIResolver piResolver, final List<CodeElement> instructions
     ) throws InvalidContextUsageException {
         for (final int instructionIndex: code.getInvokedProcessors().keySet()) {
-            // TODO will this be correct???
+
             final CodeElement element = instructionsArray[instructionIndex];
 
             final ProcInstance processor = piResolver.get(shadow, instructionIndex);
@@ -999,7 +1007,6 @@ public class WeavingCode {
             }
 
             // Remove the invocation sequence.
-            // TODO will this work????
             final int index = instructions.indexOf(element);
             List<CodeElement> elementsToRemove = new ArrayList<>();
             for (int i = index; i >= index - 3; i--) {
@@ -1087,7 +1094,7 @@ public class WeavingCode {
                 List<CodeElement> getArgIns = null;
                 if (mode == ArgumentProcessorMode.METHOD_ARGS) {
                     final int thisOffset = isStatic ? 0 : 1;
-                    final int firstSlot = thisOffset - maxLocals; // TODO in the original it uses method.maxLocals
+                    final int firstSlot = thisOffset - methodMaxLocals;
                     getArgIns = __createGetArgsCode(methodModel.methodTypeSymbol().descriptorString(), firstSlot);
                 } else if (mode == ArgumentProcessorMode.CALLSITE_ARGS) {
                     final Instruction calleeIns = ClassFileHelper.firstNextRealInstruction(instructions, shadow.getRegionStart());
@@ -1124,26 +1131,23 @@ public class WeavingCode {
                             // TODO this is the original comment, is it still valid for the classFile?
                             // TRICK: the value has to be set properly because
                             // method code will be not adjusted by fixLocalIndex
-                            // TODO also in the original the instructions are inserted into method.instructions. Why there instead of simply
-                            //  inserting them in the list passed to this method????
                             ClassFileHelper.insert(
                                     itr,
                                     ClassFileHelper.storeVar(
                                             TypeKind.from(argType),
-                                            maxLocals + argSlot // TODO the original: method.maxLocals + maxLocals + argSlot
-                                                                //  here I used only max locals since it is updated later
+                                            methodMaxLocals + snippetMaxLocals + argSlot // the original: method.maxLocals + maxLocals + argSlot
                                     ),
-                                    instructionsToInstrument);
+                                    methodInstructions);
                             ClassFileHelper.insert(
                                     itr,
                                     StackInstruction.of(TypeKind.from(argType).slotSize() == 2? Opcode.DUP2 : Opcode.DUP),
-                                    instructionsToInstrument);
+                                    methodInstructions);
                         }
 
                         argSlot += TypeKind.from(argType).slotSize();
                     }
-                    getArgIns = __createGetArgsCode(calleeDesc.descriptorString(), maxLocals);
-                    maxLocals = __calcMaxLocals(maxLocals + argSlot, getArgIns);
+                    getArgIns = __createGetArgsCode(calleeDesc.descriptorString(), snippetMaxLocals);
+                    snippetMaxLocals = __calcMaxLocals(snippetMaxLocals + argSlot, getArgIns);
 
                 } else {
                     throw new DiSLFatalException (
@@ -1173,9 +1177,9 @@ public class WeavingCode {
                     // Return null as receiver for static methods.
                     ClassFileHelper.insert(invokeIns,
                             isStatic ? ClassFileHelper.loadNull() :
-                                    ClassFileHelper.loadObjectVar(-maxLocals),
+                                    ClassFileHelper.loadObjectVar(-methodMaxLocals),
                             // TODO ins the original is: -method.maxLocals
-                            //  Why is NEGATIVE and also why is not simply maxLocals ??????????
+                            //  Why is NEGATIVE??????????
                             instructions);
                 } else if (mode == ArgumentProcessorMode.CALLSITE_ARGS) {
                     final Instruction callee = ClassFileHelper.firstNextRealInstruction(instructions, shadow.getRegionStart());
@@ -1210,17 +1214,16 @@ public class WeavingCode {
                             // method code will be not adjusted by fixLocalIndex
                             ClassFileHelper.insert(
                                     itr,
-                                    ClassFileHelper.storeObjectVar(maxLocals), // TODO original: method.maxLocals + maxLocals
-                                    instructionsToInstrument);
-                            // TODO also why are they inserted into the method.instructions in the original version??
+                                    ClassFileHelper.storeObjectVar(methodMaxLocals + snippetMaxLocals), // original: method.maxLocals + maxLocals
+                                    methodInstructions);
                             ClassFileHelper.insert(
                                     itr,
                                     StackInstruction.of(Opcode.DUP),
-                                    instructionsToInstrument);
+                                    methodInstructions);
                         }
 
-                        ClassFileHelper.insert(element, ClassFileHelper.loadObjectVar(maxLocals), instructions);
-                        maxLocals++;
+                        ClassFileHelper.insert(element, ClassFileHelper.loadObjectVar(snippetMaxLocals), instructions);
+                        snippetMaxLocals++;
                     }
 
                 } else {
@@ -1245,19 +1248,26 @@ public class WeavingCode {
     }
 
 
-    public List<CodeElement> getInstrumentedInstructions() {
-        return instructionsToInstrument;
+    public List<CodeElement> getInstrumentedSnippetInstructions() {
+        return snippetInstructions;
+    }
+
+    public List<CodeElement> getInstrumentedMethodInstructions() {
+        return methodInstructions;
     }
 
     public List<ExceptionCatch> getExceptionCatches() {
         return exceptionCatches;
     }
 
-    public int getMaxLocals() {
-        return maxLocals;
+    public int getMethodMaxLocals() {
+        return methodMaxLocals;
     }
 
-    // TODO might remove later
+    public int getSnippetMaxLocals() {
+        return snippetMaxLocals;
+    }
+
     public List <ExceptionCatch> getTCBs () {
         return code.getTryCatchBlocks ();
     }
@@ -1266,17 +1276,15 @@ public class WeavingCode {
     public void transform(
             final SCGenerator staticInfo, final PIResolver piResolver, final boolean throwing
     ) throws InvalidContextUsageException, AnalyzerException {
-        rewriteArgumentProcessorContextApplications(piResolver, instructionsToInstrument);
-        rewriteArgumentProcessorContextCalls(instructionsToInstrument);
-        rewriteStaticContextCalls(staticInfo, instructionsToInstrument);
-        rewriteClassContextCalls(instructionsToInstrument);
+        rewriteArgumentProcessorContextApplications(piResolver, snippetInstructions);
+        rewriteArgumentProcessorContextCalls(snippetInstructions);
+        rewriteStaticContextCalls(staticInfo, snippetInstructions);
+        rewriteClassContextCalls(snippetInstructions);
 
-        // TODO the original update the maxLocals of the method, since the classFile
-        //  is immutable I will update the current maxLocals, but is not really useful
-        maxLocals = fixLocalIndex(maxLocals, instructionsToInstrument);
+        methodMaxLocals = fixLocalIndex(methodMaxLocals, snippetInstructions);
 
-        optimize(instructionsToInstrument);
-        rewriteDynamicContextCalls(throwing, instructionsToInstrument);
+        optimize(snippetInstructions);
+        rewriteDynamicContextCalls(throwing, snippetInstructions);
     }
 
 
@@ -1373,9 +1381,11 @@ public class WeavingCode {
      * throws a {@link DiSLFatalException}.
      */
     private static void __removeInstruction(final Opcode expected, final CodeElement element, final List<CodeElement> instructions) {
-        // TODO what if the opcode is ALOAD but the instruction is ALOAD_0
-        //  should it match too??? do I need to make an helper for this????
-        if (element instanceof Instruction instruction && instruction.opcode().equals(expected)) {
+        char initialLetter = expected.name().charAt(0);
+        if (element instanceof Instruction instruction
+                && instruction.opcode().kind().equals(expected.kind())
+                && instruction.opcode().name().startsWith(String.valueOf(initialLetter))
+        ) {
             instructions.remove(instruction);
         } else {
             throw new DiSLFatalException (
