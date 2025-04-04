@@ -26,5 +26,8 @@ public class FutureLabelTarget extends CustomAttribute<FutureLabelTarget> {
         return this.label != null;
     }
 
+    public Label getLabel() {
+        return this.label;
+    }
 
 }
