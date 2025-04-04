@@ -122,7 +122,7 @@ public class Weaver {
         }
 
         final WeavingCode wc = new WeavingCode(
-                info, methodModel, code, snippet, shadow, loc, instructionsToInstrument, exceptionCatches , methodMaxLocals
+                info, methodModel, code, snippet, shadow, loc, instructionsToInstrument, exceptionCatches , newMethodMaxLocals
         );
 
         try {
