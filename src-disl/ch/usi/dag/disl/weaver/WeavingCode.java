@@ -68,7 +68,7 @@ public class WeavingCode {
     public WeavingCode(
             final WeavingInfo weavingInfo, final MethodModel methodModel, final SnippetCode src,
             final Snippet snippet, final Shadow shadow, final CodeElement location, final List<CodeElement> methodInstructions,
-            List<ExceptionCatch> exceptionCatches
+            List<ExceptionCatch> exceptionCatches, int methodMaxLocals
     ) {
         this.info = weavingInfo;
         this.methodModel = methodModel;
@@ -82,7 +82,7 @@ public class WeavingCode {
         this.instructionsArray = snippetInstructions.toArray(new CodeElement[0]);
         this.exceptionCatches = exceptionCatches;
 
-        this.methodMaxLocals = ClassFileHelper.getMaxLocals(methodInstructions, methodModel.methodTypeSymbol(), methodModel.flags());
+        this.methodMaxLocals = methodMaxLocals;
         this.snippetMaxLocals = ClassFileHelper.getMaxLocals(snippetInstructions, methodModel.methodTypeSymbol(), methodModel.flags());
 
     }
