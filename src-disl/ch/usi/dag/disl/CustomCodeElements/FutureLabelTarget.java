@@ -1,20 +1,29 @@
 package ch.usi.dag.disl.CustomCodeElements;
-
-import java.lang.classfile.Attributes;
 import java.lang.classfile.CustomAttribute;
+import java.lang.classfile.Label;
 
-// TODO what to put at the place of T in CustomAttribute<T>  ??????
-//  since like this I am using a raw parametrized class
-public class FutureLabelTarget extends CustomAttribute {
+public class FutureLabelTarget extends CustomAttribute<FutureLabelTarget> {
 
     // this class represent a LabelTarget that will be added in the future
-    // since we cannot create LabelTarget or Label without a code Builder
-
-    // TODO does this class need other informations????
+    // since we cannot create LabelTarget or Label without a code Builder.
+    // The idea is that before adding this element to the codeBuilder we
+    // replace it with an actual LabelTarget, if we do have a Label stored in this
+    // class we can use it. Otherwise, we can just create a new Label
+    private final Label label;
 
     public FutureLabelTarget() {
-        // TODO what to pass here????
-        super(Attributes.code());
+
+        super(new FutureLabelTargetMapper());
+        label = null;
+    }
+
+    public FutureLabelTarget(Label label) {
+        super(new FutureLabelTargetMapper());
+        this.label = label;
+    }
+
+    public boolean hasLabel() {
+        return this.label != null;
     }
 
 
