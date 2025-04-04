@@ -79,7 +79,7 @@ public class ClassFileTLVInserter {
                             final Label getDefaultValueLabel = codeBuilder.newLabel();
 
                             loadCurrentThread(codeBuilder);
-                            codeBuilder.if_null(getDefaultValueLabel);
+                            codeBuilder.ifnull(getDefaultValueLabel);
 
                             loadCurrentThread(codeBuilder);
                             getThreadField(codeBuilder, tlv);
