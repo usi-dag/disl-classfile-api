@@ -1,93 +1,89 @@
 package ch.usi.dag.disl;
 
+import java.lang.classfile.*;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.IntConsumer;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.commons.CodeSizeEvaluator;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.JumpInsnNode;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
-
 import ch.usi.dag.disl.dynamicbypass.BypassCheck;
 import ch.usi.dag.disl.exception.DiSLFatalException;
 import ch.usi.dag.disl.util.AsmHelper;
+import ch.usi.dag.disl.util.ClassFileHelper;
+
+import static java.lang.constant.ConstantDescs.CD_Boolean;
 
 
 abstract class CodeMerger {
 
-    private static final Type BPC_CLASS = Type.getType (BypassCheck.class);
+    private static final ClassDesc BPC_CLASS = ClassDesc.ofDescriptor(BypassCheck.class.descriptorString());
 
     private static final String BPC_METHOD = "executeUninstrumented";
 
-    private static final Type BPC_DESC = Type.getMethodType ("()Z");
+    private static final MethodTypeDesc BPC_DESC = MethodTypeDesc.of(CD_Boolean);
 
     private static final int ALLOWED_SIZE = 64 * 1024; // 64KB limit
 
 
-    // NOTE: the instCN ClassNode will be modified in the process
     // NOTE: abstract/native methods should not be included in changedMethods list
-    public static void mergeOriginalCode (
-        final Set <String> changedMethods, final ClassNode origCN,
-        final ClassNode instCN
-    ) {
+    // TODO the indentation is quite extreme, if there is time refactor by using transformers
+    public static byte[] mergeOriginalCode(final ClassModel originalClass,
+                                           final ClassModel instrumentedClass,
+                                           final Set<String> changedMethods) {
         if (changedMethods == null) {
             throw new DiSLFatalException ("Set of changed methods cannot be null");
         }
+        List<MethodModel> originalMethods = originalClass.methods();
+        Map<String, MethodModel> methodModelMap = originalMethods.stream().collect(Collectors.toMap(
+                ClassFileHelper::nameAndDescriptor, m -> m
+        ));
 
-        //
-        // Select instrumented methods and merge into their code the original
-        // (un-instrumented) method to be executed when the bypass is active.
-        // Duplicate the original method code to preserve it for the case
-        // where the resulting method is too long.
-        //
-        instCN.methods.parallelStream ().unordered ()
-            .filter (instMN -> changedMethods.contains (instMN.name + instMN.desc))
-            .forEach (instMN -> {
-                final MethodNode cloneMN = AsmHelper.cloneMethod (
-                    __findMethodNode (origCN, instMN.name, instMN.desc)
-                );
+        return ClassFile.of().build(instrumentedClass.thisClass().asSymbol(), classBuilder -> {
+            for (ClassElement classElement: instrumentedClass) {
+                if (classElement instanceof MethodModel instrumentedMethod) {
 
-                __createBypassCheck (
-                    instMN.instructions, instMN.tryCatchBlocks,
-                    cloneMN.instructions, cloneMN.tryCatchBlocks
-                );
-            });
+                    String methodIdentifier = ClassFileHelper.nameAndDescriptor(instrumentedMethod);
+
+                    MethodModel originalMethod = methodModelMap.get(methodIdentifier);
+
+                    if (originalMethod == null) { // TODO should I just pass the classElement to the builder instead and not throw???
+                        throw new RuntimeException("Error while merging code, cannot find matching names for method " + instrumentedMethod.methodName());
+                    }
+
+                    // The bypass check code has the following layout:
+                    //
+                    //     if (!BypassCheck.executeUninstrumented ()) {
+                    //         <instrumented code>
+                    //     } else {
+                    //         <original code>
+                    //     }
+                    classBuilder.withMethodBody(instrumentedMethod.methodName(), instrumentedMethod.methodType(), instrumentedMethod.flags().flagsMask(),
+                        codeBuilder -> {
+                            // first invoke the method that will put the boolean result on the stack
+                            codeBuilder.invokestatic(BPC_CLASS, BPC_METHOD, BPC_DESC);
+                            // execute the "then" if the stack has on top true, else it will execute the "else" block
+                            codeBuilder.ifThenElse(blockCodeBuilder -> {
+                                List<CodeElement> instrumentedInstructions = instrumentedMethod.code().orElseThrow().elementList();
+                                for (CodeElement instruction: instrumentedInstructions) {
+                                    blockCodeBuilder.with(instruction);
+                                }
+                            }, blockCodeBuilder -> {
+                                List<CodeElement> originalInstructions = originalMethod.code().orElseThrow().elementList();
+                                for (CodeElement instruction: originalInstructions) {
+                                    blockCodeBuilder.with(instruction);
+                                }
+                            });
+                        }
+                    );
+                } else {
+                    classBuilder.with(classElement);
+                }
+            }
+        });
     }
-
-
-    private static void __createBypassCheck (
-        final InsnList instCode, final List <TryCatchBlockNode> instTcbs,
-        final InsnList origCode, final List <TryCatchBlockNode> origTcbs
-    ) {
-        // The bypass check code has the following layout:
-        //
-        //     if (!BypassCheck.executeUninstrumented ()) {
-        //         <instrumented code>
-        //     } else {
-        //         <original code>
-        //     }
-        //
-        final MethodInsnNode checkNode = AsmHelper.invokeStatic (
-            BPC_CLASS, BPC_METHOD, BPC_DESC
-        );
-        instCode.insert (checkNode);
-
-        final LabelNode origLabel = new LabelNode ();
-        instCode.insert (checkNode, new JumpInsnNode (Opcodes.IFNE, origLabel));
-
-        instCode.add (origLabel);
-        instCode.add (origCode);
-        instTcbs.addAll (origTcbs);
-    }
-
 
     // NOTE: the origCN and instCN nodes will be destroyed in the process
     // NOTE: abstract or native methods should not be included in the
