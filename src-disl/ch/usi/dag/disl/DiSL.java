@@ -451,14 +451,10 @@ public final class DiSL {
 
         //
         // Fix-up methods that have become too long due to instrumentation.
-        // To split out the instrumented version of the method, we will need
-        // to preserve the instrumented version in the previous step.
-        //
-        // XXX LB: This will not help long methods produced by the transformers.
-        // TODO need to decide what to do with this:
-//        CodeMerger.fixupLongMethods (
-//            __codeOptions.contains (CodeOption.SPLIT_METHODS), origCN, instCN
-//        );
+        byte [] fixed = CodeMerger.fixLongMethods(ClassFile.of().parse(instrumentedBytes), originalClassModel);
+        if (fixed != null) {
+            instrumentedBytes = fixed;
+        }
 
         return instrumentedBytes;
     }
