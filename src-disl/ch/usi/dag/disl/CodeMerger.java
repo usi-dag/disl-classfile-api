@@ -6,12 +6,9 @@ import java.lang.constant.MethodTypeDesc;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import ch.usi.dag.disl.dynamicbypass.BypassCheck;
 import ch.usi.dag.disl.exception.DiSLFatalException;
-import ch.usi.dag.disl.util.AsmHelper;
 import ch.usi.dag.disl.util.ClassFileHelper;
 
 import static java.lang.constant.ConstantDescs.CD_Boolean;
@@ -85,79 +82,59 @@ abstract class CodeMerger {
         });
     }
 
-    // NOTE: the origCN and instCN nodes will be destroyed in the process
-    // NOTE: abstract or native methods should not be included in the
-    // changedMethods list
-    public static ClassNode fixupLongMethods (
-        final boolean splitLongMethods, final ClassNode origCN,
-        final ClassNode instCN
-    ) {
-        //
-        // Choose a fix-up strategy and process all over-size methods in the
-        // instrumented class.
-        //
-        final IntConsumer fixupStrategy = splitLongMethods ?
-            i -> __splitLongMethod (i, instCN, origCN) :
-            i -> __revertToOriginal (i, instCN, origCN);
-
-        IntStream.range (0, instCN.methods.size ()).parallel ().unordered ()
-            .filter (i -> __methodSize (instCN.methods.get (i)) > ALLOWED_SIZE)
-            .forEach (i -> fixupStrategy.accept (i));
-
-        return instCN;
+    // return the sum of all the instructions (in bytes), does not include any pseudo instruction
+    private static int getEstimateMethodSize(MethodModel method) {
+        if (method.code().isEmpty()) {
+            return 0;
+        }
+        return method.code().get().elementStream().mapToInt(e -> {
+            if (e instanceof Instruction instruction) {
+                return instruction.sizeInBytes();
+            }
+            return 0;
+        }).sum();
     }
 
+    public static byte[] fixLongMethods(final ClassModel classModel, final ClassModel originalClassModel) {
 
-    private static void __splitLongMethod (
-        final int methodIndex, final ClassNode instCN, final ClassNode origCN
-    ) {
-        // TODO jb ! add splitting for to long methods
-        // - ignore clinit - output warning
-        // - output warning if splitted is to large and ignore
+        // TODO this only replace methods that are too long with the original method, but it might be
+        //  better to split the method in two
+        List<String> methodsToFix = classModel.methods().stream()
+                .filter(methodModel -> getEstimateMethodSize(methodModel) > ALLOWED_SIZE)
+                .map(ClassFileHelper::nameAndDescriptor).toList();
 
-        // check the code size of the instrumented method
-        // add if to the original method that jumps to the renamed instrumented
-        // method
-        // add original method to the instrumented code
-        // rename instrumented method
+        if (methodsToFix.isEmpty()) {
+            return null;
+        }
+
+        final Map<String, MethodModel> originalsMethods = originalClassModel.methods().stream().collect(Collectors.toMap(
+                ClassFileHelper::nameAndDescriptor,
+                methodModel -> methodModel
+        ));
+
+        return ClassFile.of().build(classModel.thisClass().asSymbol(), classBuilder -> {
+            for (ClassElement classElement: classModel) {
+                if (classElement instanceof MethodModel methodModel) {
+                    if (methodsToFix.contains(ClassFileHelper.nameAndDescriptor(methodModel))) {
+                        MethodModel originalMethod = originalsMethods.get(ClassFileHelper.nameAndDescriptor(methodModel));
+
+                        if (originalMethod == null) {
+                            throw new RuntimeException("Cannot match method " + methodModel.methodName());
+                        }
+                        classBuilder.with(originalMethod);
+                        System.err.printf (
+                                "warning: method %s.%s%s not instrumented, because its size "+
+                                        "(%d) exceeds the maximal allowed method size (%d)\n",
+                                classModel.thisClass().asInternalName(), methodModel.methodName(), methodModel.methodType(),
+                                getEstimateMethodSize(methodModel), ALLOWED_SIZE
+                        );
+                    } else {
+                        classBuilder.with(classElement);
+                    }
+                } else {
+                    classBuilder.with(classElement);
+                }
+            }
+        });
     }
-
-
-    private static void __revertToOriginal (
-        final int instIndex, final ClassNode instCN, final ClassNode origCN
-    ) {
-        //
-        // Replace the instrumented method with the original method,
-        // and print a warning about it.
-        //
-        final MethodNode instMN = instCN.methods.get (instIndex);
-        final MethodNode origMN = __findMethodNode (origCN, instMN.name, instMN.desc);
-        instCN.methods.set (instIndex, origMN);
-
-        System.err.printf (
-            "warning: method %s.%s%s not instrumented, because its size "+
-            "(%d) exceeds the maximal allowed method size (%d)\n",
-            AsmHelper.typeName (instCN), instMN.name, instMN.desc,
-            __methodSize (instMN), ALLOWED_SIZE
-        );
-    }
-
-
-    private static int __methodSize (final MethodNode method) {
-        final CodeSizeEvaluator cse = new CodeSizeEvaluator (null);
-        method.accept (cse);
-        return cse.getMaxSize ();
-    }
-
-
-    private static MethodNode __findMethodNode (
-        final ClassNode cn, final String name, final String desc
-    ) {
-        return cn.methods.parallelStream ().unordered ()
-            .filter (m -> m.name.equals (name) && m.desc.equals (desc))
-            .findAny ().orElseThrow (() -> new RuntimeException (
-                "Code merger fatal error: method for merge not found"
-            ));
-    }
-
 }
