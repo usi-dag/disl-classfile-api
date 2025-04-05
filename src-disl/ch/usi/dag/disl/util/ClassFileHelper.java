@@ -979,4 +979,9 @@ public abstract class ClassFileHelper {
     }
 
 
+    public static String nameAndDescriptor(MethodModel methodModel) {
+        return methodModel.methodName().stringValue() + methodModel.methodTypeSymbol().descriptorString();
+    }
+
+
 }
