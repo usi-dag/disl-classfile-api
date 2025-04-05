@@ -44,7 +44,7 @@ public class ClassFileTLVInserter {
 
 
 
-    public static MethodTransform insertInitialization(final Set<ThreadLocalVar> threadLocalVars) {
+    private static MethodTransform insertInitialization(final Set<ThreadLocalVar> threadLocalVars) {
 
         return (methodBuilder, methodElement) -> {
             if (methodElement instanceof CodeModel codeModel) {
