@@ -1,11 +1,14 @@
 package ch.usi.dag.disl.staticcontext;
 
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.MethodInsnNode;
-
 import ch.usi.dag.disl.marker.BytecodeMarker;
-import ch.usi.dag.disl.util.Insn;
 import ch.usi.dag.disl.util.JavaNames;
+
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.Instruction;
+import java.lang.classfile.Opcode;
+import java.lang.classfile.instruction.InvokeDynamicInstruction;
+import java.lang.classfile.instruction.InvokeInstruction;
+import java.lang.constant.MethodTypeDesc;
 
 
 /**
@@ -31,7 +34,7 @@ public class InvocationStaticContext extends AbstractStaticContext {
      * @return {@code True} if the context is valid.
      */
     public boolean isValid () {
-        return staticContextData.getRegionStart () instanceof MethodInsnNode;
+        return staticContextData.getRegionStart () instanceof InvokeInstruction || staticContextData.getRegionStart () instanceof InvokeDynamicInstruction;
     }
 
     //
@@ -85,7 +88,7 @@ public class InvocationStaticContext extends AbstractStaticContext {
      * @return The return type descriptor of the method being invoked.
      */
     public String getReturnTypeDescriptor () {
-        return Type.getReturnType (__descriptor ()).getDescriptor ();
+        return __typeDescriptor().returnType().descriptorString();
     }
 
     //
@@ -121,7 +124,7 @@ public class InvocationStaticContext extends AbstractStaticContext {
      *         constructor).
      */
     public boolean isSpecial () {
-        return __isOpcode (Insn.INVOKESPECIAL);
+        return __isOpcode (Opcode.INVOKESPECIAL);
     }
 
 
@@ -129,7 +132,7 @@ public class InvocationStaticContext extends AbstractStaticContext {
      * @return {@code true} if this is a virtual method invocation.
      */
     public boolean isVirtual () {
-        return __isOpcode (Insn.INVOKEVIRTUAL);
+        return __isOpcode (Opcode.INVOKEVIRTUAL);
     }
 
 
@@ -137,7 +140,7 @@ public class InvocationStaticContext extends AbstractStaticContext {
      * @return {@code true} if this is an interface method invocation.
      */
     public boolean isInterface () {
-        return __isOpcode (Insn.INVOKEINTERFACE);
+        return __isOpcode (Opcode.INVOKEINTERFACE);
     }
 
 
@@ -145,7 +148,7 @@ public class InvocationStaticContext extends AbstractStaticContext {
      * @return {@code true} if this is a static method invocation.
      */
     public boolean isStatic () {
-        return __isOpcode (Insn.INVOKESTATIC);
+        return __isOpcode (Opcode.INVOKESTATIC);
     }
 
 
@@ -153,12 +156,16 @@ public class InvocationStaticContext extends AbstractStaticContext {
      * @return {@code true} if this is a dynamic invocation.
      */
     public boolean isDynamic () {
-        return __isOpcode (Insn.INVOKEDYNAMIC);
+        return __isOpcode (Opcode.INVOKEDYNAMIC);
     }
 
 
-    private boolean __isOpcode (final Insn insn) {
-        return insn.equals (Insn.forOpcode (__methodInsnNode ().getOpcode ()));
+    private boolean __isOpcode (final Opcode opcode) {
+        CodeElement element = staticContextData.getRegionStart();
+        if (element instanceof Instruction instruction) {
+            return instruction.opcode().equals(opcode);
+        }
+        return false;
     }
 
     //
@@ -181,25 +188,44 @@ public class InvocationStaticContext extends AbstractStaticContext {
     //
 
     private String __methodOwner () {
-        return __methodInsnNode ().owner;
+        switch (staticContextData.getRegionStart()) {
+            case InvokeInstruction invokeInstruction -> {
+                return invokeInstruction.owner().asInternalName();
+            }
+            case InvokeDynamicInstruction invokeDynamicInstruction -> {
+                return invokeDynamicInstruction.bootstrapMethod().owner().displayName();
+            }
+            default -> throw new RuntimeException("Invalid Instruction at region start, must be an invocation");
+        }
     }
 
     private String __methodName () {
-        return __methodInsnNode ().name;
+        switch (staticContextData.getRegionStart()) {
+            case InvokeInstruction invokeInstruction -> {
+                return invokeInstruction.name().stringValue();
+            }
+            case InvokeDynamicInstruction invokeDynamicInstruction -> {
+                return invokeDynamicInstruction.name().stringValue();
+            }
+            default -> throw new RuntimeException("Invalid Instruction at region start, must be an invocation");
+        }
     }
 
 
     private String __descriptor () {
-        return __methodInsnNode ().desc;
+        return __typeDescriptor().descriptorString();
     }
 
-
-    private MethodInsnNode __methodInsnNode () {
-        //
-        // This will throw an exception when used in a region that does not
-        // start with a method invocation instruction.
-        //
-        return ((MethodInsnNode) staticContextData.getRegionStart ());
+    private MethodTypeDesc __typeDescriptor() {
+        switch (staticContextData.getRegionStart()) {
+            case InvokeInstruction invokeInstruction -> {
+                return invokeInstruction.typeSymbol();
+            }
+            case InvokeDynamicInstruction invokeDynamicInstruction -> {
+                return invokeDynamicInstruction.typeSymbol();
+            }
+            default -> throw new RuntimeException("Invalid Instruction at region start, must be an invocation");
+        }
     }
 
 }
