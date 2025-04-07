@@ -3,13 +3,13 @@ package ch.usi.dag.disl.marker;
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.Instruction;
 import java.lang.classfile.MethodModel;
+import java.lang.classfile.Opcode;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
 import ch.usi.dag.disl.exception.MarkerException;
-import ch.usi.dag.disl.util.AsmOpcodes;
 
 /**
  * <p>
@@ -34,15 +34,15 @@ public class StrictBytecodeMarker extends AbstractInsnMarker {
 
             try {
 
-                AsmOpcodes opcode = AsmOpcodes.valueOf(instr.trim()
+                Opcode opcode = Opcode.valueOf(instr.trim()
                         .toUpperCase());
-                searchedInstrNums.add(opcode.getNumber());
+                searchedInstrNums.add(opcode.bytecode());
             } catch (IllegalArgumentException e) {
 
                 throw new MarkerException("Instruction \"" + instr
                         + "\" cannot be found. See "
-                        + AsmOpcodes.class.getName()
-                        + " enum for list of possible instructions");
+                        + " the java.lang.classfile.Opcode class"
+                        + " for list of possible instructions");
             }
         }
 

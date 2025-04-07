@@ -3,14 +3,11 @@ package ch.usi.dag.disl.marker;
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.Instruction;
 import java.lang.classfile.MethodModel;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.lang.classfile.Opcode;
+import java.util.*;
 
 
 import ch.usi.dag.disl.exception.MarkerException;
-import ch.usi.dag.disl.util.AsmOpcodes;
 
 
 /**
@@ -22,7 +19,7 @@ import ch.usi.dag.disl.util.AsmOpcodes;
  */
 public class BytecodeMarker extends AbstractDWRMarker {
 
-    protected Set <Integer> searchedInstrNums = new HashSet <Integer> ();
+    protected Set <Integer> searchedInstrNums = new HashSet<>();
 
 
     public BytecodeMarker (final Parameter param) throws MarkerException {
@@ -30,15 +27,15 @@ public class BytecodeMarker extends AbstractDWRMarker {
         // translate all instructions to opcodes
         for (final String instr : param.getMultipleValues (",")) {
             try {
-                final AsmOpcodes opcode = AsmOpcodes.valueOf (
-                    instr.trim ().toUpperCase ()
+                final Opcode opcode = Opcode.valueOf(
+                    instr.trim().toUpperCase()
                 );
 
-                searchedInstrNums.add (opcode.getNumber ());
+                searchedInstrNums.add (opcode.bytecode ());
             } catch (final IllegalArgumentException e) {
                 throw new MarkerException (
                     "Instruction \""+ instr +"\" cannot be found. "+
-                    "See the "+ AsmOpcodes.class.getName () +" enum for "+
+                    "See the java.lang.classfile.Opcode class for "+
                     "the list of valid instructions."
                 );
             }
