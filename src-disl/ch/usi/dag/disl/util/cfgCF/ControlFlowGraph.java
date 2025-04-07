@@ -69,6 +69,10 @@ public class ControlFlowGraph {
         return nodes;
     }
 
+    public List<CodeElement> getInstructions() {
+        return this.instructions;
+    }
+
     /**
      * @return the index of the basic block that contains the given instruction
      *         or -1 (NOT_FOUND) if the basic block could not be found.
