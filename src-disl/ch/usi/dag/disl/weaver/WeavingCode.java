@@ -1,7 +1,6 @@
 package ch.usi.dag.disl.weaver;
 
 import java.lang.classfile.*;
-import java.lang.classfile.attribute.CodeAttribute;
 import java.lang.classfile.constantpool.ConstantPoolBuilder;
 import java.lang.classfile.constantpool.LoadableConstantEntry;
 import java.lang.classfile.instruction.*;
