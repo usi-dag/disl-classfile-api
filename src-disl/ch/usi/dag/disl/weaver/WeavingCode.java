@@ -11,7 +11,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.AccessFlag;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import ch.usi.dag.disl.util.*;
 import ch.usi.dag.disl.util.ClassFileAnalyzer.AnalyzerException;
 import ch.usi.dag.disl.util.ClassFileAnalyzer.BasicValue;
@@ -201,9 +200,6 @@ public class WeavingCode {
     //
 
     private static final int INVALID_SLOT = -1;
-
-    private static final Set <String>
-        PRIMITIVE_TYPE_NAMES = AsmHelper.PRIMITIVE_TYPES.keySet ();
 
 
     private static final String __DYNAMIC_CONTEXT_INTERNAL_NAME__ =
