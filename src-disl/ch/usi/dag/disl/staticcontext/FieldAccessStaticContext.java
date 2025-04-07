@@ -1,9 +1,9 @@
 package ch.usi.dag.disl.staticcontext;
 
-import org.objectweb.asm.tree.FieldInsnNode;
-
 import ch.usi.dag.disl.marker.BytecodeMarker;
 import ch.usi.dag.disl.util.JavaNames;
+
+import java.lang.classfile.instruction.FieldInstruction;
 
 
 /**
@@ -29,7 +29,7 @@ public final class FieldAccessStaticContext extends AbstractStaticContext {
      * @return {@code True} if the context is valid.
      */
     public boolean isValid () {
-        return staticContextData.getRegionStart () instanceof FieldInsnNode;
+        return staticContextData.getRegionStart() instanceof FieldInstruction;
     }
 
 
@@ -37,7 +37,7 @@ public final class FieldAccessStaticContext extends AbstractStaticContext {
      * @return The field's name.
      */
     public String getName () {
-        return __getFieldInsnNode ().name;
+        return __getFieldInsnNode ().name().stringValue();
     }
 
 
@@ -45,7 +45,7 @@ public final class FieldAccessStaticContext extends AbstractStaticContext {
      * @return The field's type descriptor.
      */
     public String getDescriptor () {
-        return __getFieldInsnNode ().desc;
+        return __getFieldInsnNode ().typeSymbol().descriptorString();
     }
 
 
@@ -71,7 +71,7 @@ public final class FieldAccessStaticContext extends AbstractStaticContext {
      * @return The type name of the field's owner class.
      */
     public String getOwnerName () {
-        return JavaNames.internalToType (__getFieldInsnNode ().owner);
+        return JavaNames.internalToType (__getFieldInsnNode ().owner().asInternalName());
     }
 
 
@@ -82,7 +82,7 @@ public final class FieldAccessStaticContext extends AbstractStaticContext {
      * @return The internal name of the field's owner class. This is
      */
     public String getOwnerInternalName () {
-        return __getFieldInsnNode ().owner;
+        return __getFieldInsnNode ().owner().asInternalName();
     }
 
     //
@@ -91,12 +91,12 @@ public final class FieldAccessStaticContext extends AbstractStaticContext {
 
     //
 
-    private FieldInsnNode __getFieldInsnNode () {
+    private FieldInstruction __getFieldInsnNode () {
         //
         // This will throw an exception when used in a region that does not
         // start with a field access instruction.
         //
-        return (FieldInsnNode) staticContextData.getRegionStart ();
+        return (FieldInstruction) staticContextData.getRegionStart ();
     }
 
 }
