@@ -1,10 +1,15 @@
 package ch.usi.dag.disl.staticcontext;
 
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
-
 import ch.usi.dag.disl.util.JavaNames;
+
+import java.lang.classfile.*;
+import java.lang.classfile.attribute.EnclosingMethodAttribute;
+import java.lang.classfile.attribute.NestHostAttribute;
+import java.lang.classfile.attribute.SourceFileAttribute;
+import java.lang.classfile.constantpool.NameAndTypeEntry;
+import java.lang.constant.MethodTypeDesc;
+import java.lang.reflect.AccessFlag;
+import java.util.Optional;
 
 
 /**
@@ -54,7 +59,7 @@ public class MethodStaticContext extends AbstractStaticContext {
 
     /**
      * Returns the internal name of the class enclosing the instrumented class,
-     * or {@code null} if the instrumented class is not enclosed in another
+     * or empty string if the instrumented class is not enclosed in another
      * class.
      * <p>
      * <b>Note:</b> This method is being deprecated, please use
@@ -62,20 +67,33 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public String thisClassOuterClass () {
-        return __classNode ().outerClass;
+        Optional<NestHostAttribute> attribute = __classNode().findAttribute(Attributes.nestHost());
+        if (attribute.isEmpty()) {
+            return "";
+        }
+        return attribute.get().nestHost().asInternalName();
     }
 
 
     /**
      * Returns the name of the method enclosing the instrumented class, or
-     * {@code null} if the class is not enclosed in a method.
+     * empty string if the class is not enclosed in a method.
      * <p>
      * <b>Note:</b> This method is being deprecated, please use
      * {@link ClassStaticContext#getOuterMethodName()} instead.
      */
     @Deprecated
     public String thisClassOuterMethod () {
-        return __classNode ().outerMethod;
+        Optional<EnclosingMethodAttribute> attribute = __classNode().findAttribute(Attributes.enclosingMethod());
+        if (attribute.isEmpty()) {
+            return "";
+        } else {
+            Optional<NameAndTypeEntry> m = attribute.get().enclosingMethod();
+            if (m.isEmpty()) {
+                return "";
+            }
+            return m.get().name().stringValue();
+        }
     }
 
 
@@ -87,7 +105,16 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public String thisClassOuterMethodDesc () {
-        return __classNode ().outerMethodDesc;
+        Optional<EnclosingMethodAttribute> attribute = __classNode().findAttribute(Attributes.enclosingMethod());
+        if (attribute.isEmpty()) {
+            return "";
+        } else {
+            Optional<MethodTypeDesc> m = attribute.get().enclosingMethodTypeSymbol();
+            if (m.isEmpty()) {
+                return "";
+            }
+            return m.get().descriptorString();
+        }
     }
 
 
@@ -100,7 +127,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public String thisClassSignature () {
-        return __classNode ().signature;
+        return Signature.of(__classNode().thisClass().asSymbol()).signatureString();
     }
 
 
@@ -112,7 +139,11 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public String thisClassSourceFile () {
-        return __classNode ().sourceFile;
+        Optional<SourceFileAttribute> attribute = __classNode().findAttribute(Attributes.sourceFile());
+        if (attribute.isEmpty()) {
+            return "";
+        }
+        return attribute.get().sourceFile().stringValue();
     }
 
 
@@ -126,19 +157,30 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public String thisClassSuperName () {
-        return __classNode ().superName;
+        ClassModel thisClass = __classNode();
+        if (thisClass.superclass().isEmpty()) {
+            return "";
+        } else {
+            return thisClass.superclass().get().asInternalName();
+        }
     }
 
 
     /**
-     * Returns class version as (ASM) integer of the instrumented class.
+     * Returns class minor version.
      * <p>
-     * <b>Note:</b> This method is being deprecated, please use
-     * {@link ClassStaticContext#getVersion()} instead.
      */
     @Deprecated
-    public int thisClassVersion () {
-        return __classNode ().version;
+    public int thisClassMinorVersion () {
+        return __classNode ().minorVersion();
+    }
+
+    /**
+     * Returns class major version.
+     * <p>
+     */
+    public int thisClassMajorVersion() {
+        return __classNode().majorVersion();
     }
 
 
@@ -150,7 +192,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public boolean isClassAbstract () {
-        return __classAccessFlag (Opcodes.ACC_ABSTRACT);
+        return __classAccessFlag (AccessFlag.ABSTRACT);
     }
 
 
@@ -162,7 +204,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public boolean isClassAnnotation () {
-        return __classAccessFlag (Opcodes.ACC_ANNOTATION);
+        return __classAccessFlag (AccessFlag.ANNOTATION);
     }
 
 
@@ -174,7 +216,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public boolean isClassEnum () {
-        return __classAccessFlag (Opcodes.ACC_ENUM);
+        return __classAccessFlag (AccessFlag.ENUM);
     }
 
 
@@ -186,7 +228,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public boolean isClassFinal () {
-        return __classAccessFlag (Opcodes.ACC_FINAL);
+        return __classAccessFlag (AccessFlag.FINAL);
     }
 
 
@@ -198,7 +240,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public boolean isClassInterface () {
-        return __classAccessFlag (Opcodes.ACC_INTERFACE);
+        return __classAccessFlag (AccessFlag.INTERFACE);
     }
 
 
@@ -210,7 +252,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public boolean isClassPrivate () {
-        return __classAccessFlag (Opcodes.ACC_PRIVATE);
+        return __classAccessFlag (AccessFlag.PRIVATE);
     }
 
 
@@ -222,7 +264,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public boolean isClassProtected () {
-        return __classAccessFlag (Opcodes.ACC_PROTECTED);
+        return __classAccessFlag(AccessFlag.PROTECTED);
     }
 
 
@@ -234,7 +276,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public boolean isClassPublic () {
-        return __classAccessFlag (Opcodes.ACC_PUBLIC);
+        return __classAccessFlag (AccessFlag.PUBLIC);
     }
 
 
@@ -246,7 +288,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     @Deprecated
     public boolean isClassSynthetic () {
-        return __classAccessFlag (Opcodes.ACC_SYNTHETIC);
+        return __classAccessFlag (AccessFlag.SYNTHETIC);
     }
 
 
@@ -279,7 +321,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      */
     public String getUniqueInternalName () {
         return JavaNames.methodUniqueName (
-            __classInternalName (), __methodName (), __methodNode ().desc
+            __classInternalName (), __methodName (), __methodNode ().methodTypeSymbol().descriptorString()
         );
     }
 
@@ -288,7 +330,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      * Returns the descriptor of the instrumented method.
      */
     public String thisMethodDescriptor () {
-        return __methodNode ().desc;
+        return __methodNode().methodTypeSymbol().descriptorString();
     }
 
 
@@ -297,7 +339,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      * if the method is not a generic method.
      */
     public String thisMethodSignature () {
-        return __methodNode ().signature;
+        return MethodSignature.of(__methodNode().methodTypeSymbol()).signatureString();
     }
 
 
@@ -321,7 +363,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented method is a bridge.
      */
     public boolean isMethodBridge () {
-        return __methodAccessFlag (Opcodes.ACC_BRIDGE);
+        return __methodAccessFlag(AccessFlag.BRIDGE);
     }
 
 
@@ -329,7 +371,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented method is final.
      */
     public boolean isMethodFinal () {
-        return __methodAccessFlag (Opcodes.ACC_FINAL);
+        return __methodAccessFlag(AccessFlag.FINAL);
     }
 
 
@@ -337,7 +379,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented method is private.
      */
     public boolean isMethodPrivate () {
-        return __methodAccessFlag (Opcodes.ACC_PRIVATE);
+        return __methodAccessFlag (AccessFlag.PRIVATE);
     }
 
 
@@ -345,7 +387,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented method is protected.
      */
     public boolean isMethodProtected () {
-        return __methodAccessFlag (Opcodes.ACC_PROTECTED);
+        return __methodAccessFlag(AccessFlag.PROTECTED);
     }
 
 
@@ -353,7 +395,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented method is public.
      */
     public boolean isMethodPublic () {
-        return __methodAccessFlag (Opcodes.ACC_PUBLIC);
+        return __methodAccessFlag(AccessFlag.PUBLIC);
     }
 
 
@@ -361,7 +403,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented method is static.
      */
     public boolean isMethodStatic () {
-        return __methodAccessFlag (Opcodes.ACC_STATIC);
+        return __methodAccessFlag(AccessFlag.STATIC);
     }
 
 
@@ -369,7 +411,7 @@ public class MethodStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented method is synchronized.
      */
     public boolean isMethodSynchronized () {
-        return __methodAccessFlag (Opcodes.ACC_SYNCHRONIZED);
+        return __methodAccessFlag(AccessFlag.SYNCHRONIZED);
     }
 
 
@@ -378,41 +420,41 @@ public class MethodStaticContext extends AbstractStaticContext {
      * of arguments.
      */
     public boolean isMethodVarArgs () {
-        return __methodAccessFlag (Opcodes.ACC_VARARGS);
+        return __methodAccessFlag(AccessFlag.VARARGS);
     }
 
 
     //
 
     private String __classInternalName () {
-        return __classNode ().name;
+        return __classNode().thisClass().asInternalName();
     }
 
 
-    private boolean __classAccessFlag (final int flagMask) {
-        final int access = __classNode ().access;
-        return (access & flagMask) != 0;
+    private boolean __classAccessFlag (final AccessFlag flag) {
+        final AccessFlags flags = __classNode().flags();
+        return flags.has(flag);
     }
 
 
-    private ClassNode __classNode () {
-        return staticContextData.getClassNode ();
+    private ClassModel __classNode () {
+        return staticContextData.getClassModel();
     }
 
 
     private String __methodName () {
-        return __methodNode ().name;
+        return __methodNode().methodName().stringValue();
     }
 
 
-    private MethodNode __methodNode () {
-        return staticContextData.getMethodNode ();
+    private MethodModel __methodNode () {
+        return staticContextData.getMethodModel();
     }
 
 
-    private boolean __methodAccessFlag (final int flagMask) {
-        final int access = __methodNode ().access;
-        return (access & flagMask) != 0;
+    private boolean __methodAccessFlag (final AccessFlag flag) {
+        final AccessFlags flags = __methodNode().flags();
+        return flags.has(flag);
     }
 
 }

@@ -1,8 +1,18 @@
 package ch.usi.dag.disl.staticcontext;
 
-import org.objectweb.asm.Opcodes;
-
 import ch.usi.dag.disl.util.JavaNames;
+
+import java.lang.classfile.AccessFlags;
+import java.lang.classfile.Attributes;
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.Signature;
+import java.lang.classfile.attribute.EnclosingMethodAttribute;
+import java.lang.classfile.attribute.NestHostAttribute;
+import java.lang.classfile.attribute.SourceFileAttribute;
+import java.lang.classfile.constantpool.NameAndTypeEntry;
+import java.lang.constant.MethodTypeDesc;
+import java.lang.reflect.AccessFlag;
+import java.util.Optional;
 
 
 /**
@@ -40,28 +50,51 @@ public class ClassStaticContext extends AbstractStaticContext {
 
     /**
      * Returns the internal name of the class enclosing the instrumented class,
-     * or {@code null} if the instrumented class is not enclosed in another
+     * or empty string if the instrumented class is not enclosed in another
      * class.
      */
     public String getOuterClassInternalName () {
-        return staticContextData.getClassNode ().outerClass;
+        Optional<NestHostAttribute> attribute = staticContextData.getClassModel().findAttribute(Attributes.nestHost());
+        if (attribute.isEmpty()) {
+            return "";
+        }
+        return attribute.get().nestHost().asInternalName();
     }
 
 
     /**
      * Returns the name of the method enclosing the instrumented class, or
-     * {@code null} if the class is not enclosed in a method.
+     * empty string if the class is not enclosed in a method.
      */
     public String getOuterMethodName () {
-        return staticContextData.getClassNode ().outerMethod;
+        Optional<EnclosingMethodAttribute> attribute = staticContextData.getClassModel().findAttribute(Attributes.enclosingMethod());
+        if (attribute.isEmpty()) {
+            return "";
+        } else {
+            Optional<NameAndTypeEntry> m = attribute.get().enclosingMethod();
+            if (m.isEmpty()) {
+                return "";
+            }
+            return m.get().name().stringValue();
+        }
     }
 
 
     /**
-     * Returns outer method descriptor of the instrumented class.
+     * Returns outer method descriptor of the instrumented class. Or empty string if it doesn't
+     * have an outer method.
      */
     public String getOuterMethodDescriptor () {
-        return staticContextData.getClassNode ().outerMethodDesc;
+        Optional<EnclosingMethodAttribute> attribute = staticContextData.getClassModel().findAttribute(Attributes.enclosingMethod());
+        if (attribute.isEmpty()) {
+            return "";
+        } else {
+            Optional<MethodTypeDesc> m = attribute.get().enclosingMethodTypeSymbol();
+            if (m.isEmpty()) {
+                return "";
+            }
+            return m.get().descriptorString();
+        }
     }
 
 
@@ -70,7 +103,7 @@ public class ClassStaticContext extends AbstractStaticContext {
      * class is not a generic type.
      */
     public String getSignature () {
-        return staticContextData.getClassNode ().signature;
+        return Signature.of(staticContextData.getClassModel().thisClass().asSymbol()).signatureString();
     }
 
 
@@ -78,7 +111,11 @@ public class ClassStaticContext extends AbstractStaticContext {
      * Returns the name of the source file containing the instrumented class.
      */
     public String getSourceFile () {
-        return staticContextData.getClassNode ().sourceFile;
+        Optional<SourceFileAttribute> attribute = staticContextData.getClassModel().findAttribute(Attributes.sourceFile());
+        if (attribute.isEmpty()) {
+            return "";
+        }
+        return attribute.get().sourceFile().stringValue();
     }
 
 
@@ -88,23 +125,31 @@ public class ClassStaticContext extends AbstractStaticContext {
      * '/' character.
      */
     public String getSuperClassInternalName () {
-        return staticContextData.getClassNode ().superName;
+        ClassModel thisClass = staticContextData.getClassModel();
+        if (thisClass.superclass().isEmpty()) {
+            return "";
+        } else {
+            return thisClass.superclass().get().asInternalName();
+        }
     }
 
 
     /**
-     * Returns class version as (ASM) integer of the instrumented class.
+     * Returns class minor version
      */
-    public int getVersion () {
-        return staticContextData.getClassNode ().version;
+    public int getMinorVersion () {
+        return staticContextData.getClassModel().minorVersion();
     }
 
+    public int getMajorVersion() {
+        return staticContextData.getClassModel().majorVersion();
+    }
 
     /**
      * Returns {@code true} if the instrumented class is abstract.
      */
     public boolean isAbstract () {
-        return __classAccessFlag (Opcodes.ACC_ABSTRACT);
+        return __classAccessFlag (AccessFlag.ABSTRACT);
     }
 
 
@@ -112,7 +157,7 @@ public class ClassStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented class is an annotation.
      */
     public boolean isAnnotation () {
-        return __classAccessFlag (Opcodes.ACC_ANNOTATION);
+        return __classAccessFlag (AccessFlag.ANNOTATION);
     }
 
 
@@ -120,7 +165,7 @@ public class ClassStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented class is an enum.
      */
     public boolean isEnum () {
-        return __classAccessFlag (Opcodes.ACC_ENUM);
+        return __classAccessFlag (AccessFlag.ENUM);
     }
 
 
@@ -128,7 +173,7 @@ public class ClassStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented class is final.
      */
     public boolean isFinal () {
-        return __classAccessFlag (Opcodes.ACC_FINAL);
+        return __classAccessFlag (AccessFlag.FINAL);
     }
 
 
@@ -136,7 +181,7 @@ public class ClassStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented class is an interface.
      */
     public boolean isInterface () {
-        return __classAccessFlag (Opcodes.ACC_INTERFACE);
+        return __classAccessFlag (AccessFlag.INTERFACE);
     }
 
 
@@ -144,7 +189,7 @@ public class ClassStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented class is private.
      */
     public boolean isPrivate () {
-        return __classAccessFlag (Opcodes.ACC_PRIVATE);
+        return __classAccessFlag (AccessFlag.PRIVATE);
     }
 
 
@@ -152,7 +197,7 @@ public class ClassStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented class is protected.
      */
     public boolean isProtected () {
-        return __classAccessFlag (Opcodes.ACC_PROTECTED);
+        return __classAccessFlag (AccessFlag.PUBLIC);
     }
 
 
@@ -160,7 +205,7 @@ public class ClassStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented class is public.
      */
     public boolean isPublic () {
-        return __classAccessFlag (Opcodes.ACC_PUBLIC);
+        return __classAccessFlag (AccessFlag.PUBLIC);
     }
 
 
@@ -168,19 +213,19 @@ public class ClassStaticContext extends AbstractStaticContext {
      * Returns {@code true} if the instrumented class is synthetic.
      */
     public boolean isSynthetic () {
-        return __classAccessFlag (Opcodes.ACC_SYNTHETIC);
+        return __classAccessFlag (AccessFlag.SYNTHETIC);
     }
 
     //
 
     private String __classInternalName () {
-        return staticContextData.getClassNode ().name;
+        return staticContextData.getClassModel().thisClass().asInternalName();
     }
 
 
-    private boolean __classAccessFlag (final int flagMask) {
-        final int access = staticContextData.getClassNode ().access;
-        return (access & flagMask) != 0;
+    private boolean __classAccessFlag (final AccessFlag flag) {
+        final AccessFlags flags = staticContextData.getClassModel().flags();
+        return flags.has(flag);
     }
 
 }
