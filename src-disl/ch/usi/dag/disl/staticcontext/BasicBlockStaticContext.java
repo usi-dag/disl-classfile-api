@@ -1,14 +1,14 @@
 package ch.usi.dag.disl.staticcontext;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.Instruction;
+import java.lang.classfile.MethodModel;
 import java.lang.ref.WeakReference;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-
-import ch.usi.dag.disl.util.Insn;
+import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.cfgCF.BasicBlockCF;
+import ch.usi.dag.disl.util.cfgCF.ControlFlowGraph;
 import ch.usi.dag.disl.util.Logging;
-import ch.usi.dag.disl.util.cfg.BasicBlock;
-import ch.usi.dag.disl.util.cfg.CtrlFlowGraph;
 import ch.usi.dag.util.logging.Logger;
 
 
@@ -24,8 +24,8 @@ public class BasicBlockStaticContext extends AbstractStaticContext {
 
     //
 
-    protected CtrlFlowGraph createControlFlowGraph (final MethodNode method) {
-        return new CtrlFlowGraph (method);
+    protected ControlFlowGraph createControlFlowGraph (final MethodModel method) {
+        return new ControlFlowGraph(method);
     }
 
     //
@@ -35,28 +35,21 @@ public class BasicBlockStaticContext extends AbstractStaticContext {
     // CFG of methods that have already been instrumented.
     //
 
-    private static class Memo {
-        final MethodNode method;
-        final CtrlFlowGraph cfg;
-
-        Memo (final MethodNode method, final CtrlFlowGraph cfg) {
-            this.method = method;
-            this.cfg = cfg;
-        }
+    private record Memo(MethodModel method, ControlFlowGraph cfg) {
     }
 
     private WeakReference <Memo> __memoReference = new WeakReference <> (null);
 
 
-    protected final CtrlFlowGraph _getMethodCfg () {
+    protected final ControlFlowGraph _getMethodCfg () {
         final Memo memo = __memoReference.get ();
-        final MethodNode method = staticContextData.getMethodNode ();
+        final MethodModel method = staticContextData.getMethodModel();
 
         if (memo != null && memo.method == method) {
             return memo.cfg;
 
         } else {
-            final CtrlFlowGraph result = createControlFlowGraph (method);
+            final ControlFlowGraph result = createControlFlowGraph (method);
             __memoReference = new WeakReference <> (new Memo (method, result));
             return result;
         }
@@ -116,9 +109,9 @@ public class BasicBlockStaticContext extends AbstractStaticContext {
         } else {
             __log.warn (
                 "could not determine basic block index in %s.%s%s",
-                staticContextData.getClassNode ().name,
-                staticContextData.getMethodNode ().name,
-                staticContextData.getMethodNode ().desc
+                staticContextData.getClassModel().thisClass().name(),
+                staticContextData.getMethodModel().methodName(),
+                staticContextData.getMethodModel().methodTypeSymbol().descriptorString()
             );
 
             return 0;
@@ -131,15 +124,17 @@ public class BasicBlockStaticContext extends AbstractStaticContext {
         // If the start instruction is also an end instruction,
         // then the size of the basic block is 1 instruction.
         //
-        final BasicBlock bb = _getMethodCfg ().getNodes ().get (index);
+        final ControlFlowGraph controlFlowGraph = _getMethodCfg();
+        final BasicBlockCF bb = controlFlowGraph.getNodes().get(index);
 
-        AbstractInsnNode insn = bb.getEntryNode ();
-        final AbstractInsnNode exit = bb.getExitNode ();
+
+        CodeElement insn = bb.getEntry();
+        final CodeElement exit = bb.getExit();
 
         int result = 1;
         while (insn != exit) {
-            result += Insn.isVirtual (insn) ? 0 : 1;
-            insn = insn.getNext ();
+            result += (insn instanceof Instruction) ? 1 : 0;
+            insn = ClassFileHelper.nextInstruction(controlFlowGraph.getInstructions(), insn);
         }
 
         return result;
