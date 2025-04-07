@@ -1,29 +1,28 @@
 package ch.usi.dag.disl.marker;
 
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.MethodModel;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-
 import ch.usi.dag.disl.exception.MarkerException;
-import ch.usi.dag.disl.util.AsmHelper.Insns;
 
 /**
- * Marks bytecode instructions depending on the ASM class type.
+ * Marks bytecode instructions depending on the ClassFile class type.
  * <p>
  * <b>Note:</b> This class is work in progress.
  */
+// TODO this is not tested
 public class InsnNodeMarker extends AbstractInsnMarker {
 
-    protected Set<Class<? extends AbstractInsnNode>> classes;
+    protected Set<Class<? extends CodeElement>> classes;
 
     public InsnNodeMarker(Parameter param)
             throws MarkerException {
 
-        classes = new HashSet<Class<? extends AbstractInsnNode>>();
+        classes = new HashSet<Class<? extends CodeElement>>();
 
 
         // translate all instructions to opcodes
@@ -32,7 +31,7 @@ public class InsnNodeMarker extends AbstractInsnMarker {
             try {
 
                 Class<?> clazz = Class.forName(className);
-                classes.add(clazz.asSubclass(AbstractInsnNode.class));
+                classes.add(clazz.asSubclass(CodeElement.class));
             } catch (ClassNotFoundException e) {
 
                 throw new MarkerException("Instruction Node Class \""
@@ -51,13 +50,13 @@ public class InsnNodeMarker extends AbstractInsnMarker {
     }
 
     @Override
-    public List<AbstractInsnNode> markInstruction(MethodNode methodNode) {
+    public List<CodeElement> markInstruction(MethodModel methodNode) {
 
-        List<AbstractInsnNode> seleted = new LinkedList<AbstractInsnNode>();
+        List<CodeElement> seleted = new LinkedList<CodeElement>();
 
-        for (AbstractInsnNode instr : Insns.selectAll (methodNode.instructions)) {
+        for (CodeElement instr : methodNode.code().orElseThrow().elementList()) {
 
-            for (Class<? extends AbstractInsnNode> clazz : classes) {
+            for (Class<? extends CodeElement> clazz : classes) {
 
                 if (clazz.isInstance(instr)) {
                     seleted.add(instr);
