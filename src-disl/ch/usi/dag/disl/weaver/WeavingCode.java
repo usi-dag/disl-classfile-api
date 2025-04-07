@@ -35,8 +35,6 @@ import ch.usi.dag.disl.snippet.Snippet;
 import ch.usi.dag.disl.snippet.SnippetCode;
 import ch.usi.dag.disl.staticcontext.StaticContext;
 import ch.usi.dag.disl.staticcontext.generator.SCGenerator;
-import ch.usi.dag.disl.util.AsmHelper.Insns;
-import ch.usi.dag.disl.weaver.pe.MaxCalculator;
 
 public class WeavingCode {
 
