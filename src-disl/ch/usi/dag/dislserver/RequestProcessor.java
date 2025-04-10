@@ -4,13 +4,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassModel;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 import java.util.UUID;
-
-import org.objectweb.asm.ClassReader;
 
 import com.google.protobuf.ByteString;
 
@@ -122,7 +122,8 @@ final class RequestProcessor {
         }
 
         if (result.isEmpty ()) {
-            result = new ClassReader (classBytes).getClassName ();
+            ClassModel classModel = ClassFile.of().parse(classBytes);
+            result = classModel.thisClass().asInternalName();
             if (result == null || result.isEmpty ()) {
                 result = UUID.randomUUID ().toString ();
             }
