@@ -87,7 +87,7 @@ public final class ReflectionHelper {
 
     private static Class <?> __classForType (final ClassDesc type)
     throws ClassNotFoundException {
-        return Class.forName (type.displayName());
+        return Class.forName (ClassFileHelper.getClassName(type));
     }
 
     //
@@ -99,7 +99,6 @@ public final class ReflectionHelper {
      * @param ownerClass the class in which to look for the method
      * @param methodName the method name to look for
      * @return a {@link Method} instance corresponding to the name
-     * @throws {@link ReflectionException} if there is no such method.
      */
     public static Method resolveMethod (
         final Class <?> ownerClass, final String methodName
