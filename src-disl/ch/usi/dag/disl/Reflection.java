@@ -64,12 +64,11 @@ public final class Reflection {
          * <li>java/lang/Object[]
          * </ul>
          */
-        private final ConcurrentMap <String, Class> __classes = new ConcurrentHashMap <> ();
+        private final ConcurrentMap <ClassDesc, Class> __classes = new ConcurrentHashMap <> ();
 
         void notifyClassLoaded (final ClassModel cm) {
             __classes.computeIfAbsent(
-                    // TODO refactor: is this equivalent as cn.name, could also be cm.thisClass().name().stringValue()
-                    cm.thisClass().asInternalName(), k -> new RegularClass(this, cm)
+                    cm.thisClass().asSymbol(), k -> new RegularClass(this, cm)
             );
         }
 
@@ -115,7 +114,7 @@ public final class Reflection {
          *         {@code null} if the type is not known.
          */
         protected Class _lookupName (final String internalName) {
-            return __classes.get (internalName);
+            return __classes.get (ClassDesc.ofInternalName(internalName));
         }
 
         /**
@@ -131,7 +130,7 @@ public final class Reflection {
          */
         protected Class _lookupType(final ClassDesc desc) {
             return (Objects.equals(desc.descriptorString(), CD_Object.descriptorString())) ?
-                    __classes.get(desc.displayName()) : null;
+                    __classes.get(desc) : null;
         }
 
     }
@@ -161,9 +160,9 @@ public final class Reflection {
     static final class SystemClassLoader extends ClassLoader {
 
         private final ConcurrentMap <ClassDesc, Class> __primitives =
-            Arrays.asList (
+            Stream.of(
                 CD_void, CD_boolean, CD_byte, CD_char, CD_short, CD_int, CD_float, CD_long, CD_double
-            ).stream ().collect (Collectors.toConcurrentMap (
+            ).collect (Collectors.toConcurrentMap (
                 Function.identity (), PrimitiveClass::new
             ));
 
@@ -184,7 +183,7 @@ public final class Reflection {
 
             } else if (type.isArray()) {
                 return __arrays.computeIfAbsent (
-                    type, k -> new ArrayClass (k)
+                    type, ArrayClass::new
                 );
 
             } else {
@@ -429,8 +428,8 @@ public final class Reflection {
         @Override
         public Optional <Class> superClass () {
             if (__superName.isPresent ()) {
-                final Optional <Class> result = classLoader ().classForInternalName (__superName.get ().asInternalName());
-                if (!result.isPresent ()) {
+                final Optional <Class> result = classLoader ().classForType (__superName.get ().asSymbol());
+                if (result.isEmpty()) {
                     throw new MissingClassException (
                         "super class missing: %s", __superName.get().asInternalName()
                     );
@@ -448,8 +447,8 @@ public final class Reflection {
         public Stream <Class> interfaces () {
             // Convert interface names to classes lazily.
             return __interfaces.stream ().map (itfName -> {
-                final Optional <Class> result =__loader.classForInternalName (itfName.asInternalName());
-                if (!result.isPresent ()) {
+                final Optional <Class> result =__loader.classForType (itfName.asSymbol());
+                if (result.isEmpty()) {
                     throw new MissingClassException (
                         "interface missing: %s", itfName.asInternalName()
                     );
@@ -518,7 +517,7 @@ public final class Reflection {
         public Optional <Class> superClass () {
             final ClassDesc classDesc = CD_Object;
             final Optional <Class> result = __root__.classForType(classDesc);
-            if (!result.isPresent()) {
+            if (result.isEmpty()) {
                 throw new MissingClassException (
                     "super class missing: %s", classDesc.descriptorString()
                         // TODO: this is not equivalent to superType.getInternalName (), but I believe it should not matter as it is just an info
@@ -551,7 +550,7 @@ public final class Reflection {
         private final Class __class;
         private final String __sig;
         private final String __name;
-        private final MethodTypeDesc __type;  // TODO I am not sure what to replace this with????
+        private final MethodTypeDesc __type;
         private final int __modifiers;
 
         private Method(final Class cls, final MethodModel mm) {

@@ -5,6 +5,7 @@ import ch.usi.dag.disl.Reflection.Method;
 import ch.usi.dag.disl.staticcontext.AbstractStaticContext;
 
 import java.lang.classfile.MethodModel;
+import java.util.Optional;
 
 
 /**
@@ -18,14 +19,15 @@ import java.lang.classfile.MethodModel;
 public final class ReflectionStaticContext extends AbstractStaticContext {
 
     public Class thisClass () {
-        return Reflection.systemClassLoader ().classForInternalName (
-            staticContextData.getClassModel().thisClass().asInternalName()
-        ).get ();
+        return Reflection.systemClassLoader ().classForType (
+            staticContextData.getClassModel().thisClass().asSymbol()
+        ).orElse(null);
+        // TODO should this throw instead???
     }
 
     public Method thisMethod () {
         final MethodModel mn = staticContextData.getMethodModel();
-        return thisClass().methodForSignature (mn.methodName().stringValue() + mn.methodTypeSymbol().descriptorString()).get ();
+        return thisClass().methodForSignature (mn.methodName().stringValue() + mn.methodTypeSymbol().descriptorString()).orElse(null);
     }
 
 }
