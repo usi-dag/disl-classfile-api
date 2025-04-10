@@ -179,7 +179,7 @@ public final class Reflection {
         @Override
         protected Class _lookupType (final ClassDesc type) {
             if (Objects.equals(type.descriptorString(), CD_Object.descriptorString())) {
-                return super._lookupName (type.displayName());
+                return super._lookupType (type);
 
             } else if (type.isArray()) {
                 return __arrays.computeIfAbsent (
