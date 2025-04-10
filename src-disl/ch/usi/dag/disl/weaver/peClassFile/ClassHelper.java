@@ -16,15 +16,15 @@ public class ClassHelper {
     public static final HashSet<String> VALUE_TYPES = new HashSet<>();
 
     static {
-        VALUE_TYPES.add("java/lang/Boolean");
-        VALUE_TYPES.add("java/lang/Byte");
-        VALUE_TYPES.add("java/lang/Character");
-        VALUE_TYPES.add("java/lang/Double");
-        VALUE_TYPES.add("java/lang/Float");
-        VALUE_TYPES.add("java/lang/Integer");
-        VALUE_TYPES.add("java/lang/Long");
-        VALUE_TYPES.add("java/lang/Short");
-        VALUE_TYPES.add("java/lang/String");
+        VALUE_TYPES.add(Boolean.class.descriptorString());
+        VALUE_TYPES.add(Byte.class.descriptorString());
+        VALUE_TYPES.add(Character.class.descriptorString());
+        VALUE_TYPES.add(Double.class.descriptorString());
+        VALUE_TYPES.add(Float.class.descriptorString());
+        VALUE_TYPES.add(Integer.class.descriptorString());
+        VALUE_TYPES.add(Long.class.descriptorString());
+        VALUE_TYPES.add(Short.class.descriptorString());
+        VALUE_TYPES.add(String.class.descriptorString());
     }
 
     public static Class<?> getClassFromType(ClassDesc desc) {
@@ -66,8 +66,7 @@ public class ClassHelper {
         return switch (typeKind) {
             case BOOLEAN, BYTE, CHAR, DOUBLE, FLOAT, INT, LONG, SHORT -> true;
             case REFERENCE ->
-                // TODO is this correct>>>
-                    VALUE_TYPES.contains(desc.packageName() + "/" + desc.displayName());
+                    VALUE_TYPES.contains(desc.descriptorString());
             default -> false;
         };
     }
