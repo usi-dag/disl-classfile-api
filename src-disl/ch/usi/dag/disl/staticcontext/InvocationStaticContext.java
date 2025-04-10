@@ -1,6 +1,7 @@
 package ch.usi.dag.disl.staticcontext;
 
 import ch.usi.dag.disl.marker.BytecodeMarker;
+import ch.usi.dag.disl.util.ClassFileHelper;
 import ch.usi.dag.disl.util.JavaNames;
 
 import java.lang.classfile.CodeElement;
@@ -193,7 +194,7 @@ public class InvocationStaticContext extends AbstractStaticContext {
                 return invokeInstruction.owner().asInternalName();
             }
             case InvokeDynamicInstruction invokeDynamicInstruction -> {
-                return invokeDynamicInstruction.bootstrapMethod().owner().displayName();
+                return ClassFileHelper.getInternalName(invokeDynamicInstruction.bootstrapMethod().owner());
             }
             default -> throw new RuntimeException("Invalid Instruction at region start, must be an invocation");
         }
