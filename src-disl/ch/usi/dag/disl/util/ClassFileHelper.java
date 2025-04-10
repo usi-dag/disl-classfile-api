@@ -1018,5 +1018,23 @@ public abstract class ClassFileHelper {
         return classDesc.packageName() + "." + classDesc.displayName();
     }
 
+    /**
+     * return the descriptor of the array component like it would on ASM getElementType() on Type
+     * @param classDesc the classDesc
+     * @return the component descriptor
+     */
+    public static String getElementType(ClassDesc classDesc) {
+        return classDesc.descriptorString().replaceFirst("^\\[+", "");
+    }
+
+    /**
+     * return the number of dimension of the array like it would return from ASM Type.getDimensions()
+     * @param classDesc the classDesc representing the array
+     * @return the dimensions
+     */
+    public static long getDimensions(ClassDesc classDesc) {
+        return classDesc.descriptorString().chars().filter(c -> c == '[').count();
+    }
+
 
 }
