@@ -1,6 +1,8 @@
 package ch.usi.dag.disl.weaver.peClassFile;
 
-import java.lang.classfile.CodeElement;
+import ch.usi.dag.disl.util.ClassFileHelper;
+
+
 import java.lang.classfile.Instruction;
 import java.lang.classfile.Opcode;
 import java.lang.classfile.TypeKind;
@@ -11,7 +13,7 @@ import java.util.List;
 
 public class ClassHelper {
 
-    public static final HashSet<String> VALUE_TYPES = new HashSet<String>();
+    public static final HashSet<String> VALUE_TYPES = new HashSet<>();
 
     static {
         VALUE_TYPES.add("java/lang/Boolean");
@@ -48,7 +50,7 @@ public class ClassHelper {
                 return short.class;
             case REFERENCE:
                 try {
-                    return Class.forName(desc.displayName());
+                    return Class.forName(ClassFileHelper.getClassName(desc));
                 } catch (ClassNotFoundException e) {
                     return null;
                 }
@@ -61,25 +63,13 @@ public class ClassHelper {
     public static boolean isValueType(ClassDesc desc) {
 
         TypeKind typeKind = TypeKind.from(desc);
-        switch (typeKind) {
-
-            case BOOLEAN:
-            case BYTE:
-            case CHAR:
-            case DOUBLE:
-            case FLOAT:
-            case INT:
-            case LONG:
-            case SHORT:
-                return true;
-
-            case REFERENCE:
+        return switch (typeKind) {
+            case BOOLEAN, BYTE, CHAR, DOUBLE, FLOAT, INT, LONG, SHORT -> true;
+            case REFERENCE ->
                 // TODO is this correct>>>
-                return VALUE_TYPES.contains(desc.packageName() + "/" + desc.displayName());
-
-            default:
-                return false;
-        }
+                    VALUE_TYPES.contains(desc.packageName() + "/" + desc.displayName());
+            default -> false;
+        };
     }
 
     public static Class<?>[] getClasses(MethodTypeDesc desc)
@@ -102,7 +92,7 @@ public class ClassHelper {
 
     public static Object i2wrapper(Integer obj, Class<?> clazz) {
 
-        int i = obj.intValue();
+        int i = obj;
 
         if (clazz.equals(Boolean.class) || clazz.equals(boolean.class)) {
             return i == 1;
