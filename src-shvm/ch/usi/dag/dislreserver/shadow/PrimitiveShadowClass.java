@@ -1,5 +1,7 @@
 package ch.usi.dag.dislreserver.shadow;
 
+import ch.usi.dag.disl.util.ClassFileHelper;
+
 import java.lang.constant.ClassDesc;
 import java.lang.reflect.AccessFlag;
 import java.util.List;
@@ -50,8 +52,7 @@ final class PrimitiveShadowClass extends ShadowClass {
      */
     @Override
     public String getName () {
-        // Avoid Type.getInternalName() -- returns null for primitive types.
-        return _type().packageName() + "." + _type().displayName();
+        return ClassFileHelper.getClassName(_type());
     }
 
     //
