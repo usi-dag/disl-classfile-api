@@ -19,6 +19,7 @@ import java.lang.reflect.AccessFlag;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -981,6 +982,40 @@ public abstract class ClassFileHelper {
 
     public static String nameAndDescriptor(MethodModel methodModel) {
         return methodModel.methodName().stringValue() + methodModel.methodTypeSymbol().descriptorString();
+    }
+
+
+    /**
+     * return the internal name like it would on calling getInternalName() on an ASM Type
+     * @param classDesc the class descriptor
+     * @return the internal name
+     */
+    public static String getInternalName(ClassDesc classDesc) {
+        if (classDesc.isPrimitive() || classDesc.isArray()) {
+            return classDesc.descriptorString();
+        }
+        return (classDesc.packageName() + "/" + classDesc.displayName()).replace(".", "/");
+    }
+
+    /**
+     * return the className as would the call to ASM getClassName on Type
+     * @param classDesc the class descriptor
+     * @return the class name
+     */
+    public static String getClassName(ClassDesc classDesc) {
+        if (classDesc.isPrimitive()) {
+            return classDesc.displayName();
+        } else if (classDesc.isArray()) {
+            final String descriptor = classDesc.descriptorString();
+            final String cleaned = descriptor.replaceFirst("^\\[+([A-Z]{1})", "").replace(";", "");
+            String [] split = cleaned.split("/");
+            String partial = String.join(".", Arrays.copyOf(split, split.length -1));
+            if (partial.isEmpty()) {
+                return classDesc.displayName();
+            }
+            return String.join(".", Arrays.copyOf(split, split.length -1)) + "." + classDesc.displayName();
+        }
+        return classDesc.packageName() + "." + classDesc.displayName();
     }
 
 
