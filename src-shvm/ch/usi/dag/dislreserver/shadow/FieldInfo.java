@@ -1,34 +1,32 @@
 package ch.usi.dag.dislreserver.shadow;
 
+import java.lang.classfile.FieldModel;
 import java.lang.reflect.Modifier;
-
-import org.objectweb.asm.tree.FieldNode;
-
 
 public final class FieldInfo {
 
-    private final FieldNode __fieldNode;
+    private final FieldModel __fieldNode;
 
     //
 
-    FieldInfo (final FieldNode fieldNode) {
+    FieldInfo (final FieldModel fieldNode) {
         __fieldNode = fieldNode;
     }
 
     //
 
     public String getName () {
-        return __fieldNode.name;
+        return __fieldNode.fieldName().stringValue();
     }
 
 
     public int getModifiers () {
-        return __fieldNode.access;
+        return __fieldNode.flags().flagsMask();
     }
 
 
     public String getDescriptor () {
-        return __fieldNode.desc;
+        return __fieldNode.fieldTypeSymbol().descriptorString();
     }
 
     //

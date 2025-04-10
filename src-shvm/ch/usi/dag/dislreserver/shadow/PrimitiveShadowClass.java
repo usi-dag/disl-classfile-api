@@ -1,15 +1,15 @@
 package ch.usi.dag.dislreserver.shadow;
 
-import java.lang.reflect.Modifier;
+import java.lang.constant.ClassDesc;
+import java.lang.reflect.AccessFlag;
+import java.util.List;
 import java.util.stream.Stream;
-
-import org.objectweb.asm.Type;
 
 
 final class PrimitiveShadowClass extends ShadowClass {
 
     PrimitiveShadowClass (
-        final long netReference, final Type type, final ShadowObject classLoader
+            final long netReference, final ClassDesc type, final ShadowObject classLoader
     ) {
         super (netReference, type, classLoader);
     }
@@ -17,11 +17,11 @@ final class PrimitiveShadowClass extends ShadowClass {
     //
 
     @Override
-    public int getModifiers () {
+    public List<AccessFlag> getModifiers () {
         //
         // Primitive type classes are ABSTRACT, FINAL, and PUBLIC.
         //
-        return Modifier.ABSTRACT | Modifier.FINAL | Modifier.PUBLIC;
+        return List.of(AccessFlag.ABSTRACT, AccessFlag.FINAL, AccessFlag.PUBLIC);
     }
 
     //
@@ -51,7 +51,7 @@ final class PrimitiveShadowClass extends ShadowClass {
     @Override
     public String getName () {
         // Avoid Type.getInternalName() -- returns null for primitive types.
-        return _type ().getClassName ();
+        return _type().packageName() + "." + _type().displayName();
     }
 
     //

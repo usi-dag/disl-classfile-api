@@ -1,24 +1,27 @@
 package ch.usi.dag.dislreserver.shadow;
 
-import java.lang.reflect.Modifier;
+import java.lang.classfile.Attributes;
+import java.lang.classfile.ClassModel;
+import java.lang.classfile.attribute.NestMembersAttribute;
+import java.lang.constant.ClassDesc;
+import java.lang.reflect.AccessFlag;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
-
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.ClassNode;
 
 
 final class ObjectShadowClass extends ShadowClass {
 
     private final ShadowClass __superClass;
 
-    private final ClassNode __classNode;
+    private final ClassModel __classNode;
 
     //
 
     ObjectShadowClass (
-        final long netReference, final Type type,
+        final long netReference, final ClassDesc type,
         final ShadowObject classLoader, final ShadowClass superClass,
-        final ClassNode classNode
+        final ClassModel classNode
     ) {
         super (netReference, type, classLoader);
 
@@ -116,9 +119,9 @@ final class ObjectShadowClass extends ShadowClass {
     //
 
     @Override
-    public int getModifiers () {
+    public List<AccessFlag> getModifiers () {
         // Strip modifiers that are not valid for a class.
-        return __classNode.access & Modifier.classModifiers ();
+        return __classNode.flags().flags().stream().toList();
     }
 
     //
@@ -140,35 +143,33 @@ final class ObjectShadowClass extends ShadowClass {
 
     @Override
     public String [] getInterfaceDescriptors () {
-        return __typeDescriptors (__classNode.interfaces.stream ());
+        return __classNode.interfaces().stream().map(i -> i.asSymbol().descriptorString()).toArray(String[]::new);
     }
 
     //
 
     @Override
     protected Stream <FieldInfo> _declaredFields () {
-        return __classNode.fields.stream ().map (FieldInfo::new);
+        return __classNode.fields().stream().map(FieldInfo::new);
     }
 
 
     @Override
     protected Stream <MethodInfo> _declaredMethods () {
-        return __classNode.methods.stream ().map (MethodInfo::new);
+        return __classNode.methods().stream ().map (MethodInfo::new);
     }
 
     //
 
     @Override
     public String [] getDeclaredClassDescriptors () {
-        return __typeDescriptors (
-            __classNode.innerClasses.stream ().map (icn -> icn.name)
-        );
-    }
-
-    //
-
-    private static String [] __typeDescriptors (final Stream <String> names) {
-        return names.map (n -> Type.getObjectType (n).getDescriptor ()).toArray (String []::new);
+        Optional<NestMembersAttribute> innerClasses = __classNode.findAttribute(Attributes.nestMembers());
+        return innerClasses.map(
+                nestMembersAttribute ->
+                        nestMembersAttribute.nestMembers().stream()
+                                .map(i -> i.asSymbol().descriptorString())
+                                .toArray(String[]::new))
+                .orElseGet(() -> new String[0]);
     }
 
 }

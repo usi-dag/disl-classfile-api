@@ -1,5 +1,9 @@
 package ch.usi.dag.dislreserver.shadow;
 
+import ch.usi.dag.disl.util.ClassFileHelper;
+
+import java.lang.constant.ClassDesc;
+import java.lang.reflect.AccessFlag;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -11,8 +15,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
 
 
 public abstract class ShadowClass extends ShadowObject {
@@ -20,7 +22,7 @@ public abstract class ShadowClass extends ShadowObject {
     /**
      * The type (class) represented by this shadow class.
      */
-    private final Type __type;
+    private final ClassDesc __type;
 
     /**
      * The class loader that loaded the class represented by this shadow class.
@@ -31,7 +33,7 @@ public abstract class ShadowClass extends ShadowObject {
     //
 
     protected ShadowClass (
-        final long netReference, final Type type,
+        final long netReference, final ClassDesc type,
         final ShadowObject classLoader
     ) {
         super (netReference, null /* indicates Class instance */);
@@ -42,7 +44,7 @@ public abstract class ShadowClass extends ShadowObject {
 
     //
 
-    protected final Type _type () {
+    protected final ClassDesc _type () {
         return __type;
     }
 
@@ -117,7 +119,7 @@ public abstract class ShadowClass extends ShadowObject {
         //
         // Avoid Type.getClassName() because it adds "class" prefix to array types.
         //
-        return _javaName (__type.getInternalName ());
+        return _javaName (ClassFileHelper.getInternalName(__type));
     }
 
 
@@ -143,7 +145,7 @@ public abstract class ShadowClass extends ShadowObject {
 
 
     private String __canonicalName () {
-        return __type.getClassName ().replace ('$',  '.');
+        return ClassFileHelper.getClassName(__type).replace ('$',  '.');
     }
 
 
@@ -165,11 +167,11 @@ public abstract class ShadowClass extends ShadowObject {
      */
     public boolean isPrimitive () {
         // We rely on the ordering of sorts in ASM Type.
-        return __type.getSort () < Type.ARRAY;
+        return __type.isPrimitive();
     }
 
     public boolean isArray () {
-        return __type.getSort () == Type.ARRAY;
+        return __type.isArray();
     };
 
     //
@@ -202,55 +204,54 @@ public abstract class ShadowClass extends ShadowObject {
     //
 
     /**
-     * Returns {@code true} if this class matches the given {@link Type type}.
+     * Returns {@code true} if this class matches the given {@link ClassDesc type}.
      */
-    final boolean equalsType (final Type type) {
+    final boolean equalsType (final ClassDesc type) {
         return __type.equals (type);
     }
 
 
     /**
-     * Returns {@code true} if this class is derived from the given {@link Type
-     * type}. This method checks for presence of {@link Type type} in the
+     * Returns {@code true} if this class is derived from the given {@link ClassDesc
+     * type}. This method checks for presence of {@link ClassDesc type} in the
      * inheritance hierarchy of this class.
      */
-    final boolean extendsType (final Type type) {
+    final boolean extendsType (final ClassDesc type) {
         if (equalsType (type)) {
             return true;
-
         } else {
             final ShadowClass superClass = getSuperclass ();
-            return (superClass != null) ? superClass.extendsType (type) : false;
+            return superClass != null && superClass.extendsType(type);
         }
     }
 
 	//
 
-    public abstract int getModifiers ();
+    public abstract List<AccessFlag> getModifiers ();
 
 
     public boolean isInterface () {
-        return __hasModifier (Opcodes.ACC_INTERFACE);
+        return __hasModifier (AccessFlag.INTERFACE);
     }
 
 
     public boolean isAnnotation () {
-        return __hasModifier (Opcodes.ACC_ANNOTATION);
+        return __hasModifier (AccessFlag.ANNOTATION);
     }
 
 
     public boolean isSynthetic () {
-        return __hasModifier (Opcodes.ACC_SYNTHETIC);
+        return __hasModifier (AccessFlag.SYNTHETIC);
     }
 
 
     public boolean isEnum () {
-        return __hasModifier (Opcodes.ACC_ENUM);
+        return __hasModifier (AccessFlag.ENUM);
     }
 
 
-    private boolean __hasModifier (final int flag) {
-        return (getModifiers () & flag) != 0;
+    private boolean __hasModifier (final AccessFlag flag) {
+        return getModifiers().contains(flag);
     }
 
 	//

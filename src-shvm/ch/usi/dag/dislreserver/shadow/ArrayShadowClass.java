@@ -1,10 +1,12 @@
 package ch.usi.dag.dislreserver.shadow;
 
-import java.io.Serializable;
-import java.lang.reflect.Modifier;
-import java.util.stream.Stream;
+import ch.usi.dag.disl.util.ClassFileHelper;
 
-import org.objectweb.asm.Type;
+import java.io.Serializable;
+import java.lang.constant.ClassDesc;
+import java.lang.reflect.AccessFlag;
+import java.util.List;
+import java.util.stream.Stream;
 
 
 final class ArrayShadowClass extends ShadowClass {
@@ -16,7 +18,7 @@ final class ArrayShadowClass extends ShadowClass {
     //
 
     ArrayShadowClass (
-        final long netReference, final Type type,
+        final long netReference, final ClassDesc type,
         final ShadowObject classLoader, final ShadowClass superClass,
         final ShadowClass componentClass
     ) {
@@ -29,7 +31,7 @@ final class ArrayShadowClass extends ShadowClass {
     //
 
     public int getDimensionCount () {
-        return _type ().getDimensions ();
+        return (int) ClassFileHelper.getDimensions(_type());
     }
 
 
@@ -45,7 +47,7 @@ final class ArrayShadowClass extends ShadowClass {
 
     @Override
     public String getComponentDescriptor () {
-        return _type ().getElementType ().getDescriptor ();
+        return ClassFileHelper.getElementType(_type());
     }
 
     //
@@ -83,7 +85,7 @@ final class ArrayShadowClass extends ShadowClass {
     //
 
     @Override
-    public int getModifiers () {
+    public List<AccessFlag> getModifiers () {
         //
         // Array classes are ABSTRACT and FINAL, but the access modifier is
         // derived from the component type. We make the array classes public
@@ -91,7 +93,7 @@ final class ArrayShadowClass extends ShadowClass {
         //
         // FIXME Return access modifier based on the component type.
         //
-        return Modifier.ABSTRACT | Modifier.FINAL | Modifier.PUBLIC;
+        return List.of(AccessFlag.ABSTRACT, AccessFlag.FINAL, AccessFlag.PUBLIC);
     }
 
     //
@@ -113,8 +115,8 @@ final class ArrayShadowClass extends ShadowClass {
     public String [] getInterfaceDescriptors () {
         // Array types implement Cloneable and Serializable interfaces.
         return new String [] {
-            Type.getType (Cloneable.class).getDescriptor (),
-            Type.getType (Serializable.class).getDescriptor ()
+            Cloneable.class.descriptorString(),
+            Serializable.class.descriptorString()
         };
     }
 

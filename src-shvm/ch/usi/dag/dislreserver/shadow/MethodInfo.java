@@ -1,20 +1,20 @@
 package ch.usi.dag.dislreserver.shadow;
 
+import java.lang.classfile.CodeModel;
+import java.lang.classfile.MethodModel;
+import java.lang.constant.ClassDesc;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
-import java.util.List;
-
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.MethodNode;
+import java.util.Optional;
 
 
 public final class MethodInfo {
 
-    private final MethodNode __methodNode;
+    private final MethodModel __methodNode;
 
     //
 
-    MethodInfo (final MethodNode methodNode) {
+    MethodInfo (final MethodModel methodNode) {
         __methodNode = methodNode;
     }
 
@@ -31,8 +31,7 @@ public final class MethodInfo {
 
     @Override
     public boolean equals (final Object object) {
-        if (object instanceof MethodInfo) {
-            final MethodInfo other = (MethodInfo) object;
+        if (object instanceof MethodInfo other) {
             return
                 this.getName ().equals (other.getName ())
                 &&
@@ -54,35 +53,35 @@ public final class MethodInfo {
     //
 
     public String getName () {
-        return __methodNode.name;
+        return __methodNode.methodName().stringValue();
     }
 
 
     public int getModifiers () {
-        return __methodNode.access;
+        return __methodNode.flags().flagsMask();
     }
 
 
     public String getDescriptor () {
-        return __methodNode.desc;
+        return __methodNode.methodTypeSymbol().descriptorString();
     }
 
 
     public String getReturnDescriptor () {
-        return Type.getReturnType (__methodNode.desc).getDescriptor ();
+        return __methodNode.methodTypeSymbol().returnType().descriptorString();
     }
 
 
     public String [] getParameterDescriptors () {
-        return Arrays.stream (
-            Type.getArgumentTypes (__methodNode.desc)
-        ).map (Type::getDescriptor).toArray (String []::new);
+        return __methodNode.methodTypeSymbol().parameterList().stream().map(ClassDesc::descriptorString).toArray(String[]::new);
     }
 
 
     public String [] getExceptionDescriptors () {
-        final List <String> exceptions = __methodNode.exceptions;
-        return exceptions.toArray (new String [exceptions.size ()]);
+        Optional<CodeModel> code = __methodNode.code();
+        return code.map(codeModel -> codeModel.exceptionHandlers().stream()
+                .map(e -> e.catchType().isEmpty() ? Exception.class.descriptorString() : e.catchType().get().asSymbol().descriptorString())
+                .toArray(String[]::new)).orElseGet(() -> new String[0]);
     }
 
     //
@@ -93,12 +92,12 @@ public final class MethodInfo {
 
 
     public boolean isConstructor () {
-        return "<init>".equals (__methodNode.name);
+        return "<init>".equals (__methodNode.methodName().stringValue());
     }
 
 
     public boolean isClassInitializer () {
-        return "<clinit>".equals (__methodNode.name);
+        return "<clinit>".equals (__methodNode.methodName().stringValue());
     }
 
 }

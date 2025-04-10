@@ -1,9 +1,10 @@
 package ch.usi.dag.dislreserver.shadow;
 
+import java.lang.constant.ClassDesc;
+import java.lang.reflect.AccessFlag;
+import java.util.List;
 import java.util.stream.Stream;
 
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
 
 import ch.usi.dag.dislreserver.util.Env;
 
@@ -15,7 +16,7 @@ final class LambdaShadowClass extends ShadowClass {
     //
 
     LambdaShadowClass (
-        final long netReference, final Type type,
+        final long netReference, final ClassDesc type,
         final ShadowObject classLoader, final ShadowClass superClass
     ) {
         super (netReference, type, classLoader);
@@ -56,7 +57,7 @@ final class LambdaShadowClass extends ShadowClass {
         // instead of only those preceding the $$Lambda$ suffix. Also, the dollars
         // in the lambda type canonical names should not be converted to dots.
         //
-        final String name = _type ().getInternalName ();
+        final String name = (_type ().packageName () + "/" + _type().displayName()).replace(".", "/");
         final int start = name.lastIndexOf ("$$Lambda$");
         assert start > 0;
 
@@ -85,11 +86,11 @@ final class LambdaShadowClass extends ShadowClass {
     //
 
     @Override
-    public int getModifiers () {
+    public List<AccessFlag> getModifiers () {
         //
         // Lambda classes are SYNTHETIC and FINAL.
         //
-        return Opcodes.ACC_SYNTHETIC | Opcodes.ACC_FINAL;
+        return List.of(AccessFlag.SYNTHETIC, AccessFlag.FINAL);
     }
 
     //

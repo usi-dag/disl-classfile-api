@@ -1,13 +1,15 @@
 package ch.usi.dag.dislreserver.shadow;
 
+import java.lang.classfile.ClassFile;
+import java.lang.constant.ClassDesc;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.objectweb.asm.Type;
+import ch.usi.dag.disl.util.ClassFileHelper;
 
 import ch.usi.dag.dislreserver.DiSLREServerFatalException;
 import ch.usi.dag.dislreserver.util.Logging;
-import ch.usi.dag.util.asm.ClassNodeHelper;
 import ch.usi.dag.util.logging.Logger;
 
 
@@ -33,20 +35,20 @@ public final class ShadowClassTable {
 
     static final AtomicReference <ShadowClass> JAVA_LANG_CLASS;
 
-    private static final Type __JAVA_LANG_CLASS_TYPE__;
+    private static final ClassDesc __JAVA_LANG_CLASS_TYPE__;
 
     //
 
     private static final ConcurrentHashMap <Integer, ShadowClass> shadowClasses;
 
     // TODO LB: Associate class code with class loader shadow objects.
-    private static final ConcurrentHashMap <ShadowObject, ConcurrentHashMap <Type, byte []>> classLoaderMap;
+    private static final ConcurrentHashMap <ShadowObject, ConcurrentHashMap <ClassDesc, byte []>> classLoaderMap;
 
     //
 
     static {
         JAVA_LANG_CLASS = new AtomicReference <> ();
-        __JAVA_LANG_CLASS_TYPE__ = Type.getType (Class.class);
+        __JAVA_LANG_CLASS_TYPE__ = ClassDesc.ofDescriptor(Class.class.descriptorString());
 
         shadowClasses = new ConcurrentHashMap <> (__INITIAL_SIZE__);
 
@@ -62,12 +64,12 @@ public final class ShadowClassTable {
         final String classInternalName, final long classLoaderNetReference,
         final byte [] classCode
     ) {
-        final ConcurrentHashMap <Type, byte []> classNameMap = classLoaderMap.computeIfAbsent (
+        final ConcurrentHashMap <ClassDesc, byte []> classNameMap = classLoaderMap.computeIfAbsent (
             __safeClassLoader (ShadowObjectTable.get (classLoaderNetReference)),
             cl -> new ConcurrentHashMap <> ()
         );
 
-        final Type type = Type.getObjectType (classInternalName);
+        final ClassDesc type = ClassDesc.ofInternalName(classInternalName);
         if (classNameMap.putIfAbsent (type, classCode) != null) {
             if (__log.debugIsLoggable ()) {
                 __log.debug ("reloading/redefining %s", type);
@@ -82,7 +84,7 @@ public final class ShadowClassTable {
     //
 
     static ShadowClass newInstance (
-        final long classNetReference, final Type type,
+        final long classNetReference, final ClassDesc type,
         final String classGenericStr, final ShadowObject classLoader,
         final ShadowClass superClass
     ) {
@@ -132,29 +134,29 @@ public final class ShadowClassTable {
 
 
     private static ShadowClass __createShadowClass (
-        final long netReference, final Type type,
+        final long netReference, final ClassDesc type,
         final ShadowClass superClass, ShadowObject classLoader
     ) {
         //
         // Assumes that the sorts of primitive types in ASM Type precede the
         // sort of array, which itself precedes the sort of object.
         //
-        if (type.getSort () < Type.ARRAY) {
+        if (type.isPrimitive()) {
             // Primitive type should return null as classloader.
             return new PrimitiveShadowClass (netReference, type, classLoader);
 
-        } else if (type.getSort () == Type.ARRAY) {
+        } else if (type.isArray()) {
             // TODO unknown array component type
             // Array types have the same class loader as their component type.
             return new ArrayShadowClass (netReference, type, classLoader, superClass, null);
 
-        } else if (type.getSort () == Type.OBJECT) {
+        } else if (type.isClassOrInterface()) {
             if (classLoader == null) {
                 // bootstrap loader
                 classLoader = BOOTSTRAP_CLASSLOADER;
             }
 
-            final ConcurrentHashMap <Type, byte []> classTypeMap = classLoaderMap.get (classLoader);
+            final ConcurrentHashMap <ClassDesc, byte []> classTypeMap = classLoaderMap.get (classLoader);
             if (classTypeMap == null) {
                 throw new DiSLREServerFatalException ("Unknown class loader");
             }
@@ -167,23 +169,25 @@ public final class ShadowClassTable {
                 // about the class (i.e. what interface it implements) to the
                 // Shadow VM.
                 //
-                if (type.getInternalName ().contains ("$$Lambda$")) {
+                if (ClassFileHelper.getInternalName(type).contains ("$$Lambda$")) {
                     return new LambdaShadowClass (
                         netReference, type, classLoader, superClass
                     );
 
                 } else {
-                    throw new DiSLREServerFatalException ("No bytecode found for "+ type + classCode);
+                    throw new DiSLREServerFatalException ("No bytecode found for "+ type + Arrays.toString(classCode));
                 }
             }
 
             return new ObjectShadowClass (
-                netReference, type, classLoader, superClass,
-                ClassNodeHelper.OUTLINE.unmarshal (classCode)
+                netReference, type, classLoader, superClass, ClassFile.of(
+                    ClassFile.DebugElementsOption.DROP_DEBUG,
+                    ClassFile.StackMapsOption.DROP_STACK_MAPS
+                ).parse(classCode)
             );
 
         } else {
-            throw new DiSLREServerFatalException ("unpextected sort of type: "+ type.getSort ());
+            throw new DiSLREServerFatalException ("unexpected sort of type: "+ type.descriptorString());
         }
     }
 
@@ -209,9 +213,7 @@ public final class ShadowClassTable {
         if (object.isClassInstance ()) {
             shadowClasses.remove (object.getClassId ());
 
-        } else if (classLoaderMap.containsKey (object)) {
-            classLoaderMap.remove (object);
-        }
+        } else classLoaderMap.remove (object);
     }
 
 
@@ -220,7 +222,7 @@ public final class ShadowClassTable {
         final String classGenericStr, final long classLoaderNetReference,
         final long superclassNetReference
     ) {
-        final Type type = Type.getType (typeDescriptor);
+        final ClassDesc type = ClassDesc.ofDescriptor(typeDescriptor);
         final ShadowObject classLoader = ShadowObjectTable.get (classLoaderNetReference);
         final ShadowClass superClass = (ShadowClass) ShadowObjectTable.get (superclassNetReference);
         newInstance (netReference, type, classGenericStr, classLoader, superClass);
