@@ -1,5 +1,6 @@
 package ch.usi.dag.disl.weaver.peClassFile;
 
+import ch.usi.dag.disl.util.ClassFileHelper;
 import ch.usi.dag.disl.util.JavaNames;
 
 import java.lang.classfile.Opcode;
@@ -51,8 +52,7 @@ public class InvocationInterpreter {
         }
 
         try {
-            // TODO is this correct???
-            Class<?> clazz = Class.forName(instruction.owner().asSymbol().displayName());
+            Class<?> clazz = Class.forName(ClassFileHelper.getClassName(instruction.owner().asSymbol()));
             Class<?>[] parameters = ClassHelper.getClasses(instruction.typeSymbol());
 
             if (parameters == null) {
