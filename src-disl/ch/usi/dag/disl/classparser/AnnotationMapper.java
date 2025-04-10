@@ -37,13 +37,8 @@ final class AnnotationMapper {
     private Map <Predicate <String>, BiConsumer <String, Object>> __getConsumers (
         final Class <?> ac
     ) {
-        Map <Predicate <String>, BiConsumer <String, Object>> result = __consumers.get (ac);
-        if (result == null) {
-            result = new HashMap <> ();
-            __consumers.put (ac, result);
-        }
 
-        return result;
+        return __consumers.computeIfAbsent(ac, k -> new HashMap<>());
     }
 
     private Map <Predicate <String>, BiConsumer <String, Object>> __findConsumers (
@@ -59,8 +54,8 @@ final class AnnotationMapper {
 
     public AnnotationMapper processDefaults () {
         __consumers.keySet ().stream ()
-            .filter (ac -> ac.isAnnotation ())
-            .forEach (ac -> __accept (ac));
+            .filter (Class::isAnnotation)
+            .forEach (this::__accept);
 
         return this;
     }
@@ -152,7 +147,7 @@ final class AnnotationMapper {
 
     private static Class<?> __resolveClass(final ClassDesc desc) {
         try {
-            return Class.forName (desc.displayName());
+            return Class.forName (ClassFileHelper.getClassName(desc));
 
         } catch (final ClassNotFoundException e) {
             throw new ParserRuntimeException (e);
@@ -163,11 +158,10 @@ final class AnnotationMapper {
     private static Object __instantiateEnum (
         final String desc, final String value
     ) {
-        //Type.getType (desc).getClassName ();
-        final String className = ClassDesc.ofDescriptor(desc).displayName();
+        final ClassDesc classDesc = ClassDesc.ofDescriptor(desc);
 
         try {
-            final Class <?> enumClass = Class.forName (className);
+            final Class <?> enumClass = Class.forName (ClassFileHelper.getClassName(classDesc));
             final Method valueMethod = enumClass.getMethod ("valueOf", String.class );
             final Object result = valueMethod.invoke (null, value);
             if (result != null) {
@@ -178,12 +172,12 @@ final class AnnotationMapper {
 
         } catch (final Exception e) {
             throw new ParserRuntimeException (
-                e, "failed to instantiate enum value %s.%s", className, value
+                e, "failed to instantiate enum value %s.%s", classDesc.displayName(), value
             );
         }
 
         throw new ParserRuntimeException (
-            "failed to instantiate enum value %s.%s", className, value
+            "failed to instantiate enum value %s.%s", classDesc.displayName(), value
         );
     }
 
