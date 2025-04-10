@@ -1,11 +1,11 @@
 package ch.usi.dag.disl.scope;
 
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
-
-import org.objectweb.asm.Type;
 
 import ch.usi.dag.disl.util.JavaNames;
 
@@ -56,22 +56,23 @@ abstract class ParameterMatcher {
             __suffixCard = cards.get (cards.size () - 1);
             __cards = cards.stream ()
                 .filter (a -> a.length > 0)
-                .toArray (size -> new TypeMatcher [size][]);
+                .toArray (TypeMatcher[][]::new);
         }
 
         //
 
         @Override
         public boolean match (final String methodDesc) {
-            final Type [] params = Type.getArgumentTypes (methodDesc);
+            MethodTypeDesc methodTypeDesc = MethodTypeDesc.ofDescriptor(methodDesc);
+            final ClassDesc[] parameters = methodTypeDesc.parameterArray();
 
             int paramsFromInclusive = 0;
-            int paramsToExclusive = params.length;
+            int paramsToExclusive = parameters.length;
 
             int cardsFromInclusive = 0;
             if (__prefixCard.length > 0) {
                 // The first card should match at the beginning.
-                if (!__matchCard (__prefixCard, params, 0, paramsToExclusive)) {
+                if (!__matchCard (__prefixCard, parameters, 0, paramsToExclusive)) {
                     return false;
                 }
 
@@ -83,7 +84,7 @@ abstract class ParameterMatcher {
             if (__suffixCard.length > 0) {
                 // The last card should match at the end
                 final int tailFromInclusive = Math.max (0, paramsToExclusive - __suffixCard.length);
-                if (!__matchCard (__suffixCard, params, tailFromInclusive, paramsToExclusive)) {
+                if (!__matchCard (__suffixCard, parameters, tailFromInclusive, paramsToExclusive)) {
                     return false;
                 }
 
@@ -96,7 +97,7 @@ abstract class ParameterMatcher {
             // on all parameters.
             //
             if (cardsFromInclusive > cardsToExclusive) {
-                return (paramsToExclusive - paramsFromInclusive) == -params.length;
+                return (paramsToExclusive - paramsFromInclusive) == -parameters.length;
             }
 
             //
@@ -107,7 +108,7 @@ abstract class ParameterMatcher {
             while (cardsFromInclusive < cardsToExclusive) {
                 final TypeMatcher [] card = __cards [cardsFromInclusive];
 
-                final int cardMatchIndex = __indexOf (card, params, paramsFromInclusive, paramsToExclusive);
+                final int cardMatchIndex = __indexOf (card, parameters, paramsFromInclusive, paramsToExclusive);
                 if (cardMatchIndex < 0) {
                     return false;
                 }
@@ -120,7 +121,7 @@ abstract class ParameterMatcher {
         }
 
         private boolean __matchCard (
-            final TypeMatcher [] card, final Type [] params,
+            final TypeMatcher [] card, final ClassDesc [] params,
             final int fromInclusive, final int toExclusive
         ) {
             if (card.length > (toExclusive - fromInclusive)) {
@@ -130,8 +131,8 @@ abstract class ParameterMatcher {
 
             int paramIndex = fromInclusive;
             for (final TypeMatcher matcher : card) {
-                final Type param = params [paramIndex++];
-                if (!matcher.match (param.getDescriptor ())) {
+                final ClassDesc param = params [paramIndex++];
+                if (!matcher.match (param.descriptorString ())) {
                     return false;
                 }
             }
@@ -140,7 +141,7 @@ abstract class ParameterMatcher {
         }
 
         private int __indexOf (
-            final TypeMatcher [] card, final Type [] params,
+            final TypeMatcher [] card, final ClassDesc [] params,
             final int fromInclusive, final int toExclusive
         ) {
             for (int index = fromInclusive; index < toExclusive; index++) {
