@@ -1,10 +1,9 @@
 package ch.usi.dag.dislreserver.shadow;
 
+import java.lang.constant.ClassDesc;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.objectweb.asm.Type;
 
 import ch.usi.dag.dislreserver.DiSLREServerFatalException;
 import ch.usi.dag.dislreserver.util.Logging;
@@ -77,8 +76,8 @@ public final class ShadowObjectTable {
     }
 
 
-    private static final Type __THREAD_CLASS_TYPE__ = Type.getType (Thread.class);
-    private static final Type __STRING_CLASS_TYPE__ = Type.getType (String.class);
+    private static final ClassDesc __THREAD_CLASS_TYPE__ = ClassDesc.ofDescriptor(Thread.class.descriptorString());
+    private static final ClassDesc __STRING_CLASS_TYPE__ = ClassDesc.ofDescriptor(String.class.descriptorString());
 
     private static ShadowObject __createShadowObject (
         final long netReference
