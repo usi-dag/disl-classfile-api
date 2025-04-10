@@ -1,10 +1,10 @@
 package ch.usi.dag.disl.scope;
 
+import java.lang.classfile.TypeKind;
+import java.lang.constant.ClassDesc;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
-import org.objectweb.asm.Type;
 
 import ch.usi.dag.disl.util.JavaNames;
 
@@ -162,16 +162,16 @@ abstract class TypeMatcher {
 
 
     @SuppressWarnings ("serial")
-    private static final Map <String, Type> __PRIMITIVES__ = new HashMap <String, Type> () {{
-        put ("void", Type.VOID_TYPE);
-        put ("boolean", Type.BOOLEAN_TYPE);
-        put ("byte", Type.BYTE_TYPE);
-        put ("char", Type.CHAR_TYPE);
-        put ("short", Type.SHORT_TYPE);
-        put ("int", Type.INT_TYPE);
-        put ("float", Type.FLOAT_TYPE);
-        put ("long", Type.LONG_TYPE);
-        put ("double", Type.DOUBLE_TYPE);
+    private static final Map <String, TypeKind> __PRIMITIVES__ = new HashMap<>() {{
+        put ("void", TypeKind.VOID);
+        put ("boolean", TypeKind.BOOLEAN);
+        put ("byte", TypeKind.BYTE);
+        put ("char", TypeKind.CHAR);
+        put ("short", TypeKind.SHORT);
+        put ("int", TypeKind.INT);
+        put ("float", TypeKind.FLOAT);
+        put ("long", TypeKind.LONG);
+        put ("double", TypeKind.DOUBLE);
     }};
 
     private static String __getTypeDescriptor (final String input) {
@@ -185,13 +185,14 @@ abstract class TypeMatcher {
 
         //
 
-        final Type primitiveType = __PRIMITIVES__.get (input);
+        final TypeKind primitiveType = __PRIMITIVES__.get (input);
         if (primitiveType == null) {
             final String fqcn = __getClassName (input);
-            return Type.getObjectType (fqcn).getDescriptor ();
+            // TODO will this constructor of ClassDesc (of) work with this string format???
+            return ClassDesc.of(fqcn).descriptorString();
 
         } else {
-            return primitiveType.getDescriptor ();
+            return primitiveType.upperBound().descriptorString();
         }
     }
 
