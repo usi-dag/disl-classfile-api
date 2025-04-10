@@ -138,7 +138,7 @@ class ArgProcessorParser extends AbstractParser {
         ClassDesc argType = method.methodTypeSymbol().parameterType(0);
         TypeKind typeKind = TypeKind.fromDescriptor(argType.descriptorString());
         // TODO is this equivalent to the asm version???
-        if (argType.isPrimitive() && !typeKind.equals(TypeKind.VoidType)) {
+        if (argType.isPrimitive() && !typeKind.equals(TypeKind.VOID)) {
             return; // primitive are accepted except void
         }
         if (argType.isArray()) {
@@ -196,7 +196,7 @@ class ArgProcessorParser extends AbstractParser {
 
         private static Class<?> __resolveClass(final ClassDesc classDesc) {
             try {
-                return Class.forName(classDesc.displayName());
+                return Class.forName(ClassFileHelper.getClassName(classDesc));
             } catch (final ClassNotFoundException e) {
                 throw new ParserRuntimeException(e);
             }
