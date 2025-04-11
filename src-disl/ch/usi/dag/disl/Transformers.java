@@ -87,7 +87,7 @@ class Transformers {
         final Class <?> transformerClass
     ) {
         try {
-            return (Transformer) transformerClass.newInstance ();
+            return (Transformer) transformerClass.getDeclaredConstructor().newInstance();
 
         } catch (final Exception e) {
             throw new InitializationException (
