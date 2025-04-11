@@ -1,25 +1,29 @@
 package ch.usi.dag.disl.test.suite.dispatch.instr;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
+import ch.usi.dag.disl.util.ClassFileHelper;
 
 import ch.usi.dag.disl.staticcontext.AbstractStaticContext;
+
+import java.lang.classfile.CodeElement;
+import java.util.List;
 
 
 public class CodeLengthSC extends AbstractStaticContext {
 
     public int methodSize() {
-        return staticContextData.getMethodNode().instructions.size();
+        return staticContextData.getMethodModel().code().orElseThrow().elementList().size();
     }
 
     public int codeSize() {
-        AbstractInsnNode ain = staticContextData.getRegionStart();
+        CodeElement ain = staticContextData.getRegionStart();
 
         int size = 0;
 
         // count the size until the first end
         while(ain != null && ain != staticContextData.getRegionEnds().get(0)) {
             ++size;
-            ain = ain.getNext();
+            List<CodeElement> instr = staticContextData.getMethodModel().code().orElseThrow().elementList();
+            ain = ClassFileHelper.nextInstruction(instr, ain);
         }
 
         if(ain == null) {
