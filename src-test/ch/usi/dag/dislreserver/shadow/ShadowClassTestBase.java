@@ -2,23 +2,18 @@ package ch.usi.dag.dislreserver.shadow;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import java.lang.classfile.ClassModel;
+import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.util.classfileAPI.ClassModelHelper;
 import org.junit.Assert;
 import org.junit.experimental.theories.PotentialAssignment;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.ClassNode;
-
-import ch.usi.dag.util.asm.ClassNodeHelper;
 
 
 abstract class ShadowClassTestBase {
@@ -113,8 +108,9 @@ abstract class ShadowClassTestBase {
         //
 
         final ShadowClass shadowType = _createShadowClass (type);
-        final int modifiers = shadowType.getModifiers ();
-        Assert.assertEquals (type.getModifiers () & modifiers, modifiers);
+        final List<AccessFlag> modifiers = shadowType.getModifiers();
+        final int mask = modifiers.stream().map(AccessFlag::mask).reduce(0, (a, b) -> a | b);
+        Assert.assertEquals (type.getModifiers () & mask, mask);
     }
 
     //
@@ -142,7 +138,7 @@ abstract class ShadowClassTestBase {
         final ShadowClass shadowType = _createShadowClass (type);
 
         Assert.assertArrayEquals (
-            __sortedStringArray (Arrays.stream (type.getInterfaces ()).map (c -> Type.getType (c).getDescriptor ())),
+            __sortedStringArray (Arrays.stream (type.getInterfaces ()).map (Class::descriptorString)),
             __sortedStringArray (Arrays.stream (shadowType.getInterfaceDescriptors ()))
         );
     }
@@ -183,7 +179,7 @@ abstract class ShadowClassTestBase {
 
     private void __assertEquals (final Field field, final FieldInfo shadowField) {
         Assert.assertEquals (field.getName (), shadowField.getName ());
-        Assert.assertEquals (Type.getType (field.getType ()).getDescriptor (), shadowField.getDescriptor ());
+        Assert.assertEquals (field.getType ().descriptorString(), shadowField.getDescriptor ());
         Assert.assertEquals (field.getModifiers (), removeASMSpecificAccessFlags(shadowField.getModifiers ()));
     }
 
@@ -212,7 +208,7 @@ abstract class ShadowClassTestBase {
             return nameResult;
         }
 
-        return Type.getMethodDescriptor (a).compareTo (Type.getMethodDescriptor (b));
+        return ClassFileHelper.getMethodDescriptor(a).descriptorString().compareTo(ClassFileHelper.getMethodDescriptor(b).descriptorString());
     };
 
 
@@ -245,15 +241,15 @@ abstract class ShadowClassTestBase {
 
     private void __assertEqual (final Method method, final MethodInfo shadowMethod) {
         Assert.assertEquals (method.getName (), shadowMethod.getName ());
-        Assert.assertEquals (Type.getMethodDescriptor (method), shadowMethod.getDescriptor ());
+        Assert.assertEquals (ClassFileHelper.getMethodDescriptor(method), shadowMethod.getDescriptor ());
         Assert.assertEquals (method.getModifiers (), removeASMSpecificAccessFlags(shadowMethod.getModifiers ()));
     }
 
     //
 
-    static ClassNode createClassNode (final Class <?> type) {
+    static ClassModel createClassNode (final Class <?> type) {
         try {
-            return ClassNodeHelper.OUTLINE.load (type.getName ());
+            return ClassModelHelper.OUTLINE.load (type.getName ());
 
         } catch (final IOException ioe) {
             throw new RuntimeException ("could not load byte code for "+ type.getName (), ioe);
@@ -273,7 +269,7 @@ abstract class ShadowClassTestBase {
 
         out.printf ("\tinterfaces:\n");
         Arrays.stream (type.getInterfaces ()).forEach (
-            c -> out.printf ("\t\t%s, %s\n", c.getName (), Type.getType (c).getDescriptor ())
+            c -> out.printf ("\t\t%s, %s\n", c.getName (), c.descriptorString())
         );
 
         out.printf ("\tdeclared fields:\n");
