@@ -12,7 +12,7 @@ public enum ClassModelHelper {
     OUTLINE(List.of(
             ClassFile.DebugElementsOption.DROP_DEBUG,  // this should be equivalent to ClassReader.SKIP_DEBUG
             ClassFile.StackMapsOption.DROP_STACK_MAPS,  // this should be equivalent to ClassReader.SKIP_FRAMES
-            ClassFile.AttributesProcessingOption.DROP_UNSTABLE_ATRIBUTES  // TODO I am not sure if this is equivalent to ClassReader.SKIP_CODE
+            ClassFile.AttributesProcessingOption.DROP_UNSTABLE_ATTRIBUTES  // TODO I am not sure if this is equivalent to ClassReader.SKIP_CODE
     )),
 
     SNIPPET(List.of(
@@ -31,6 +31,9 @@ public enum ClassModelHelper {
     public ClassModel load(final String className) throws IOException {
         // this is what asm does internally
         InputStream inputStream = ClassLoader.getSystemResourceAsStream(className.replace(".", "/") + ".class");
+        if (inputStream == null) {
+            throw new RuntimeException("Input stream is null while loading class " + className);
+        }
         byte[] classBytes = inputStream.readAllBytes();
         ClassFile.Option[] options = __options.toArray(ClassFile.Option[]::new);
         return ClassFile.of(options).parse(classBytes);
