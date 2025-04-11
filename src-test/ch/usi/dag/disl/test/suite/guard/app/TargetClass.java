@@ -13,7 +13,7 @@ public class TargetClass {
     public static void main(String[] args) {
         System.out.println("app: TargetClass.main(..)");
         TargetClass t = new TargetClass();
-        t.method(new Integer(0), 0);
+        t.method(0, 0);
     }
 
 }
