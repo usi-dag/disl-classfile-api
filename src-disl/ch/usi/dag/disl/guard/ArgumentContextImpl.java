@@ -20,7 +20,7 @@ class ArgumentContextImpl implements ArgumentContext {
 
     @Override
     public String getTypeDescriptor() {
-        return __pmi.getArgType ().getDescriptor ();
+        return __pmi.getArgType ().descriptorString();
     }
 
     @Override
