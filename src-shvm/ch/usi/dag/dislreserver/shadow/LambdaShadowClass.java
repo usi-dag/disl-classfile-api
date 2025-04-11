@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 
+import ch.usi.dag.disl.util.ClassFileHelper;
 import ch.usi.dag.dislreserver.util.Env;
 
 
@@ -57,7 +58,8 @@ final class LambdaShadowClass extends ShadowClass {
         // instead of only those preceding the $$Lambda$ suffix. Also, the dollars
         // in the lambda type canonical names should not be converted to dots.
         //
-        final String name = (_type ().packageName () + "/" + _type().displayName()).replace(".", "/");
+
+        final String name = ClassFileHelper.getInternalName(_type());
         final int start = name.lastIndexOf ("$$Lambda$");
         assert start > 0;
 
