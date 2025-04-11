@@ -1,5 +1,6 @@
 package ch.usi.dag.dislreserver.shadow;
 
+import java.lang.constant.ClassDesc;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -11,7 +12,6 @@ import org.junit.experimental.theories.PotentialAssignment;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
-import org.objectweb.asm.Type;
 
 
 @RunWith (Theories.class)
@@ -20,7 +20,7 @@ public class ArrayShadowClassTest extends ShadowClassTestBase {
     private static final AtomicLong __uniqueId__ = new AtomicLong (1);
 
     private static final ShadowClass __objectShadowClass__ = new ObjectShadowClass (
-        __uniqueId__.getAndIncrement (), Type.getType (Object.class),
+        __uniqueId__.getAndIncrement (), ClassDesc.ofDescriptor(Object.class.descriptorString()),
         null /* no class loader */, null /* no super class */,
         createClassNode (Object.class)
     );
@@ -49,7 +49,7 @@ public class ArrayShadowClassTest extends ShadowClassTestBase {
         Assert.assertTrue (type.isArray ());
 
         return new ArrayShadowClass (
-            __uniqueId__.getAndIncrement (), Type.getType (type),
+            __uniqueId__.getAndIncrement (), ClassDesc.ofDescriptor(type.descriptorString()),
             null /* no class loader */, __objectShadowClass__,
             null /* no component type yet */
         );
