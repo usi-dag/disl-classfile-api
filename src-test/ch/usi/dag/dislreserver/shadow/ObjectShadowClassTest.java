@@ -1,5 +1,6 @@
 package ch.usi.dag.dislreserver.shadow;
 
+import java.lang.constant.ClassDesc;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,8 +13,6 @@ import org.junit.experimental.theories.PotentialAssignment;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
-import org.objectweb.asm.Type;
-
 
 @RunWith (Theories.class)
 public class ObjectShadowClassTest extends ShadowClassTestBase {
@@ -79,7 +78,7 @@ public class ObjectShadowClassTest extends ShadowClassTestBase {
         return __classCache__.computeIfAbsent (
             type, t -> new ObjectShadowClass (
                 __uniqueId__.getAndIncrement (),
-                Type.getType (t), null, superclass,
+                        ClassDesc.ofDescriptor(t.descriptorString()), null, superclass,
                 createClassNode (t)
             )
         );
