@@ -1,28 +1,33 @@
 package ch.usi.dag.disl.test.suite.gettarget.instr;
 
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
 
 import ch.usi.dag.disl.staticcontext.AbstractStaticContext;
+
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.Instruction;
+import java.lang.classfile.Opcode;
+import java.lang.classfile.instruction.InvokeInstruction;
 
 
 public class GetTargetAnalysis extends AbstractStaticContext {
 
     public boolean isCalleeStatic() {
-        AbstractInsnNode instr = staticContextData.getRegionStart();
-        return instr.getOpcode() == Opcodes.INVOKESTATIC;
+        CodeElement instr = staticContextData.getRegionStart();
+        if (instr instanceof Instruction instruction) {
+            return instruction.opcode() == Opcode.INVOKESTATIC;
+        } else {
+            return false;
+        }
     }
 
     public int calleeParCount() {
-        AbstractInsnNode instr = staticContextData.getRegionStart();
+        CodeElement instr = staticContextData.getRegionStart();
 
-        if (!(instr instanceof MethodInsnNode)) {
+        if (instr instanceof InvokeInstruction instruction) {
+            return instruction.typeSymbol().parameterCount();
+        } else {
             return 0;
         }
-
-        return Type.getArgumentTypes(((MethodInsnNode) instr).desc).length;
     }
 
 }
