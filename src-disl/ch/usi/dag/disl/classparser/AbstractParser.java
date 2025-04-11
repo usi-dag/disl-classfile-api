@@ -495,13 +495,13 @@ abstract class AbstractParser {
             case AnnotationValue.OfByte ofByte -> {
                 return ofByte.byteValue();
             }
-            case AnnotationValue.OfCharacter ofCharacter -> {
+            case AnnotationValue.OfChar ofCharacter -> {
                 return ofCharacter.charValue();
             }
             case AnnotationValue.OfShort ofShort -> {
                 return ofShort.shortValue();
             }
-            case AnnotationValue.OfInteger ofInteger -> {
+            case AnnotationValue.OfInt ofInteger -> {
                 return ofInteger.intValue();
             }
             case AnnotationValue.OfLong ofLong -> {
