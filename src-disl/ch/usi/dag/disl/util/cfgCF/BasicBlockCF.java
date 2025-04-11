@@ -1,5 +1,7 @@
 package ch.usi.dag.disl.util.cfgCF;
 
+import ch.usi.dag.disl.util.ClassFileHelper;
+
 import java.lang.classfile.CodeElement;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -37,6 +39,11 @@ public class BasicBlockCF implements Iterable<CodeElement> {
 
     public int getIndex() {
         return index;
+    }
+
+    // method used for tests
+    public CodeElement getNextElement(CodeElement element) {
+        return ClassFileHelper.nextInstruction(this.instructions, element);
     }
 
     public CodeElement getEntry() {
