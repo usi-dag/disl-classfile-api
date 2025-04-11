@@ -1,5 +1,6 @@
 package ch.usi.dag.dislreserver.msg.analyze;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,7 +66,7 @@ public final class AnalysisResolver {
                 Class <?> raClass = Class.forName (className);
 
                 // create instance
-                raInst = (RemoteAnalysis) raClass.newInstance ();
+                raInst = (RemoteAnalysis) raClass.getDeclaredConstructor ().newInstance();
 
                 analysisMap.put (className, raInst);
                 analysisSet.add (raInst);
@@ -77,11 +78,8 @@ public final class AnalysisResolver {
             return new AnalysisMethodHolder(raInst, raMethod);
         }
 
-        catch (ClassNotFoundException e) {
-            throw new DiSLREServerException(e);
-        } catch (InstantiationException e) {
-            throw new DiSLREServerException(e);
-        } catch (IllegalAccessException e) {
+        catch (ClassNotFoundException | InstantiationException | IllegalAccessException | NoSuchMethodException |
+               InvocationTargetException e) {
             throw new DiSLREServerException(e);
         }
     }
