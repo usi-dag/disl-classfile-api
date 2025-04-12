@@ -1,7 +1,6 @@
 package ch.usi.dag.disl.util.cfgCF;
 
 import ch.usi.dag.disl.util.JavaNames;
-import ch.usi.dag.disl.util.cfg.CtrlFlowGraphTest;
 import ch.usi.dag.util.classfileAPI.ClassModelHelper;
 import org.junit.Test;
 import org.junit.Assert;
@@ -126,44 +125,44 @@ public class ControlFlowGraphTest {
 
     @Test
     public void emptyMethodHasOneBasicBlock () throws IOException {
-        final ControlFlowGraph cfg = __createCFG (CtrlFlowGraphTest.A.class, "empty");
+        final ControlFlowGraph cfg = __createCFG (ControlFlowGraphTest.A.class, "empty");
         Assert.assertEquals (1, cfg.getNodes ().size ());
     }
 
     @Test
     public void emptyMethodBasicBlockHasOneInsn () throws IOException {
-        final ControlFlowGraph cfg = __createCFG(CtrlFlowGraphTest.A.class, "empty");
+        final ControlFlowGraph cfg = __createCFG(ControlFlowGraphTest.A.class, "empty");
         final BasicBlockCF bb = cfg.getNodes ().get (0);
         Assert.assertEquals (1, __getBasicBlockSize (bb));
     }
 
     @Test
     public void threeInvocationsHasOneBasicBlock () throws IOException {
-        final ControlFlowGraph cfg = __createCFG(CtrlFlowGraphTest.A.class, "threeInvocations");
+        final ControlFlowGraph cfg = __createCFG(ControlFlowGraphTest.A.class, "threeInvocations");
         Assert.assertEquals (1, cfg.getNodes ().size ());
     }
 
     @Test
     public void ifThenBranchHasThreeBasicBlocks () throws IOException {
-        final ControlFlowGraph cfg = __createCFG(CtrlFlowGraphTest.A.class, "ifThenBranch");
+        final ControlFlowGraph cfg = __createCFG(ControlFlowGraphTest.A.class, "ifThenBranch");
         Assert.assertEquals (3, cfg.getNodes ().size ());
     }
 
     @Test
     public void ifThenElseBranchHasFourBasicBlocks () throws IOException {
-        final ControlFlowGraph cfg = __createCFG(CtrlFlowGraphTest.A.class, "ifThenElseBranch");
+        final ControlFlowGraph cfg = __createCFG(ControlFlowGraphTest.A.class, "ifThenElseBranch");
         Assert.assertEquals (4, cfg.getNodes ().size ());
     }
 
     @Test
     public void ifThenReturnElseReturnHasThreeBasicBlocks () throws IOException {
-        final ControlFlowGraph cfg = __createCFG(CtrlFlowGraphTest.A.class, "ifThenReturnElseReturn");
+        final ControlFlowGraph cfg = __createCFG(ControlFlowGraphTest.A.class, "ifThenReturnElseReturn");
         Assert.assertEquals (3, cfg.getNodes ().size ());
     }
 
     @Test
     public void simpleForLoopHasFourBasicBlocks () throws IOException {
-        final ControlFlowGraph cfg = __createCFG(CtrlFlowGraphTest.A.class, "simpleForLoop");
+        final ControlFlowGraph cfg = __createCFG(ControlFlowGraphTest.A.class, "simpleForLoop");
         Assert.assertEquals (4, cfg.getNodes ().size ());
     }
 }
