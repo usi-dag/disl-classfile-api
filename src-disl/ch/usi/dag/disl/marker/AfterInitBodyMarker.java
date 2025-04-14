@@ -1,7 +1,6 @@
 package ch.usi.dag.disl.marker;
 
 import java.lang.classfile.CodeElement;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.Opcode;
 import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.classfile.instruction.ReturnInstruction;
@@ -12,6 +11,7 @@ import java.util.List;
 import ch.usi.dag.disl.annotation.Before;
 import ch.usi.dag.disl.snippet.Shadow.WeavingRegion;
 import ch.usi.dag.disl.util.JavaNames;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 
 /**
@@ -27,12 +27,12 @@ import ch.usi.dag.disl.util.JavaNames;
 public class AfterInitBodyMarker extends AbstractMarker {
 
     @Override
-    public List<MarkedRegion> mark(final MethodModel methodModel) {
+    public List<MarkedRegion> mark(final MethodModelCopy methodModel) {
         final MarkedRegion region = new MarkedRegion(__findBodyStart(methodModel));
 
         final List<CodeElement> instructions;
-        if (methodModel.code().isPresent()) {
-            instructions = methodModel.code().get().elementList();
+        if (methodModel.hasCode()) {
+            instructions = methodModel.instructions();
         } else {
             instructions = new ArrayList<>();
         }
@@ -57,12 +57,12 @@ public class AfterInitBodyMarker extends AbstractMarker {
     // Finds the first instruction of a method body. For normal methods, this is
     // the first instruction of a method, but for constructor, this is the first
     // instruction after a call to the superclass constructor.
-    private static CodeElement __findBodyStart(final MethodModel methodModel) {
+    private static CodeElement __findBodyStart(final MethodModelCopy methodModel) {
 
-        if (methodModel.code().isEmpty()) {
+        if (!methodModel.hasCode()) {
             return null; // TODO should it throw an exception instad???
         }
-        List<CodeElement> instructions = methodModel.code().get().elementList();
+        List<CodeElement> instructions = methodModel.instructions();
 
         if (!JavaNames.isConstructorName(methodModel.methodName().stringValue())) {
             return instructions.getFirst();

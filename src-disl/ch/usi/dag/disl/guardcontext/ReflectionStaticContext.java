@@ -3,6 +3,7 @@ import ch.usi.dag.disl.Reflection;
 import ch.usi.dag.disl.Reflection.Class;
 import ch.usi.dag.disl.Reflection.Method;
 import ch.usi.dag.disl.staticcontext.AbstractStaticContext;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 import java.lang.classfile.MethodModel;
 import java.util.Optional;
@@ -26,7 +27,7 @@ public final class ReflectionStaticContext extends AbstractStaticContext {
     }
 
     public Method thisMethod () {
-        final MethodModel mn = staticContextData.getMethodModel();
+        final MethodModelCopy mn = staticContextData.getMethodModel();
         return thisClass().methodForSignature (mn.methodName().stringValue() + mn.methodTypeSymbol().descriptorString()).orElse(null);
     }
 

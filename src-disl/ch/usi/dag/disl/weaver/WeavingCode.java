@@ -43,7 +43,7 @@ public class WeavingCode {
     private final Snippet snippet;
     private final Shadow shadow;
 
-    private final MethodModel methodModel;
+    private final MethodModelCopy methodModel;
     private final CodeElement weavingLocation;
     //private final List<CodeElement> instructionsToInstrument;
 
@@ -62,7 +62,7 @@ public class WeavingCode {
 
 
     public WeavingCode(
-            final WeavingInfo weavingInfo, final MethodModel methodModel, final SnippetCode src,
+            final WeavingInfo weavingInfo, final MethodModelCopy methodModel, final SnippetCode src,
             final Snippet snippet, final Shadow shadow, final CodeElement location, final List<CodeElement> methodInstructions,
             List<ExceptionCatch> exceptionCatches, int methodMaxLocals
     ) {

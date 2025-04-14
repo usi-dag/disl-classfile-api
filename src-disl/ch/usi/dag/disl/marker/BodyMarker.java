@@ -1,12 +1,12 @@
 package ch.usi.dag.disl.marker;
 
 import java.lang.classfile.CodeElement;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.instruction.ReturnInstruction;
 import java.util.LinkedList;
 import java.util.List;
 
 import ch.usi.dag.disl.snippet.Shadow.WeavingRegion;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 
 /**
@@ -19,12 +19,12 @@ public class BodyMarker extends AbstractMarker {
 
 
     @Override
-    public List<MarkedRegion> mark(final MethodModel method) {
+    public List<MarkedRegion> mark(final MethodModelCopy method) {
         final List<MarkedRegion> regions = new LinkedList<>();
-        if (method.code().isEmpty()) {
+        if (!method.hasCode()) {
             return regions; // TODO should I return an error maybe???
         }
-        List<CodeElement> instructions = method.code().get().elementList();
+        List<CodeElement> instructions = method.instructions();
         final MarkedRegion region = new MarkedRegion(instructions.getFirst());
         for (final CodeElement codeElement: instructions) {
             if (codeElement instanceof ReturnInstruction) {

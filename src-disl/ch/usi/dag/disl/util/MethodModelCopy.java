@@ -16,6 +16,7 @@ import java.util.Optional;
  */
 public class MethodModelCopy {
 
+    final MethodModel original;
     final Utf8Entry methodName;
     final Utf8Entry methodType;
     final MethodTypeDesc methodTypeSymbol;
@@ -31,6 +32,7 @@ public class MethodModelCopy {
 
 
     public MethodModelCopy(MethodModel methodModel) {
+        this.original = methodModel;
         this.methodName = methodModel.methodName();
         this.methodType = methodModel.methodType();
         this.methodTypeSymbol = methodModel.methodTypeSymbol();
@@ -100,5 +102,9 @@ public class MethodModelCopy {
 
     public List<ExceptionCatch> exceptionHandlers() {
         return exceptionHandlers;
+    }
+
+    public MethodModel getOriginal() {
+        return original;
     }
 }

@@ -1,8 +1,9 @@
 package ch.usi.dag.disl.snippet;
 
+import ch.usi.dag.disl.util.MethodModelCopy;
+
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeElement;
-import java.lang.classfile.MethodModel;
 import java.util.List;
 
 /**
@@ -15,7 +16,7 @@ import java.util.List;
  */
 public final class Shadow {
     protected final ClassModel classModel;
-    protected final MethodModel methodModel;
+    protected final MethodModelCopy methodModel;
 
     protected final Snippet snippet;
 
@@ -63,7 +64,7 @@ public final class Shadow {
         public void setAfterThrowEnd(CodeElement afterThrowEnd) {this.afterThrowEnd = afterThrowEnd;}
     }
 
-    public Shadow(final ClassModel classModel, final MethodModel methodModel, final Snippet snippet,
+    public Shadow(final ClassModel classModel, final MethodModelCopy methodModel, final Snippet snippet,
                   final CodeElement regionStart, final List<CodeElement> regionEnds, final WeavingRegion weavingRegion) {
         super();
         this.classModel = classModel;
@@ -84,7 +85,7 @@ public final class Shadow {
     }
 
     public ClassModel getClassModel() {return classModel;}
-    public MethodModel getMethodModel() {return methodModel;}
+    public MethodModelCopy getMethodModel() {return methodModel;}
     public CodeElement getRegionStart() {return regionStart;}
     public List<CodeElement> getRegionEnds() {return regionEnds;}
     public WeavingRegion getWeavingRegion() {return weavingRegion;}

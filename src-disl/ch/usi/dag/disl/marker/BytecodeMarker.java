@@ -2,12 +2,12 @@ package ch.usi.dag.disl.marker;
 
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.Instruction;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.Opcode;
 import java.util.*;
 
 
 import ch.usi.dag.disl.exception.MarkerException;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 
 /**
@@ -49,12 +49,12 @@ public class BytecodeMarker extends AbstractDWRMarker {
     }
 
     @Override
-    public List<MarkedRegion> markWithDefaultWeavingReg(final MethodModel methodModel) {
+    public List<MarkedRegion> markWithDefaultWeavingReg(final MethodModelCopy methodModel) {
         final List<MarkedRegion> regions = new LinkedList<>();
-        if (methodModel.code().isEmpty()) {
+        if (!methodModel.hasCode()) {
             return regions;
         }
-        for (final CodeElement element: methodModel.code().get()) {
+        for (final CodeElement element: methodModel.instructions()) {
             if (element instanceof Instruction && searchedInstrNums.contains(((Instruction) element).opcode().bytecode())) {
                 regions.add(new MarkedRegion(element, element));
             }

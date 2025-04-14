@@ -6,7 +6,7 @@ import ch.usi.dag.disl.staticcontext.AbstractStaticContext;
 public class CodeSC extends AbstractStaticContext {
 
     public int codeLength () {
-        return staticContextData.getMethodModel().code().orElseThrow().elementList().size();
+        return staticContextData.getMethodModel().instructions().size();
     }
 
 }

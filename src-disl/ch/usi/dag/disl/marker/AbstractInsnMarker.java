@@ -1,20 +1,20 @@
 package ch.usi.dag.disl.marker;
 
 import java.lang.classfile.CodeElement;
-import java.lang.classfile.MethodModel;
 import java.util.LinkedList;
 import java.util.List;
 
 import ch.usi.dag.disl.snippet.Shadow.WeavingRegion;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 
 abstract class AbstractInsnMarker extends AbstractMarker {
 
 
-    public abstract List<CodeElement> markInstruction(MethodModel methodModel);
+    public abstract List<CodeElement> markInstruction(MethodModelCopy methodModel);
 
     @Override
-    public final List<MarkedRegion> mark(final MethodModel methodModel) {
+    public final List<MarkedRegion> mark(final MethodModelCopy methodModel) {
         final List<MarkedRegion> regions = new LinkedList<>();
 
         for (final CodeElement instruction: markInstruction(methodModel)) {

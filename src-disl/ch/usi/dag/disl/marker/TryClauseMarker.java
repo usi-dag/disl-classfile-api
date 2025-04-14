@@ -2,7 +2,6 @@ package ch.usi.dag.disl.marker;
 
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.Label;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.instruction.ExceptionCatch;
 import java.lang.classfile.instruction.LabelTarget;
 import java.util.LinkedList;
@@ -10,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 
 /**
@@ -22,18 +22,18 @@ public class TryClauseMarker extends AbstractDWRMarker {
 
 
     @Override
-    public List<MarkedRegion> markWithDefaultWeavingReg(MethodModel methodModel) {
+    public List<MarkedRegion> markWithDefaultWeavingReg(MethodModelCopy methodModel) {
         List<MarkedRegion> regions = new LinkedList<>();
 
-        if (methodModel.code().isEmpty()) {
+        if (!methodModel.hasCode()) {
             return regions;
         }
 
-        List<CodeElement> instructions = methodModel.code().get().elementList();
+        List<CodeElement> instructions = methodModel.instructions();
 
         Map<Label, LabelTarget> labelTargetMap = ClassFileHelper.getLabelTargetMap(instructions);
 
-        for (ExceptionCatch exceptionCatch: methodModel.code().get().exceptionHandlers()) {
+        for (ExceptionCatch exceptionCatch: methodModel.exceptionHandlers()) {
             Label startLabel = exceptionCatch.tryStart();
             Label endLabel = exceptionCatch.tryEnd();
 

@@ -1,6 +1,7 @@
 package ch.usi.dag.disl.marker;
 
-import java.lang.classfile.MethodModel;
+import ch.usi.dag.disl.util.MethodModelCopy;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -11,7 +12,7 @@ import java.util.List;
 public class EmptyMarker extends AbstractMarker {
 
     @Override
-    public List<MarkedRegion> mark(final MethodModel method) {
+    public List<MarkedRegion> mark(final MethodModelCopy method) {
         return new LinkedList<>();
     }
 }

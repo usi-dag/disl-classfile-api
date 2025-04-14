@@ -1,6 +1,7 @@
 package ch.usi.dag.disl.staticcontext;
 
 import ch.usi.dag.disl.util.JavaNames;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 import java.lang.classfile.*;
 import java.lang.classfile.attribute.EnclosingMethodAttribute;
@@ -447,7 +448,7 @@ public class MethodStaticContext extends AbstractStaticContext {
     }
 
 
-    private MethodModel __methodNode () {
+    private MethodModelCopy __methodNode () {
         return staticContextData.getMethodModel();
     }
 

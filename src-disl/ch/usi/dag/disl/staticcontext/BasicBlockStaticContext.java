@@ -2,10 +2,10 @@ package ch.usi.dag.disl.staticcontext;
 
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.Instruction;
-import java.lang.classfile.MethodModel;
 import java.lang.ref.WeakReference;
 
 import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.MethodModelCopy;
 import ch.usi.dag.disl.util.cfgCF.BasicBlockCF;
 import ch.usi.dag.disl.util.cfgCF.ControlFlowGraph;
 import ch.usi.dag.disl.util.Logging;
@@ -24,7 +24,7 @@ public class BasicBlockStaticContext extends AbstractStaticContext {
 
     //
 
-    protected ControlFlowGraph createControlFlowGraph (final MethodModel method) {
+    protected ControlFlowGraph createControlFlowGraph (final MethodModelCopy method) {
         return new ControlFlowGraph(method);
     }
 
@@ -35,7 +35,7 @@ public class BasicBlockStaticContext extends AbstractStaticContext {
     // CFG of methods that have already been instrumented.
     //
 
-    private record Memo(MethodModel method, ControlFlowGraph cfg) {
+    private record Memo(MethodModelCopy method, ControlFlowGraph cfg) {
     }
 
     private WeakReference <Memo> __memoReference = new WeakReference <> (null);
@@ -43,7 +43,7 @@ public class BasicBlockStaticContext extends AbstractStaticContext {
 
     protected final ControlFlowGraph _getMethodCfg () {
         final Memo memo = __memoReference.get ();
-        final MethodModel method = staticContextData.getMethodModel();
+        final MethodModelCopy method = staticContextData.getMethodModel();
 
         if (memo != null && memo.method == method) {
             return memo.cfg;

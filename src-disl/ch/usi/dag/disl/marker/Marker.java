@@ -1,12 +1,12 @@
 package ch.usi.dag.disl.marker;
 
 import java.lang.classfile.ClassModel;
-import java.lang.classfile.MethodModel;
 import java.util.List;
 
 import ch.usi.dag.disl.exception.MarkerException;
 import ch.usi.dag.disl.snippet.Shadow;
 import ch.usi.dag.disl.snippet.Snippet;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 /**
  * <p>
@@ -82,5 +82,5 @@ public interface Marker {
      * @return
      *         list of shadows for marked method
      */
-    List<Shadow> mark(ClassModel classModel, MethodModel methodModel, Snippet snippet) throws MarkerException;
+    List<Shadow> mark(ClassModel classModel, MethodModelCopy methodModel, Snippet snippet) throws MarkerException;
 }

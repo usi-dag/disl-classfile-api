@@ -302,7 +302,7 @@ public abstract class ClassFileHelper {
     }
 
     // TODO this seem correct, but might need to double check
-    public static int getParameterSlot(final MethodModel methodModel, final int paramIndex) {
+    public static int getParameterSlot(final MethodModelCopy methodModel, final int paramIndex) {
         MethodTypeDesc methodTypeDesc = methodModel.methodTypeSymbol();
         if (paramIndex >= methodTypeDesc.parameterCount()) {
             throw new DiSLFatalException ("parameter index out of bounds");

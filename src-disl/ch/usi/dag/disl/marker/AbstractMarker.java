@@ -3,7 +3,6 @@ package ch.usi.dag.disl.marker;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.Label;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.instruction.ExceptionCatch;
 import java.lang.classfile.instruction.LabelTarget;
 import java.util.HashSet;
@@ -11,6 +10,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import ch.usi.dag.disl.util.MethodModelCopy;
 import ch.usi.dag.util.classfileAPI.InstructionsWrapper;
 import ch.usi.dag.disl.exception.MarkerException;
 import ch.usi.dag.disl.snippet.Shadow;
@@ -20,7 +20,7 @@ import ch.usi.dag.disl.snippet.Snippet;
 
 /**
  * Simplifies {@link Marker} implementation by providing a
- * {@link #mark(MethodModel)} method that returns a list of {@link MarkedRegion}
+ * {@link #mark(MethodModelCopy)} method that returns a list of {@link MarkedRegion}
  * instances instead of {@link Shadow} instances. The {@link MarkedRegion} class
  * itself supports automatic computation of weaving region based on simplified
  * region specification.
@@ -145,7 +145,7 @@ public abstract class AbstractMarker implements Marker {
          * {@link MarkedRegion}. The computed {@link WeavingRegion} instance
          * will NOT be automatically associated with this {@link MarkedRegion}.
          */
-        public WeavingRegion computeDefaultWeavingRegion(final MethodModel methodModel) {
+        public WeavingRegion computeDefaultWeavingRegion(final MethodModelCopy methodModel) {
             final CodeElement wStart = start;
             final CodeElement afterThrowStart = start;
             InstructionsWrapper.InstructionWrapper afterThrowEndWrapper = null;
@@ -166,8 +166,8 @@ public abstract class AbstractMarker implements Marker {
             // TODO is this equivalent to the functionality of the asm function??????
             if (afterThrowEnd instanceof LabelTarget) {
                 final Set<Label> tcb_ends = new HashSet<>();
-                if (methodModel.code().isPresent()) {
-                    for (ExceptionCatch exceptionCatch: methodModel.code().get().exceptionHandlers()) {
+                if (methodModel.hasCode()) {
+                    for (ExceptionCatch exceptionCatch: methodModel.exceptionHandlers()) {
                         tcb_ends.add(exceptionCatch.tryEnd());
                     }
                 }
@@ -187,7 +187,7 @@ public abstract class AbstractMarker implements Marker {
     }
 
     @Override
-    public List<Shadow> mark(final ClassModel classModel, final MethodModel methodModel, Snippet snippet) throws MarkerException {
+    public List<Shadow> mark(final ClassModel classModel, final MethodModelCopy methodModel, Snippet snippet) throws MarkerException {
         final List<MarkedRegion> markedRegions = mark(methodModel);
         final List<Shadow> result = new LinkedList<>();
 
@@ -214,5 +214,5 @@ public abstract class AbstractMarker implements Marker {
      *        method node of the marked class
      * @return returns list of MarkedRegion
      */
-    public abstract List<MarkedRegion> mark(MethodModel methodModel);
+    public abstract List<MarkedRegion> mark(MethodModelCopy methodModel);
 }

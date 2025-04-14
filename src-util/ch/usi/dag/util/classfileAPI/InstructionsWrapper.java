@@ -1,9 +1,9 @@
 package ch.usi.dag.util.classfileAPI;
 
+import ch.usi.dag.disl.util.MethodModelCopy;
+
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.Instruction;
-import java.lang.classfile.MethodModel;
-import java.lang.classfile.instruction.ExceptionCatch;
 import java.lang.classfile.instruction.LineNumber;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,11 +17,11 @@ public class InstructionsWrapper {
         this.codeElementList = codeElementList;
     }
 
-    public InstructionsWrapper(MethodModel methodModel) {
-        if (methodModel.code().isEmpty()) {
+    public InstructionsWrapper(MethodModelCopy methodModel) {
+        if (!methodModel.hasCode()) {
             this.codeElementList = new ArrayList<>();
         } else {
-            this.codeElementList = methodModel.code().get().elementList();
+            this.codeElementList = methodModel.instructions();
         }
     }
 

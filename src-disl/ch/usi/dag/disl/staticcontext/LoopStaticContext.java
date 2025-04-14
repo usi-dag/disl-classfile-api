@@ -1,12 +1,10 @@
 package ch.usi.dag.disl.staticcontext;
 
 import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.MethodModelCopy;
 import ch.usi.dag.disl.util.cfgCF.BasicBlockCF;
 import ch.usi.dag.disl.util.cfgCF.ControlFlowGraph;
-
-import java.lang.classfile.CodeModel;
 import java.lang.classfile.Label;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.instruction.ExceptionCatch;
 import java.lang.classfile.instruction.LabelTarget;
 import java.util.HashMap;
@@ -26,19 +24,18 @@ public class LoopStaticContext extends BasicBlockStaticContext {
     private Map<BasicBlockCF, Set<BasicBlockCF>> dominatormapping;
 
     @Override
-    protected ControlFlowGraph createControlFlowGraph(final MethodModel method) {
+    protected ControlFlowGraph createControlFlowGraph(final MethodModelCopy method) {
 
-        CodeModel code = method.code().orElseThrow();
-        ControlFlowGraph cfg = ControlFlowGraph.build(code.elementList(), code.exceptionHandlers());
+        ControlFlowGraph cfg = ControlFlowGraph.build(method.instructions(), method.exceptionHandlers());
 
         dominatormapping = new HashMap<BasicBlockCF, Set<BasicBlockCF>>();
 
         Set<BasicBlockCF> entries = new HashSet<>();
-        entries.add(cfg.getBasicBlock(code.elementList().getFirst()));
+        entries.add(cfg.getBasicBlock(method.instructions().getFirst()));
 
-        Map<Label, LabelTarget> labelTargetMap = ClassFileHelper.getLabelTargetMap(code.elementList());
+        Map<Label, LabelTarget> labelTargetMap = ClassFileHelper.getLabelTargetMap(method.instructions());
 
-        for (ExceptionCatch tcb : code.exceptionHandlers()) {
+        for (ExceptionCatch tcb : method.exceptionHandlers()) {
             entries.add(cfg.getBasicBlock(labelTargetMap.get(tcb.handler())));
         }
 

@@ -2,7 +2,6 @@ package ch.usi.dag.disl.marker;
 
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.Instruction;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.Opcode;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -10,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 import ch.usi.dag.disl.exception.MarkerException;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 /**
  * <p>
@@ -55,14 +55,14 @@ public class StrictBytecodeMarker extends AbstractInsnMarker {
 
 
     @Override
-    public List<CodeElement> markInstruction(MethodModel methodModel) {
+    public List<CodeElement> markInstruction(MethodModelCopy methodModel) {
         List<CodeElement> selected = new LinkedList<>();
 
-        if (methodModel.code().isEmpty()) {
+        if (!methodModel.hasCode()) {
             return selected;
         }
 
-        for (CodeElement codeElement: methodModel.code().get().elementList()) {
+        for (CodeElement codeElement: methodModel.instructions()) {
             if (codeElement instanceof Instruction && searchedInstrNums.contains(((Instruction) codeElement).opcode().bytecode())) {
                 selected.add(codeElement);
             }

@@ -22,6 +22,7 @@ import ch.usi.dag.disl.snippet.Snippet;
 import ch.usi.dag.disl.staticcontext.generator.SCGenerator;
 import ch.usi.dag.disl.util.ClassFileHelper;
 import ch.usi.dag.disl.util.Logging;
+import ch.usi.dag.disl.util.MethodModelCopy;
 import ch.usi.dag.disl.weaver.Weaver;
 import ch.usi.dag.util.logging.Logger;
 
@@ -189,7 +190,7 @@ public final class DiSL {
      *        the builder that will build the instrumented class
      * @return {@code true} if the methods was changed, {@code false} otherwise.
      */
-    private boolean instrumentMethod(ClassModel classModel, MethodModel methodModel, ClassBuilder classBuilder) throws DiSLException {
+    private boolean instrumentMethod(ClassModel classModel, MethodModelCopy methodModel, ClassBuilder classBuilder) throws DiSLException {
         if (methodModel.flags().has(AccessFlag.ABSTRACT) ||
                 methodModel.flags().has(AccessFlag.NATIVE)
         ) {
@@ -352,7 +353,8 @@ public final class DiSL {
                     boolean methodChanged;
 
                     try {
-                        methodChanged = instrumentMethod(classModel, methodModel, classBuilder);
+                        MethodModelCopy methodModelCopy = new MethodModelCopy(methodModel);
+                        methodChanged = instrumentMethod(classModel, methodModelCopy, classBuilder);
 
                         if (!methodChanged) {
                             classBuilder.with(methodModel); // if the method was not changed then add it back like the original

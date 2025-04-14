@@ -1,6 +1,6 @@
 package ch.usi.dag.disl.marker;
 
-import java.lang.classfile.MethodModel;
+import ch.usi.dag.disl.util.MethodModelCopy;
 import java.util.List;
 
 /**
@@ -14,7 +14,7 @@ import java.util.List;
 public abstract class AbstractDWRMarker extends AbstractMarker {
 
 
-    public final List<MarkedRegion> mark(MethodModel methodModel) {
+    public final List<MarkedRegion> mark(MethodModelCopy methodModel) {
         List<MarkedRegion> markedRegions = markWithDefaultWeavingReg(methodModel);
 
         for (MarkedRegion markedRegion: markedRegions) {
@@ -32,5 +32,5 @@ public abstract class AbstractDWRMarker extends AbstractMarker {
      * <p>
      * The regions will get automatic branch skipping at the end.
      */
-    public abstract List<MarkedRegion> markWithDefaultWeavingReg(MethodModel methodModel);
+    public abstract List<MarkedRegion> markWithDefaultWeavingReg(MethodModelCopy methodModel);
 }

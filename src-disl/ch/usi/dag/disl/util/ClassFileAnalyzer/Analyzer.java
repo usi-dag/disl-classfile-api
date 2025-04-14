@@ -29,10 +29,9 @@ package ch.usi.dag.disl.util.ClassFileAnalyzer;
 
 
 // this code was ported from ASM, but is modified to work with the Java CLass File API
-import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 import java.lang.classfile.*;
-import java.lang.classfile.attribute.CodeAttribute;
 import java.lang.classfile.constantpool.ClassEntry;
 import java.lang.classfile.instruction.*;
 import java.lang.constant.ClassDesc;
@@ -100,33 +99,21 @@ public class Analyzer<V extends Value> {
      * @throws AnalyzerException if a problem occurs during the analysis.
      */
     @SuppressWarnings("unchecked")
-    public Frame<V>[] analyze(final ClassDesc owner, final MethodModel method) throws AnalyzerException {
+    public Frame<V>[] analyze(final ClassDesc owner, final MethodModelCopy method) throws AnalyzerException {
         if (method.flags().has(AccessFlag.NATIVE) || method.flags().has(AccessFlag.ABSTRACT) ||
-                method.code().isEmpty()
+                !method.hasCode()
         ) {
             frames = (Frame<V>[]) new Frame<?>[0];
             return frames;
         }
-        Optional<CodeModel> code = method.code();
-        int maxLocals = -1;
-        int maxStack = 0;
-        if (code.isPresent()) {
-            Optional<CodeAttribute> attribute = code.get().findAttribute(Attributes.code());
-            if (attribute.isPresent()) {
-                CodeAttribute codeAttribute = attribute.get();
-                maxStack = codeAttribute.maxStack();
-                maxLocals = codeAttribute.maxLocals();
-            }
-        }
+        int maxLocals = method.maxLocals();
+        int maxStack = method.maxStack();
 
-        if (maxLocals < 0) {
-            maxLocals = ClassFileHelper.getMaxLocals(method.code().get().elementList(), method.methodTypeSymbol(), method.flags());
-        }
 
         return analyze(
                 owner,
-                method.code().get().elementList(),
-                method.code().get().exceptionHandlers(),
+                method.instructions(),
+                method.exceptionHandlers(),
                 method.flags(),
                 maxLocals,
                 maxStack,

@@ -20,6 +20,7 @@ import ch.usi.dag.disl.util.ClassFileHelper;
 import ch.usi.dag.disl.snippet.Shadow;
 import ch.usi.dag.disl.snippet.Shadow.WeavingRegion;
 import ch.usi.dag.disl.snippet.Snippet;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 public class WeavingInfo {
 
@@ -31,7 +32,7 @@ public class WeavingInfo {
     private Frame<BasicValue> retFrame;
 
     public WeavingInfo(ClassModel classModel,
-                       MethodModel methodModel,
+                       MethodModelCopy methodModel,
                        Map<Snippet, List<Shadow>> snippetMarkings,
                        List<CodeElement> instructionsToInstrument,
                        List<ExceptionCatch> exceptions) {

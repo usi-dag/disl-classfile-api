@@ -20,7 +20,7 @@ public class InstructionStaticContext extends AbstractStaticContext {
      */
     public int getOpcode () {
         final CodeElement insn = staticContextData.getRegionStart ();
-        List<CodeElement> instructions = staticContextData.getMethodModel().code().orElseThrow().elementList();
+        List<CodeElement> instructions = staticContextData.getMethodModel().instructions();
         return ClassFileHelper.firstNextRealInstruction(instructions, insn).opcode().bytecode();
     }
 
@@ -31,7 +31,7 @@ public class InstructionStaticContext extends AbstractStaticContext {
      */
     public int getIndex () {
         final CodeElement startInsn = staticContextData.getRegionStart ();
-        final List<CodeElement> insns = staticContextData.getMethodModel ().code().orElseThrow().elementList();
+        final List<CodeElement> insns = staticContextData.getMethodModel ().instructions();
 
         //
         // There is a region, therefore there must be instructions.

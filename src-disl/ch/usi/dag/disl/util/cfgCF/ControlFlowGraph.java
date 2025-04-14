@@ -1,6 +1,7 @@
 package ch.usi.dag.disl.util.cfgCF;
 
 import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 import java.lang.classfile.*;
 import java.lang.classfile.instruction.*;
@@ -57,12 +58,11 @@ public class ControlFlowGraph {
 
     }
 
-    public ControlFlowGraph(MethodModel methodModel) {
-        if (methodModel.code().isEmpty()) {
+    public ControlFlowGraph(MethodModelCopy methodModel) {
+        if (!methodModel.hasCode()) {
             throw new RuntimeException("No code for method: " + methodModel.methodName().stringValue());  // TODO improve exception
         }
-        CodeModel code = methodModel.code().get();
-        this(code.elementList(), code.exceptionHandlers());
+        this(methodModel.instructions(), methodModel.exceptionHandlers());
     }
 
     public List<BasicBlockCF> getNodes() {

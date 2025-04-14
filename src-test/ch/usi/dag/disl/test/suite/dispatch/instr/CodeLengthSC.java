@@ -11,7 +11,7 @@ import java.util.List;
 public class CodeLengthSC extends AbstractStaticContext {
 
     public int methodSize() {
-        return staticContextData.getMethodModel().code().orElseThrow().elementList().size();
+        return staticContextData.getMethodModel().instructions().size();
     }
 
     public int codeSize() {
@@ -20,9 +20,9 @@ public class CodeLengthSC extends AbstractStaticContext {
         int size = 0;
 
         // count the size until the first end
-        while(ain != null && ain != staticContextData.getRegionEnds().get(0)) {
+        while(ain != null && ain != staticContextData.getRegionEnds().getFirst()) {
             ++size;
-            List<CodeElement> instr = staticContextData.getMethodModel().code().orElseThrow().elementList();
+            List<CodeElement> instr = staticContextData.getMethodModel().instructions();
             ain = ClassFileHelper.nextInstruction(instr, ain);
         }
 

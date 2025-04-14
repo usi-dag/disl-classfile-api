@@ -2,11 +2,11 @@ package ch.usi.dag.disl.marker;
 
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.Instruction;
-import java.lang.classfile.MethodModel;
 import java.util.LinkedList;
 import java.util.List;
 
 import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.MethodModelCopy;
 import ch.usi.dag.disl.util.cfgCF.BasicBlockCalculator;
 
 /**
@@ -22,15 +22,15 @@ public class BasicBlockMarker extends AbstractDWRMarker {
 
 
     @Override
-    public List<MarkedRegion> markWithDefaultWeavingReg(final MethodModel methodModel) {
+    public List<MarkedRegion> markWithDefaultWeavingReg(final MethodModelCopy methodModel) {
         final List<MarkedRegion> regions = new LinkedList<>();
 
-        if (methodModel.code().isEmpty()) {
+        if (!methodModel.hasCode()) {
             return regions;
         }
-        final List<CodeElement> instructions = methodModel.code().get().elementList();
+        final List<CodeElement> instructions = methodModel.instructions();
 
-        final List<CodeElement> separators = BasicBlockCalculator.getAll(instructions, methodModel.code().get().exceptionHandlers(), isPrecise);
+        final List<CodeElement> separators = BasicBlockCalculator.getAll(instructions, methodModel.exceptionHandlers(), isPrecise);
 
         final Instruction last = ClassFileHelper.selectReal(instructions).getLast();
 

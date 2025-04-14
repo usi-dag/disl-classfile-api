@@ -1,13 +1,13 @@
 package ch.usi.dag.disl.marker;
 
 import java.lang.classfile.CodeElement;
-import java.lang.classfile.MethodModel;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
 import ch.usi.dag.disl.exception.MarkerException;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 /**
  * Marks bytecode instructions depending on the ClassFile class type.
@@ -50,21 +50,21 @@ public class InsnNodeMarker extends AbstractInsnMarker {
     }
 
     @Override
-    public List<CodeElement> markInstruction(MethodModel methodNode) {
+    public List<CodeElement> markInstruction(MethodModelCopy methodNode) {
 
-        List<CodeElement> seleted = new LinkedList<CodeElement>();
+        List<CodeElement> selected = new LinkedList<>();
 
-        for (CodeElement instr : methodNode.code().orElseThrow().elementList()) {
+        for (CodeElement instr : methodNode.instructions()) {
 
             for (Class<? extends CodeElement> clazz : classes) {
 
                 if (clazz.isInstance(instr)) {
-                    seleted.add(instr);
+                    selected.add(instr);
                 }
             }
         }
 
-        return seleted;
+        return selected;
     }
 
 }

@@ -1,7 +1,6 @@
 package ch.usi.dag.disl.snippet;
 
 import java.lang.classfile.ClassModel;
-import java.lang.classfile.MethodModel;
 import java.lang.constant.ClassDesc;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -20,6 +19,7 @@ import ch.usi.dag.disl.marker.Marker;
 import ch.usi.dag.disl.processor.ArgProcessor;
 import ch.usi.dag.disl.processor.ArgProcessorMethod;
 import ch.usi.dag.disl.scope.Scope;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 
 /**
@@ -103,7 +103,7 @@ public class Snippet implements Comparable <Snippet> {
      *
      * @throws MarkerException
      */
-    public final List<Shadow> selectApplicableShadows(final ClassModel classModel, final MethodModel methodModel) throws MarkerException {
+    public final List<Shadow> selectApplicableShadows(final ClassModel classModel, final MethodModelCopy methodModel) throws MarkerException {
         return __guardedShadows(marker.mark(classModel, methodModel, this));
     }
 

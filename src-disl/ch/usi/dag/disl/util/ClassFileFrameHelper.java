@@ -127,7 +127,7 @@ public class ClassFileFrameHelper {
         return source.size;
     }
 
-    public static <V extends Value> Frame<V>[] getFrames(Analyzer<V> analyzer, ClassDesc owner, MethodModel methodModel) {
+    public static <V extends Value> Frame<V>[] getFrames(Analyzer<V> analyzer, ClassDesc owner, MethodModelCopy methodModel) {
         try {
             analyzer.analyze(owner, methodModel);
         } catch (AnalyzerException e) {
@@ -160,12 +160,12 @@ public class ClassFileFrameHelper {
     }
 
     public static <V extends Value> Map<CodeElement, Frame<V>> createMapping(
-            Analyzer<V> analyzer, ClassDesc owner, MethodModel methodModel
+            Analyzer<V> analyzer, ClassDesc owner, MethodModelCopy methodModel
     ) {
         Map<CodeElement, Frame<V>> mapping = new HashMap<>();
 
         Frame<V>[] frames = getFrames(analyzer, owner, methodModel);
-        List<CodeElement> instructions = methodModel.code().orElseThrow().elementList();
+        List<CodeElement> instructions = methodModel.instructions;
         for (int i = 0; i < frames.length; i++) {
             mapping.put(instructions.get(i), frames[i]);
         }
@@ -188,12 +188,12 @@ public class ClassFileFrameHelper {
     }
 
     public static Map<CodeElement, Frame<BasicValue>> createBasicMapping(
-            ClassDesc owner, MethodModel method) {
+            ClassDesc owner, MethodModelCopy method) {
         return createMapping(getBasicAnalyzer(), owner, method);
     }
 
     public static Map<CodeElement, Frame<SourceValue>> createSourceMapping(
-            ClassDesc owner, MethodModel method) {
+            ClassDesc owner, MethodModelCopy method) {
         return createMapping(getSourceAnalyzer(), owner, method);
     }
 

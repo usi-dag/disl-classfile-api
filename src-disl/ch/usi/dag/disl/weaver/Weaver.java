@@ -24,6 +24,7 @@ import ch.usi.dag.disl.snippet.Shadow.WeavingRegion;
 import ch.usi.dag.disl.snippet.Snippet;
 import ch.usi.dag.disl.snippet.SnippetCode;
 import ch.usi.dag.disl.staticcontext.generator.SCGenerator;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 // The weaver instruments byte-codes into java class.
 public class Weaver {
@@ -99,7 +100,7 @@ public class Weaver {
 
 
     private static InstrumentedResult __insert(
-            final MethodModel methodModel,
+            final MethodModelCopy methodModel,
             final SCGenerator staticInfoHolder, final PIResolver piResolver,
             final WeavingInfo info, final Snippet snippet, final SnippetCode code,
             final Shadow shadow, final CodeElement loc, final List<CodeElement> instructionsToInstrument,
@@ -110,7 +111,7 @@ public class Weaver {
 
         // exception handler will discard the stack and push the
         // exception object. Thus, before entering this snippet,
-        // weaver must backup the stack and restore when exiting
+        // weaver must back up the stack and restore when exiting
         if (code.containsHandledException() && info.stackNotEmpty(loc)) {
             final List<StoreInstruction> backup = info.backupStack(loc, methodMaxLocals);
             final List<LoadInstruction> restore = info.restoreStack(loc, methodMaxLocals);
@@ -145,7 +146,7 @@ public class Weaver {
 
     public static void instrument(
             ClassModel classModel,
-            MethodModel methodModel,
+            MethodModelCopy methodModel,
             ClassBuilder classBuilder,
             final Map <Snippet, List <Shadow>> snippetShadows,
             final Set <SyntheticLocalVar> syntheticLocalVars,
@@ -156,10 +157,10 @@ public class Weaver {
         //  I could use: classBuilder.withMethodBody(...)   or   classBuilder.transformMethod(...)   need to check which is more convenient
 
 
-        if (methodModel.code().isEmpty()) {
+        if (!methodModel.hasCode()) {
             // if the method is empty we just pass it as it is
             // TODO should throw instead???
-            classBuilder.with(methodModel);
+            classBuilder.with(methodModel.getOriginal());
             return;
         }
 
@@ -174,7 +175,7 @@ public class Weaver {
                 threadLocalVars);
 
         classBuilder.transformMethod(
-                methodModel,
+                methodModel.getOriginal(),
                 instrumentCode.andThen(static2Local).andThen(rewriteThreadLocalVarAccessesCodeTransformer)
         );
 
@@ -186,7 +187,7 @@ public class Weaver {
 
     public static MethodTransform instrumentCode(
             ClassModel classModel,
-            MethodModel methodModel,
+            MethodModelCopy methodModel,
             final Map <Snippet, List <Shadow>> snippetShadows,
             final SCGenerator staticInfoHolder, final PIResolver piResolver
     ) {
@@ -194,7 +195,7 @@ public class Weaver {
         //  I could use: classBuilder.withMethodBody(...)   or   classBuilder.transformMethod(...)   need to check which is more convenient
 
 
-        if (methodModel.code().isEmpty()) {
+        if (!methodModel.hasCode()) {
             // if the method is empty we just pass it as it is since there is nothing to instrument
             return ClassFileBuilder::with;
         } else {
@@ -204,9 +205,9 @@ public class Weaver {
 
                         try {
                             // since we do not want to edit the original list of instruction we copy all element in a new one
-                            List<CodeElement> codeToInstrument = new ArrayList<>(methodModel.code().get().elementList());
-                            List<ExceptionCatch> exceptions = methodModel.code().get().exceptionHandlers();
-                            int maxLocals = ClassFileHelper.getMaxLocals(methodModel);
+                            List<CodeElement> codeToInstrument = new ArrayList<>(methodModel.instructions());
+                            List<ExceptionCatch> exceptions = methodModel.exceptionHandlers();
+                            int maxLocals = methodModel.maxLocals();
 
                             final WeavingInfo info = new WeavingInfo(classModel, methodModel, snippetShadows, codeToInstrument, exceptions);
 

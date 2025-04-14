@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import ch.usi.dag.disl.util.JavaNames;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 /**
  * Marks object creation.
@@ -19,16 +20,16 @@ public class NewObjMarker extends AbstractDWRMarker {
 
     // NOTE: does not work for arrays
     @Override
-    public List<MarkedRegion> markWithDefaultWeavingReg(MethodModel methodModel) {
+    public List<MarkedRegion> markWithDefaultWeavingReg(MethodModelCopy methodModel) {
         List<MarkedRegion> regions = new LinkedList<>();
         int invokedNews = 0;
 
-        if (methodModel.code().isEmpty()) {
+        if (!methodModel.hasCode()) {
             return regions;
         }
 
         // find invocation of constructor after new instruction
-        List<CodeElement> instructions = methodModel.code().get().elementList();
+        List<CodeElement> instructions = methodModel.instructions();
         for (CodeElement codeElement: instructions) {
             if (!(codeElement instanceof Instruction instruction)) {
                 continue;

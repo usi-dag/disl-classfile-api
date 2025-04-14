@@ -1,9 +1,7 @@
 package ch.usi.dag.disl.marker;
 
 import java.lang.classfile.CodeElement;
-import java.lang.classfile.CodeModel;
 import java.lang.classfile.Label;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.instruction.ExceptionCatch;
 import java.lang.classfile.instruction.LabelTarget;
 import java.util.LinkedList;
@@ -11,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.MethodModelCopy;
 import ch.usi.dag.disl.util.cfgCF.ControlFlowGraph;
 
 /**
@@ -23,16 +22,16 @@ public class ExceptionHandlerMarker extends AbstractDWRMarker {
 
 
     @Override
-    public List<MarkedRegion> markWithDefaultWeavingReg(MethodModel methodModel) {
+    public List<MarkedRegion> markWithDefaultWeavingReg(MethodModelCopy methodModel) {
         List<MarkedRegion> regions = new LinkedList<>();
 
-        if (methodModel.code().isEmpty()) {
+        if (!methodModel.hasCode()) {
             return regions;
         }
 
-        CodeModel code = methodModel.code().get();
-        List<CodeElement> instructions = code.elementList();
-        List<ExceptionCatch> exceptions = code.exceptionHandlers();
+
+        List<CodeElement> instructions = methodModel.instructions();
+        List<ExceptionCatch> exceptions = methodModel.exceptionHandlers();
 
         ControlFlowGraph cfg = new ControlFlowGraph(methodModel);
 
