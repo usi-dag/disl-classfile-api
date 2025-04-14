@@ -241,7 +241,7 @@ abstract class ShadowClassTestBase {
 
     private void __assertEqual (final Method method, final MethodInfo shadowMethod) {
         Assert.assertEquals (method.getName (), shadowMethod.getName ());
-        Assert.assertEquals (ClassFileHelper.getMethodDescriptor(method), shadowMethod.getDescriptor ());
+        Assert.assertEquals (ClassFileHelper.getMethodDescriptor(method).descriptorString(), shadowMethod.getDescriptor ());
         Assert.assertEquals (method.getModifiers (), removeASMSpecificAccessFlags(shadowMethod.getModifiers ()));
     }
 
