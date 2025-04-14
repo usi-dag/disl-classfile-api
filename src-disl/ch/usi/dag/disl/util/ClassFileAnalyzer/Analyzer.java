@@ -29,6 +29,8 @@ package ch.usi.dag.disl.util.ClassFileAnalyzer;
 
 
 // this code was ported from ASM, but is modified to work with the Java CLass File API
+import ch.usi.dag.disl.util.ClassFileHelper;
+
 import java.lang.classfile.*;
 import java.lang.classfile.attribute.CodeAttribute;
 import java.lang.classfile.constantpool.ClassEntry;
@@ -105,16 +107,29 @@ public class Analyzer<V extends Value> {
             frames = (Frame<V>[]) new Frame<?>[0];
             return frames;
         }
-        // TODO in case there is no code attribute compute the maxLocals by a function
-        //  is max stack even useful ?
-        CodeAttribute codeAttribute = method.findAttribute(Attributes.code()).orElseThrow();
+        Optional<CodeModel> code = method.code();
+        int maxLocals = -1;
+        int maxStack = 0;
+        if (code.isPresent()) {
+            Optional<CodeAttribute> attribute = code.get().findAttribute(Attributes.code());
+            if (attribute.isPresent()) {
+                CodeAttribute codeAttribute = attribute.get();
+                maxStack = codeAttribute.maxStack();
+                maxLocals = codeAttribute.maxLocals();
+            }
+        }
+
+        if (maxLocals < 0) {
+            maxLocals = ClassFileHelper.getMaxLocals(method.code().get().elementList(), method.methodTypeSymbol(), method.flags());
+        }
+
         return analyze(
                 owner,
                 method.code().get().elementList(),
                 method.code().get().exceptionHandlers(),
                 method.flags(),
-                codeAttribute.maxLocals(),
-                codeAttribute.maxStack(),
+                maxLocals,
+                maxStack,
                 method.methodTypeSymbol()
         );
     }
