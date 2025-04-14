@@ -1,12 +1,14 @@
 package ch.usi.dag.disl.util.cfgCF;
 
 import ch.usi.dag.disl.util.JavaNames;
+import ch.usi.dag.disl.util.MethodModelCopy;
 import ch.usi.dag.util.classfileAPI.ClassModelHelper;
 import org.junit.Test;
 import org.junit.Assert;
 
 import java.io.IOException;
 import java.lang.classfile.*;
+import java.util.List;
 import java.util.function.Predicate;
 
 public class ControlFlowGraphTest {
@@ -81,8 +83,10 @@ public class ControlFlowGraphTest {
         if (methodModel.code().isEmpty()) {
             throw new RuntimeException("Cannot create CFG, method " + methodModel.methodName() + " has no code");
         }
-        CodeModel codeModel = methodModel.code().get();
-        return ControlFlowGraph.build(codeModel.elementList(), codeModel.exceptionHandlers());
+        MethodModelCopy copy = new MethodModelCopy(methodModel);
+
+        List<CodeElement> copied = copy.instructions();
+        return ControlFlowGraph.build(copied, copy.exceptionHandlers());
     }
 
     private ControlFlowGraph __createCFG(final Class<?> owner, final String name) throws IOException {
