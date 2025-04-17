@@ -1,4 +1,4 @@
-package ch.usi.dag.util.classfileAPI;
+package ch.usi.dag.disl.util.ClassFileAPI;
 
 import ch.usi.dag.disl.util.MethodModelCopy;
 
@@ -44,7 +44,7 @@ public class InstructionsWrapper {
         if (codeElementList.isEmpty()) {
             return null;
         }
-        return new InstructionWrapper(codeElementList.getLast(), codeElementList, codeElementList.size() -1);
+        return new InstructionWrapper(codeElementList.getLast(), codeElementList, codeElementList.size() - 1);
     }
 
     public InstructionWrapper get(int index) {
@@ -60,7 +60,7 @@ public class InstructionsWrapper {
         return null;
     }
 
-    public class InstructionWrapper {
+    public static class InstructionWrapper {
         private final CodeElement codeElement;
         private final List<CodeElement> codeElementList;
         private final int index;
@@ -79,14 +79,14 @@ public class InstructionsWrapper {
             if (index + 1 >= codeElementList.size()) {
                 return null;  // TODO should throw an exception instead????
             }
-            return new InstructionWrapper(codeElementList.get(index+1), codeElementList, index+1);
+            return new InstructionWrapper(codeElementList.get(index + 1), codeElementList, index + 1);
         }
 
         public InstructionWrapper getPrevious() {
             if (index -1 < 0) {
                 return null;  // TODO should throw an exception instead????
             }
-            return new InstructionWrapper(codeElementList.get(index-1), codeElementList, index-1);
+            return new InstructionWrapper(codeElementList.get(index - 1), codeElementList, index - 1);
         }
 
         public InstructionWrapper nextRealInstruction() {

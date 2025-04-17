@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 import ch.usi.dag.disl.util.MethodModelCopy;
-import ch.usi.dag.util.classfileAPI.InstructionsWrapper;
+import ch.usi.dag.disl.util.ClassFileAPI.InstructionsWrapper;
 import ch.usi.dag.disl.exception.MarkerException;
 import ch.usi.dag.disl.snippet.Shadow;
 import ch.usi.dag.disl.snippet.Shadow.WeavingRegion;

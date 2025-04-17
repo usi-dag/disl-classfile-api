@@ -2,7 +2,7 @@ package ch.usi.dag.disl.util.cfgCF;
 
 import ch.usi.dag.disl.util.JavaNames;
 import ch.usi.dag.disl.util.MethodModelCopy;
-import ch.usi.dag.util.classfileAPI.ClassModelHelper;
+import ch.usi.dag.disl.util.ClassFileAPI.ClassModelHelper;
 import org.junit.Test;
 import org.junit.Assert;
 

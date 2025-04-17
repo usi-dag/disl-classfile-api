@@ -1,4 +1,4 @@
-package ch.usi.dag.util.classfileAPI;
+package ch.usi.dag.disl.util.ClassFileAPI;
 
 import java.io.IOException;
 import java.io.InputStream;

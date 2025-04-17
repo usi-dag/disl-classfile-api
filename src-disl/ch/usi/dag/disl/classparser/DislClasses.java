@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import ch.usi.dag.util.classfileAPI.ClassModelHelper;
+import ch.usi.dag.disl.util.ClassFileAPI.ClassModelHelper;
 
 import ch.usi.dag.disl.DiSL.CodeOption;
 import ch.usi.dag.disl.InitializationException;
