@@ -129,7 +129,7 @@ public final class Reflection {
          *         {@code null} if the type is not known.
          */
         protected Class _lookupType(final ClassDesc desc) {
-            return (Objects.equals(desc.descriptorString(), CD_Object.descriptorString())) ?
+            return (desc.isClassOrInterface()) ?
                     __classes.get(desc) : null;
         }
 
@@ -178,7 +178,7 @@ public final class Reflection {
 
         @Override
         protected Class _lookupType (final ClassDesc type) {
-            if (Objects.equals(type.descriptorString(), CD_Object.descriptorString())) {
+            if (type.isClassOrInterface()) {
                 return super._lookupType (type);
 
             } else if (type.isArray()) {
@@ -488,8 +488,23 @@ public final class Reflection {
             return __root__;
         }
 
+        // if the type is an array of one or more dimension it return the type of the most inner element the array,
+        // otherwise it return the element itself
+        // e.g. input -> ClassDesc of Object[][]    return -> ClassDesc of Object
+        private static ClassDesc getArrayType(ClassDesc classDesc) {
+            if (classDesc.isArray()) {
+                return getArrayType(classDesc.componentType());
+            }
+            return classDesc;
+        }
+
         @Override
         public String typeName () {
+            ClassDesc componentType = getArrayType(__type);
+            String pkg = componentType.packageName();
+            if (!pkg.isEmpty()) {
+                return pkg + "." + __type.displayName();
+            }
             return __type.displayName();
         }
 

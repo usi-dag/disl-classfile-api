@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import ch.usi.dag.util.classfileAPI.ClassModelHelper;
+import ch.usi.dag.disl.util.ClassFileAPI.ClassModelHelper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -246,7 +246,7 @@ public final class ReflectionTest {
 
     //
 
-    final java.lang.Class <?> __globalClasses [] = {
+    final java.lang.Class<?>[] __globalClasses = {
         void.class,
         int.class, int[].class, int[][].class,
         Object.class, Object[].class, Object[][].class,
@@ -271,7 +271,7 @@ public final class ReflectionTest {
         for (final java.lang.Class <?> cl : __globalClasses) {
             Assert.assertEquals (
                 cl.getTypeName (),
-                __getClass (cl).get ().typeName ()
+                __getClass (cl).get ().typeName()
             );
         }
     }
