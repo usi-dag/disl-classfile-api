@@ -63,17 +63,19 @@ abstract class TypeMatcher {
             // we need to add package separator to such descriptors so that
             // the default package is an empty package.
             //
-            if (__isObjectType (typeDesc) && !JavaNames.internalNameHasPackage (typeDesc)) {
-                return __matcher.match (__fixupDefaultPackage (typeDesc));
-            } else {
-                return __matcher.match (typeDesc);
-            }
+//            if (__isObjectType (typeDesc) && !JavaNames.internalNameHasPackage (typeDesc)) {
+//                // TODO this function __fixupDefaultPackage make LString; become L/String and causes problems.
+//                return __matcher.match (__fixupDefaultPackage (typeDesc));
+//            } else {
+//                return __matcher.match (typeDesc);
+//            }
+            return __matcher.match (typeDesc);
         }
 
         private static final char __OBJECT_TYPE_CHAR__ = 'L';
 
         private boolean __isObjectType (final String descriptor) {
-            return descriptor.length () > 0 && descriptor.charAt (0) == __OBJECT_TYPE_CHAR__;
+            return !descriptor.isEmpty() && descriptor.charAt (0) == __OBJECT_TYPE_CHAR__;
         }
 
         private static final char __PKG_SEPARATOR_CHAR__ = '/';
@@ -187,9 +189,9 @@ abstract class TypeMatcher {
 
         final TypeKind primitiveType = __PRIMITIVES__.get (input);
         if (primitiveType == null) {
-            final String fqcn = __getClassName (input);
-            // TODO will this constructor of ClassDesc (of) work with this string format???
-            return ClassDesc.of(fqcn).descriptorString();
+            final String fqcn = __getClassName(input);
+            ClassDesc classDesc = ClassDesc.of(fqcn);
+            return classDesc.descriptorString();
 
         } else {
             return primitiveType.upperBound().descriptorString();
@@ -205,11 +207,12 @@ abstract class TypeMatcher {
 
         } else if (!JavaNames.typeNameHasPackage (input)) {
             // Append package wild card to classes without package specification.
-            return JavaNames.typeNameJoin (WildCardMatcher.WILDCARD, input);
+           // return JavaNames.typeNameJoin (WildCardMatcher.WILDCARD, input);
+            return input;
 
         } else if (input.startsWith (__DEFAULT_PKG_WITH_SEPARATOR__)) {
-            // Strip the [default] package specifier, leaving the separator.
-            return input.substring (__DEFAULT_PKG_WITH_SEPARATOR__.length () - 1);
+            // Strip the [default] package specifier
+            return input.substring (__DEFAULT_PKG_WITH_SEPARATOR__.length ());
 
         } else {
             return input;
