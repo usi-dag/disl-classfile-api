@@ -295,7 +295,7 @@ public class ScopeMatcherTest {
             __reject (
                 __method ("my/pkg/TargetClass", "method", "(II)I"),
                 __method ("my/pkg/TargetClass", "method", "(IIII)I"),
-                __method ("my/pkg/TargetClass", "method", "(Ljava.lang.String;)I")
+                __method ("my/pkg/TargetClass", "method", "(Ljava/lang/String;)I")
             )
         );
     }
