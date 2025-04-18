@@ -15,7 +15,7 @@
 	<property file="build.properties"/>
 
 	<condition property="javac.option.prepend" value="--patch-module java.base=" else="-Xbootclasspath/p:">
-		<javaversion atleast="9"/>
+		<javaversion atleast="24"/>
 	</condition>
 
 	<!-- ================================================================== -->
@@ -350,7 +350,8 @@
 
 	<target name="compile-tools" depends="-init">
 		<mkdir dir="${build.tools}"/>
-		<javac destdir="${build.tools}" srcdir="${src.tools}">
+		<javac destdir="${build.tools}" srcdir="${src.tools}" release="24">
+			<compilerarg value="--enable-preview" />
 			<classpath>
 				<path refid="asm.classpath"/>
 				<path location="${ant.core.lib}"/>
@@ -419,7 +420,8 @@
 		<ac:for list="always,never,dynamic" param="variant">
 			<sequential>
 				<mkdir dir="${build.disl.bypass}/@{variant}"/>
-				<javac destdir="${build.disl.bypass}/@{variant}" srcdir="${src.disl.bypass}/@{variant}" debug="true">
+				<javac destdir="${build.disl.bypass}/@{variant}" srcdir="${src.disl.bypass}/@{variant}" debug="true" release="24">
+					<compilerarg value="--enable-preview" />
 					<compilerarg line="${javac.option.prepend}${basedir}/${build.disl.thread}"/>
 				</javac>
 			</sequential>
@@ -451,7 +453,8 @@
 
 	<target name="compile-util" depends="-init">
 		<mkdir dir="${build.util}"/>
-		<javac destdir="${build.util}" srcdir="${src.util}" debug="true">
+		<javac destdir="${build.util}" srcdir="${src.util}" debug="true" release="24">
+			<compilerarg value="--enable-preview" />
 			<classpath refid="asm.classpath"/>
 			<classpath refid="log4j.classpath"/>
 		</javac>
@@ -478,7 +481,8 @@
 
 	<target name="compile-disl" depends="compile-util,compile-disl-bypass">
 		<mkdir dir="${build.disl}"/>
-		<javac destdir="${build.disl}" srcdir="${src.disl}" debug="true">
+		<javac destdir="${build.disl}" srcdir="${src.disl}" debug="true" release="24" >
+			<compilerarg value="--enable-preview" />
 			<classpath>
 				<path refid="disl.bypass.classpath"/>
 				<path refid="util.classpath"/>
@@ -534,8 +538,9 @@
 	    <delete dir="${build.disl.native}" />
         <mkdir dir="${build.disl.native}" />
 
-		<javac srcdir="${src.disl}" destdir="${build.disl.native}" nativeheaderdir="${build.disl.native}" debug="false" includeantruntime="false">
+		<javac srcdir="${src.disl}" destdir="${build.disl.native}" nativeheaderdir="${build.disl.native}" debug="false" includeantruntime="false" release="24">
 			<include name="**/DiSL.java"/>
+			<compilerarg value="--enable-preview" />
 			<classpath>
 				<path refid="disl.classpath"/>
 				<path refid="disl.bypass.classpath"/>
@@ -654,7 +659,9 @@
 
 	<target name="compile-shvm-dispatch">
 		<mkdir dir="${build.shvm.dispatch}"/>
-		<javac destdir="${build.shvm.dispatch}" srcdir="${src.shvm.dispatch}" debug="true"/>
+		<javac destdir="${build.shvm.dispatch}" srcdir="${src.shvm.dispatch}" debug="true" release="24">
+			<compilerarg value="--enable-preview" />
+		</javac>
 	</target>
 
 
@@ -665,7 +672,8 @@
 
 	<target name="compile-shvm" depends="compile-util,compile-shvm-dispatch">
 		<mkdir dir="${build.shvm}"/>
-		<javac destdir="${build.shvm}" srcdir="${src.shvm}" debug="true">
+		<javac destdir="${build.shvm}" srcdir="${src.shvm}" debug="true" release="24">
+			<compilerarg value="--enable-preview" />
 			<classpath refid="util.classpath"/>
 			<classpath refid="asm.classpath"/>
 		</javac>
@@ -714,7 +722,8 @@
 
 	<target name="compile-test" depends="-init,compile-util,compile-disl,compile-shvm">
 		<mkdir dir="${build.test}"/>
-		<javac destdir="${build.test}" srcdir="${src.test}" debug="true">
+		<javac destdir="${build.test}" srcdir="${src.test}" debug="true" release="24">
+			<compilerarg value="--enable-preview" />
 			<classpath refid="test.classpath"/>
 		</javac>
 
@@ -791,9 +800,9 @@
 			<find-class property="classfinder.class" dir="${build.disl}" name="DislClassFinder"/>
 
 			<mkdir dir="${out.dir}/empty"/>
-			<javac srcdir="${src.test}" destDir="${out.dir}/empty">
+			<javac srcdir="${src.test}" destDir="${out.dir}/empty" release="24">
 				<classpath refid="test.classpath"/>
-
+				<compilerarg value="--enable-preview" />
 				<compilerArg value="-proc:only"/>
 				<compilerArg line="-processor ${classfinder.class}"/>
 				<compilerArg value="-Adisl.classfinder.output=${classfinder.output}"/>
