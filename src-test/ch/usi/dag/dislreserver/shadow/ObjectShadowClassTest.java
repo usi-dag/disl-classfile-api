@@ -33,6 +33,7 @@ public class ObjectShadowClassTest extends ShadowClassTestBase {
         public void methodB () { };
     }
 
+    // TODO for some reason the modifier static is not available from the classModel
     static class ClassC extends ClassB {
         public int fieldC;
         public void methodC () { };

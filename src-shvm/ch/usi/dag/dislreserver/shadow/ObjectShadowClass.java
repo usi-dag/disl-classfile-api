@@ -4,9 +4,13 @@ import java.lang.classfile.Attributes;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.attribute.NestMembersAttribute;
 import java.lang.constant.ClassDesc;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.AccessFlag;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
@@ -120,8 +124,15 @@ final class ObjectShadowClass extends ShadowClass {
 
     @Override
     public List<AccessFlag> getModifiers () {
-        // Strip modifiers that are not valid for a class.
-        return __classNode.flags().flags().stream().toList();
+        // TODO For some reasons the flags of the class model do not contain the flag "Static" even if
+        //  the actual class has the modifier. This might be a bug of the classFile api, for now I simply merge the
+        //  flags of the classModel with the flags of the class object.
+        Set<AccessFlag> accessFlags = new HashSet<>(__classNode.flags().flags()); // originally is a unmodifiable set
+        try {
+            Class<?> actualClass = __classNode.thisClass().asSymbol().resolveConstantDesc(MethodHandles.lookup());
+            accessFlags.addAll(actualClass.accessFlags());
+        } catch (Exception _) {}
+        return accessFlags.stream().toList();
     }
 
     //

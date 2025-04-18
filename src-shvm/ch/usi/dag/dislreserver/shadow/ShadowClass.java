@@ -73,7 +73,7 @@ public abstract class ShadowClass extends ShadowObject {
             if (this.__classLoader != null) {
                 return this.__classLoader.equals (other.__classLoader);
             } else {
-                return this.__classLoader == other.__classLoader;
+                return null == other.__classLoader;
             }
         }
 

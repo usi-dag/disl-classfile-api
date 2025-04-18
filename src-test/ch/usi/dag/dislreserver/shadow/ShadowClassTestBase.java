@@ -4,14 +4,12 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.classfile.ClassModel;
 import java.lang.reflect.*;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import ch.usi.dag.disl.util.ClassFileHelper;
-import ch.usi.dag.util.classfileAPI.ClassModelHelper;
+import ch.usi.dag.disl.util.ClassFileAPI.ClassModelHelper;
 import org.junit.Assert;
 import org.junit.experimental.theories.PotentialAssignment;
 
@@ -107,10 +105,12 @@ abstract class ShadowClassTestBase {
         // the byte code are set on the reflection class.
         //
 
+        Set<AccessFlag> accessFlagsSet = type.accessFlags();
+
         final ShadowClass shadowType = _createShadowClass (type);
-        final List<AccessFlag> modifiers = shadowType.getModifiers();
-        final int mask = modifiers.stream().map(AccessFlag::mask).reduce(0, (a, b) -> a | b);
-        Assert.assertEquals (type.getModifiers () & mask, mask);
+        List<AccessFlag> accessFlagList = shadowType.getModifiers();
+
+        Assert.assertTrue(new HashSet<>(accessFlagList).containsAll(accessFlagsSet));
     }
 
     //
