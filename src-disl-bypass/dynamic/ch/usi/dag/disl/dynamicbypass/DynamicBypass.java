@@ -8,33 +8,60 @@ public final class DynamicBypass {
     //
 
     public static boolean isActive () {
-        return Thread.currentThread ().bypass;
+        try {
+            Thread current = Thread.currentThread ();
+            return (boolean) current.getClass().getDeclaredField("bypass").get(current);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+
+        // return Thread.currentThread ().bypass;
     }
 
 
     public static void activate () {
-        if (debug) {
-            // bypass should be disabled in this state
-            if (Thread.currentThread ().bypass) {
-                throw new RuntimeException (
-                    "fatal error: dynamic bypass activated twice");
+        Thread current = Thread.currentThread ();
+        try {
+            if (debug) {
+                // bypass should be disabled in this state
+                boolean b = (boolean) current.getClass().getDeclaredField("bypass").get(current);
+                if (b) {
+                    throw new RuntimeException (
+                            "fatal error: dynamic bypass activated twice");
+                }
             }
-        }
 
-        Thread.currentThread ().bypass = true;
+            current.getClass().getDeclaredField("bypass").set(current, true);
+            //Thread.currentThread ().bypass = true;
+
+
+
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
     public static void deactivate () {
-        if (debug) {
-            // bypass should be enabled in this state
-            if (!Thread.currentThread ().bypass) {
-                throw new RuntimeException (
-                    "fatal error: dynamic bypass deactivated twice");
-            }
-        }
+        Thread current = Thread.currentThread ();
+        try {
 
-        Thread.currentThread ().bypass = false;
+            if (debug) {
+                // bypass should be enabled in this state
+                boolean b = (boolean) current.getClass().getDeclaredField("bypass").get(current);
+                if (!b) {
+                    throw new RuntimeException (
+                            "fatal error: dynamic bypass deactivated twice");
+                }
+            }
+
+            current.getClass().getDeclaredField("bypass").set(current, true);
+            //Thread.currentThread ().bypass = false;
+
+
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
