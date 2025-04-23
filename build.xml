@@ -676,6 +676,7 @@
 			<compilerarg value="--enable-preview" />
 			<classpath refid="util.classpath"/>
 			<classpath refid="asm.classpath"/>
+			<classpath refid="disl.classpath"/>
 		</javac>
 	</target>
 
