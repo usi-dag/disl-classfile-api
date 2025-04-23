@@ -77,7 +77,7 @@ public class BasicBlockCF implements Iterable<CodeElement> {
 
     private CodeElement getNext(CodeElement element) {
         final int elementIndex = this.instructions.indexOf(element);
-        if (elementIndex >= 0 && elementIndex < this.instructions.size()) {
+        if (elementIndex >= 0 && elementIndex < this.instructions.size() -1) {
             return this.instructions.get(elementIndex + 1);
         }
         return null;
