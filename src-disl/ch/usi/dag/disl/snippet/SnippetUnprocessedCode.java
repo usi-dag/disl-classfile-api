@@ -27,6 +27,7 @@ import ch.usi.dag.disl.marker.Marker;
 import ch.usi.dag.disl.processor.ArgProcessor;
 import ch.usi.dag.disl.processorcontext.ArgumentProcessorContext;
 import ch.usi.dag.disl.processorcontext.ArgumentProcessorMode;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 
 /**
@@ -53,7 +54,7 @@ public class SnippetUnprocessedCode {
      * source method, usage of context parameters in the template, and whether
      * the snippet requires automatic control of dynamic bypass.
      */
-    public SnippetUnprocessedCode(final String className, final MethodModel method, final boolean snippetDynamicBypass) {
+    public SnippetUnprocessedCode(final String className, final MethodModelCopy method, final boolean snippetDynamicBypass) {
         __template = new UnprocessedCode(className, method);
         __snippetDynamicBypass = snippetDynamicBypass;
     }
@@ -107,7 +108,7 @@ public class SnippetUnprocessedCode {
         }
 
         MethodModel transformedMethod = ClassFileCodeTransformer.applyTransformers(code.getMethod(), transformers);
-        code.setNewMethod(transformedMethod);
+        code.setNewMethod(new MethodModelCopy(transformedMethod));
 
         // Analyze code:
         //

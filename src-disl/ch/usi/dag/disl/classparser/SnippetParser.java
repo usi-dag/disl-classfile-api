@@ -2,7 +2,6 @@ package ch.usi.dag.disl.classparser;
 
 import java.lang.classfile.Annotation;
 import java.lang.classfile.ClassModel;
-import java.lang.classfile.MethodModel;
 import java.lang.constant.ClassDesc;
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -60,6 +59,7 @@ class SnippetParser extends AbstractParser {
             final String className = ClassFileHelper.typeName(dislClass);
 
             snippets.addAll(dislClass.methods().parallelStream().unordered()
+                    .map(MethodModelCopy::new)
                     .filter(this::__isSnippetCandidate)
                     .map(m -> __parseSnippetWrapper(className, m))
                     .toList()
@@ -71,7 +71,7 @@ class SnippetParser extends AbstractParser {
     }
 
 
-    private boolean __isSnippetCandidate(final MethodModel m) {
+    private boolean __isSnippetCandidate(final MethodModelCopy m) {
         if (JavaNames.isConstructorName(m.methodName().stringValue())) {
             __log.trace ("ignoring %s (constructor)", m.methodName().stringValue());
             return false;
@@ -88,7 +88,7 @@ class SnippetParser extends AbstractParser {
     }
 
 
-    private Snippet __parseSnippetWrapper(final String className, final MethodModel method) {
+    private Snippet __parseSnippetWrapper(final String className, final MethodModelCopy method) {
         // Wrap all parser exceptions into ParserRuntimeException so that __parseSnippet() can be called from a stream pipeline.
         try {
             return __parseSnippet(className, method);
@@ -101,7 +101,7 @@ class SnippetParser extends AbstractParser {
     }
 
 
-    private Snippet __parseSnippet(final String className, final MethodModel method)
+    private Snippet __parseSnippet(final String className, final MethodModelCopy method)
             throws ParserException, ReflectionException, MarkerException, GuardException
     {
         __ensureSnippetIsWellDefined(method);
@@ -123,7 +123,7 @@ class SnippetParser extends AbstractParser {
     }
 
 
-    private void __ensureSnippetIsWellDefined(final MethodModel method) throws ParserException {
+    private void __ensureSnippetIsWellDefined(final MethodModelCopy method) throws ParserException {
         // The ordering of (some of) these checks is important -- some may rely on certain assumptions to be satisfied.
         __warnOnMultipleAnnotations (method);
         __ensureSnippetOnlyHasDislAnnotations (method);
@@ -138,7 +138,7 @@ class SnippetParser extends AbstractParser {
     }
 
 
-    private void __warnOnMultipleAnnotations(final MethodModel method) throws SnippetParserException {
+    private void __warnOnMultipleAnnotations(final MethodModelCopy method) throws SnippetParserException {
         final int annotationCount = ClassFileHelper.getInvisibleAnnotation(method).size();
         if (annotationCount > 1) {
             __log.warn (
@@ -149,7 +149,7 @@ class SnippetParser extends AbstractParser {
     }
 
 
-    private static void __ensureSnippetOnlyHasDislAnnotations(final MethodModel method) throws SnippetParserException {
+    private static void __ensureSnippetOnlyHasDislAnnotations(final MethodModelCopy method) throws SnippetParserException {
         for (final Annotation annotation: ClassFileHelper.getInvisibleAnnotation(method)) {
             ClassDesc annotationType = annotation.classSymbol();
             if (! __isSnippetAnnotation(annotationType)) {
@@ -200,7 +200,7 @@ class SnippetParser extends AbstractParser {
     private static class SnippetAnnotationData {
         final Class <?> type;
 
-        ClassDesc marker;
+        ClassDesc marker;  // TODO this could be the problem
 
         //
         // Default values of annotation attributes.

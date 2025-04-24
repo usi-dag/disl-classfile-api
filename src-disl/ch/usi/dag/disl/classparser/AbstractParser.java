@@ -366,7 +366,7 @@ abstract class AbstractParser {
     }
 
 
-    static void ensureMethodReturnsVoid(final MethodModel method) throws ParserException {
+    static void ensureMethodReturnsVoid(final MethodModelCopy method) throws ParserException {
         ClassDesc returnType = method.methodTypeSymbol().returnType();
         if (!returnType.descriptorString().equals(void.class.descriptorString())) {
             throw new ParserException ("method may not return any value!");
@@ -374,17 +374,17 @@ abstract class AbstractParser {
     }
 
 
-    static void ensureMethodIsStatic(final MethodModel method) throws ParserException {
+    static void ensureMethodIsStatic(final MethodModelCopy method) throws ParserException {
         if (!method.flags().has(AccessFlag.STATIC)) {
             throw new ParserException ("method must be declared static!");
         }
     }
 
 
-    static void ensureMethodUsesContextProperly(MethodModel method) throws ParserException {
+    static void ensureMethodUsesContextProperly(MethodModelCopy method) throws ParserException {
         final int firstLocalSlot = ClassFileHelper.getParameterSlotCount(method);
-        if (method.code().isPresent()) {
-            final List<CodeElement> allCode = method.code().get().elementList();
+        if (method.hasCode()) {
+            final List<CodeElement> allCode = method.instructions();
             for (CodeElement instruction: allCode) {
                 if (instruction instanceof StoreInstruction && ((StoreInstruction) instruction).opcode() == Opcode.ASTORE) {
                     final int storeSlot = ((StoreInstruction) instruction).slot();
@@ -411,7 +411,7 @@ abstract class AbstractParser {
     }
 
 
-    static void ensureMethodHasOnlyContextArguments(final MethodModel method) throws ParserException {
+    static void ensureMethodHasOnlyContextArguments(final MethodModelCopy method) throws ParserException {
         // The type of each method argument must be a context of some kind.
         List<ClassDesc> argTypes = method.methodTypeSymbol().parameterList();
         for (int argIndex = 0; argIndex < argTypes.size(); argIndex++) {
@@ -436,17 +436,17 @@ abstract class AbstractParser {
      * @param method the method to check
      * @throws ParserException if the method is empty
      */
-    static void ensureMethodIsNotEmpty(final MethodModel method) throws ParserException {
-        if (method.code().isEmpty() ||
-                ClassFileHelper.isReturn(ClassFileHelper.selectReal(method.code().get().elementList()).get(0))) {
+    static void ensureMethodIsNotEmpty(final MethodModelCopy method) throws ParserException {
+        if (!method.hasCode() ||
+                ClassFileHelper.isReturn(ClassFileHelper.selectReal(method.instructions()).getFirst())) {
             throw new ParserException ("method does not contain any code!");
         }
     }
 
 
-    static void ensureMethodThrowsNoExceptions(final MethodModel method) throws ParserException {
-        if(method.code().isPresent()) {
-            List<ExceptionCatch> exceptionCatches = method.code().get().exceptionHandlers();
+    static void ensureMethodThrowsNoExceptions(final MethodModelCopy method) throws ParserException {
+        if(method.hasCode()) {
+            List<ExceptionCatch> exceptionCatches = method.exceptionHandlers();
             if (!exceptionCatches.isEmpty()) {
                 throw new ParserException ("method may not throw any exceptions!");
             }
@@ -466,6 +466,7 @@ abstract class AbstractParser {
      * @return the modified result object
      */
     static <T> T parseAnnotation(final Annotation annotation, final T result) {
+        // TODO error might be here
         if (annotation.elements().isEmpty()) {
             return result;
         }

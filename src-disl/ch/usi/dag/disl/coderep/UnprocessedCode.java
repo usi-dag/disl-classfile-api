@@ -40,9 +40,9 @@ public class UnprocessedCode {
     private final String __className;
 
     /** Method node containing the snippet code. */
-    private final MethodModel __method;
+    private final MethodModelCopy __method;
 
-    public UnprocessedCode(final String className, final MethodModel methodModel) {
+    public UnprocessedCode(final String className, final MethodModelCopy methodModel) {
         __className = className;
         __method = methodModel;
     }
@@ -56,19 +56,19 @@ public class UnprocessedCode {
     }
 
     public String location () {
-        if (__method.code().isEmpty()) {
+        if (!__method.hasCode()) {
             throw new RuntimeException("Method " + __method.methodName().stringValue() + " Has no Code!");
         }
-        return location (__method.code().get().elementList().getFirst());
+        return location (__method.instructions().getFirst());
     }
 
     public String location(final CodeElement codeElement) {
-        if (__method.code().isEmpty()) {
+        if (!__method.hasCode()) {
             throw new RuntimeException("Method " + __method.methodName().stringValue() + " Has no Code!");
         }
         return String.format (
                 "snippet %s.%s%s", __className, __method.methodName().stringValue(),
-                ClassFileHelper.formatLineNo(":%d ", codeElement, __method.code().get().elementList())
+                ClassFileHelper.formatLineNo(":%d ", codeElement, __method.instructions())
         );
     }
 
@@ -85,7 +85,7 @@ public class UnprocessedCode {
         // Then collect the sets of referenced synthetic local and thread local variables, and finally determine if there is any exception handler in
         // the code that handles the exception and does not propagate it.
         final ContextUsage ctxs = ContextUsage.forMethod(__method);
-        List<CodeElement> instructions = __method.code().get().elementList();
+        List<CodeElement> instructions = __method.instructions();
 
         final Set<StaticContextMethod> staticContextMethods = __collectStaticContextMethods(
                 instructions, ctxs.staticContextTypes()
@@ -101,7 +101,7 @@ public class UnprocessedCode {
 
         // in the ClassFile api the exception block instruction are included also with the normal instruction
         List<CodeElement> instructionsWithoutTryCatch = instructions.stream().filter(i -> !(i instanceof ExceptionCatch)).collect(Collectors.toList());
-        List<ExceptionCatch> exceptionCatches = __method.code().isPresent()? __method.code().get().exceptionHandlers() : new ArrayList<>();
+        List<ExceptionCatch> exceptionCatches = __method.hasCode()? __method.exceptionHandlers() : new ArrayList<>();
 
         final boolean handlesExceptions = __handlesExceptionWithoutThrowing (
             instructionsWithoutTryCatch, exceptionCatches
@@ -109,7 +109,7 @@ public class UnprocessedCode {
 
         // Process code:
         // - replace all RETURN instructions with a GOTO to the end of a method
-        final MethodModel method = ClassFileCodeTransformer.replaceReturnsWithGoto(__method);
+        final MethodModelCopy method = ClassFileCodeTransformer.replaceReturnsWithGoto(__method);
 
         return new Code (
             method, syntheticLocalVars, threadLocalVars, staticContextMethods, handlesExceptions

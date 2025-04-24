@@ -5,6 +5,7 @@ import ch.usi.dag.disl.localvar.AbstractLocalVar;
 import ch.usi.dag.disl.localvar.SyntheticLocalVar;
 import ch.usi.dag.disl.localvar.ThreadLocalVar;
 import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.MethodModelCopy;
 import ch.usi.dag.disl.util.ReflectionHelper;
 
 import java.io.PrintStream;
@@ -26,13 +27,13 @@ public class ClassFileCodeTransformer {
     public static MethodTransform identityTransform = ClassFileBuilder::with;
 
 
-    public static MethodModel applyTransformers(MethodModel oldMethod, List<MethodTransform> transforms) {
+    public static MethodModel applyTransformers(MethodModelCopy oldMethod, List<MethodTransform> transforms) {
         // first chain all the transform
         final MethodTransform transform = transforms.stream().reduce(identityTransform, MethodTransform::andThen);
         return applyTransformers(oldMethod, transform);
     }
 
-    public static MethodModel applyTransformers(MethodModel oldMethod, MethodTransform transform) {
+    public static MethodModel applyTransformers(MethodModelCopy oldMethod, MethodTransform transform) {
         if (oldMethod.parent().isEmpty()) {
             throw new RuntimeException("Method " +oldMethod.methodName().stringValue() + " has not class (method.parent())");
         }
@@ -527,13 +528,13 @@ public class ClassFileCodeTransformer {
 
 
 
-    public static MethodModel replaceReturnsWithGoto(final MethodModel oldMethod) {
+    public static MethodModelCopy replaceReturnsWithGoto(final MethodModelCopy oldMethod) {
         // TODO this method create a new class with the method edited and then return only the new method, there might be
         //  a better way to apply transformations, but in the ClassFile all element are immutable and to create new one you might need a
         //  builder. In this case it is essential to generate a new label.
-        if (oldMethod.code().isEmpty()) {
+        if (!oldMethod.hasCode()) {
             return oldMethod;  // Do nothing if there is no code
         }
-        return applyTransformers(oldMethod, replaceReturnsWithGoto());
+        return new MethodModelCopy(applyTransformers(oldMethod, replaceReturnsWithGoto()));
     }
 }

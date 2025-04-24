@@ -14,7 +14,6 @@ import java.lang.classfile.instruction.*;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDesc;
 import java.lang.constant.MethodTypeDesc;
-import java.lang.invoke.TypeDescriptor;
 import java.lang.reflect.AccessFlag;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -59,8 +58,7 @@ public abstract class ClassFileHelper {
         }
     }
 
-    // TODO need to check if this is equivalent tp the asmHelper version
-    public static CodeElement loadConst(final Object value) {
+    public static Instruction loadConst(final Object value) {
         switch (value) {
             case Boolean b -> {
                 return ConstantInstruction.ofIntrinsic(
@@ -93,7 +91,6 @@ public abstract class ClassFileHelper {
         }
     }
 
-    // TODO this seem that should work, but need an expert opinion
     public static String getStringConstOperand(final CodeElement codeElement) {
         if (codeElement instanceof ConstantInstruction.LoadConstantInstruction) {
             LoadableConstantEntry entry = ((ConstantInstruction.LoadConstantInstruction) codeElement).constantEntry();
@@ -111,10 +108,9 @@ public abstract class ClassFileHelper {
     ) {
         if (
                 enumType.isEnum() &&
-                codeElement instanceof FieldInstruction &&
-                ((FieldInstruction) codeElement).opcode() == Opcode.GETSTATIC
+                codeElement instanceof FieldInstruction fieldInstruction &&
+                fieldInstruction.opcode() == Opcode.GETSTATIC
         ) {
-            final FieldInstruction fieldInstruction = (FieldInstruction) codeElement;
 
             if (enumType.descriptorString().equals(fieldInstruction.owner().asSymbol().descriptorString())) {
                 final String expectedName = fieldInstruction.name().stringValue();
@@ -129,7 +125,6 @@ public abstract class ClassFileHelper {
     }
 
 
-    // TODO this seem correct, but not 100% sure
     public static Integer getIntConstantOperand(final CodeElement codeElement) {
         switch (codeElement) {
             // case like  bipush
@@ -156,7 +151,6 @@ public abstract class ClassFileHelper {
     }
 
 
-    // TODO this is probably correct, but is ok to return a ConstantDesc???
     public static ConstantDesc getTypeConstOperand(final CodeElement codeElement) {
         switch (codeElement) {
             case ConstantInstruction.LoadConstantInstruction instruction -> {
@@ -274,7 +268,6 @@ public abstract class ClassFileHelper {
         );
     }
 
-    // TODO there might be a better way to do this (without using ASM)
     public static MethodTypeDesc getMethodDescriptor(final Method method) {
         Class<?> returnType = method.getReturnType();
         Class<?>[] parameters = method.getParameterTypes();
@@ -316,7 +309,7 @@ public abstract class ClassFileHelper {
         return slot;
     }
 
-    public static int getParameterSlotCount(final MethodModel methodModel) {
+    public static int getParameterSlotCount(final MethodModelCopy methodModel) {
         MethodTypeDesc methodTypeDesc = methodModel.methodTypeSymbol();
         List<ClassDesc> parameters =  methodTypeDesc.parameterList();
         int result = methodModel.flags().has(AccessFlag.STATIC)? 0 : 1;
@@ -466,11 +459,6 @@ public abstract class ClassFileHelper {
         return instructions.get(index -1);
     }
 
-    // also accept ClassDesc and I believe ConstDesc too
-    public static boolean isReferenceType(TypeDescriptor.OfField<?> desc) {
-        return isReferenceType(TypeKind.from(desc));
-    }
-
     // TODO this should be correct, but it should also give true to
     //  encapsulated primitive such as Integer
     public static boolean isReferenceType(TypeKind typeKind) {
@@ -491,11 +479,10 @@ public abstract class ClassFileHelper {
 
 
     public static boolean isBranch(final CodeElement codeElement) {
-        if (!(codeElement instanceof Instruction)) {
+        if (!(codeElement instanceof Instruction instruction)) {
             return false;
         }
         // TODO should return be included????
-        Instruction instruction = (Instruction) codeElement;
         return codeElement instanceof BranchInstruction ||
                 codeElement instanceof LookupSwitchInstruction ||
                 codeElement instanceof TableSwitchInstruction ||
@@ -507,59 +494,15 @@ public abstract class ClassFileHelper {
     public static boolean mightThrowException(final CodeElement codeElement) {
         if (!(codeElement instanceof Instruction)) return false;
         Opcode opcode = ((Instruction) codeElement).opcode();
-        switch (opcode) {
-            // NullPointerException, ArrayIndexOutOfBoundsException
-            case Opcode.BALOAD:
-            case Opcode.DALOAD:
-            case Opcode.FALOAD:
-            case Opcode.IALOAD:
-            case Opcode.LALOAD:
-            case Opcode.BASTORE:
-            case Opcode.CASTORE:
-            case Opcode.DASTORE:
-            case Opcode.FASTORE:
-            case Opcode.IASTORE:
-            case Opcode.LASTORE:
-            case Opcode.AALOAD:
-            case Opcode.CALOAD:
-            case Opcode.SALOAD:
-            case Opcode.SASTORE:
-                // NullPointerException, ArrayIndexOutOfBoundsException,
-                // ArrayStoreException
-            case Opcode.AASTORE:
-                // NullPointerException
-            case Opcode.ARRAYLENGTH:
-            case Opcode.ATHROW:
-            case Opcode.GETFIELD:
-            case Opcode.PUTFIELD:
-                // NullPointerException, StackOverflowError
-            case Opcode.INVOKEINTERFACE:
-            case Opcode.INVOKESPECIAL:
-            case Opcode.INVOKEVIRTUAL:
-                // StackOverflowError
-            case Opcode.INVOKESTATIC:
-                // NegativeArraySizeException
-            case Opcode.ANEWARRAY:
-                // NegativeArraySizeException, OutOfMemoryError
-            case Opcode.NEWARRAY:
-            case Opcode.MULTIANEWARRAY:
-                // OutOfMemoryError, InstantiationError
-            case Opcode.NEW:
-                // OutOfMemoryError
-            case Opcode.LDC:
-                // ClassCastException
-            case Opcode.CHECKCAST:
-                // ArithmeticException
-            case Opcode.IDIV:
-            case Opcode.IREM:
-            case Opcode.LDIV:
-            case Opcode.LREM:
-                // New instruction in JDK7
-            case Opcode.INVOKEDYNAMIC:
-                return true;
-            default:
-                return false;
-        }
+        return switch (opcode) {
+            case Opcode.BALOAD, Opcode.DALOAD, Opcode.FALOAD, Opcode.IALOAD, Opcode.LALOAD, Opcode.BASTORE,
+                 Opcode.CASTORE, Opcode.DASTORE, Opcode.FASTORE, Opcode.IASTORE, Opcode.LASTORE, Opcode.AALOAD,
+                 Opcode.CALOAD, Opcode.SALOAD, Opcode.SASTORE, Opcode.AASTORE, Opcode.ARRAYLENGTH, Opcode.ATHROW,
+                 Opcode.GETFIELD, Opcode.PUTFIELD, Opcode.INVOKEINTERFACE, Opcode.INVOKESPECIAL, Opcode.INVOKEVIRTUAL,
+                 Opcode.INVOKESTATIC, Opcode.ANEWARRAY, Opcode.NEWARRAY, Opcode.MULTIANEWARRAY, Opcode.NEW, Opcode.LDC,
+                 Opcode.CHECKCAST, Opcode.IDIV, Opcode.IREM, Opcode.LDIV, Opcode.LREM, Opcode.INVOKEDYNAMIC -> true;
+            default -> false;
+        };
     }
 
 
@@ -656,8 +599,8 @@ public abstract class ClassFileHelper {
         return a.annotations();
     }
 
-    public static List<Annotation> getVisibleAnnotation(MethodModel methodModel) {
-        RuntimeVisibleAnnotationsAttribute a = methodModel.elementStream()
+    public static List<Annotation> getVisibleAnnotation(MethodModelCopy methodModel) {
+        RuntimeVisibleAnnotationsAttribute a = methodModel.original.elementStream()
                 .filter(e -> e instanceof RuntimeVisibleAnnotationsAttribute)
                 .map(e -> (RuntimeVisibleAnnotationsAttribute)e)
                 .findFirst().orElse(null);
@@ -678,8 +621,8 @@ public abstract class ClassFileHelper {
         return a.annotations();
     }
 
-    public static List<Annotation> getInvisibleAnnotation(MethodModel methodModel) {
-        RuntimeInvisibleAnnotationsAttribute a = methodModel.elementStream()
+    public static List<Annotation> getInvisibleAnnotation(MethodModelCopy methodModel) {
+        RuntimeInvisibleAnnotationsAttribute a = methodModel.original.elementStream()
                 .filter(e -> e instanceof RuntimeInvisibleAnnotationsAttribute)
                 .map(e -> (RuntimeInvisibleAnnotationsAttribute)e)
                 .findFirst().orElse(null);
@@ -794,19 +737,6 @@ public abstract class ClassFileHelper {
         return argumentSize << 2 | TypeKind.from(methodTypeDesc.returnType()).slotSize();
     }
 
-
-    /**
-     * Get the number of max locals
-     * @param method the method we want to calculate the max locals
-     * @return the max locals
-     */
-    public static int getMaxLocals(MethodModel method) {
-        return getMaxLocals(
-                method.code().orElseThrow().elementList(),
-                method.methodTypeSymbol(),
-                method.flags());
-    }
-
     /**
      * Get the number of max locals
      * @param codeElementList list of instruction of the method
@@ -869,15 +799,6 @@ public abstract class ClassFileHelper {
             }
         }
         return maxLocals;
-    }
-
-
-    public static int getMaxStack(MethodModel method) {
-        if (method.code().isEmpty()) {
-            return 0;
-        }
-        CodeModel code = method.code().get();
-        return getMaxStack(code.elementList(), code.exceptionHandlers());
     }
 
     public static int getMaxStack(List<CodeElement> codeElementList, List<ExceptionCatch> tryCatchBlocks) {

@@ -1,10 +1,9 @@
 package ch.usi.dag.disl.coderep;
-
-import java.lang.classfile.MethodModel;
 import java.lang.constant.ClassDesc;
 import java.util.*;
 
 import ch.usi.dag.disl.classparser.ContextKind;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 
 /**
@@ -44,7 +43,7 @@ final class ContextUsage {
         return __contextTypes;
     }
 
-    public static ContextUsage forMethod(final MethodModel method) {
+    public static ContextUsage forMethod(final MethodModelCopy method) {
         // Collect the kinds of contexts appearing in the arguments as well as the types of static contexts.
         final EnumSet <ContextKind> usedContexts = EnumSet.noneOf (ContextKind.class);
         final Set<ClassDesc> staticContextTypes = new HashSet<>();

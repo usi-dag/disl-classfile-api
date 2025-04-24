@@ -3,7 +3,6 @@ package ch.usi.dag.disl.classparser;
 import java.lang.classfile.Annotation;
 import java.lang.classfile.AnnotationElement;
 import java.lang.classfile.AnnotationValue;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.constantpool.Utf8Entry;
 import java.lang.constant.ClassDesc;
 import java.lang.reflect.Method;
@@ -14,6 +13,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 
 final class AnnotationMapper {
@@ -86,7 +86,7 @@ final class AnnotationMapper {
     }
 
 
-    public AnnotationMapper accept(final MethodModel methodModel) {
+    public AnnotationMapper accept(final MethodModelCopy methodModel) {
         List<Annotation> visibleAnnotation = ClassFileHelper.getVisibleAnnotation(methodModel);
         List<Annotation> invisibleAnnotation = ClassFileHelper.getInvisibleAnnotation(methodModel);
         Stream.of(visibleAnnotation, invisibleAnnotation)

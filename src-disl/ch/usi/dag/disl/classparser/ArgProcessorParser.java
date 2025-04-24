@@ -1,7 +1,6 @@
 package ch.usi.dag.disl.classparser;
 
 import java.lang.classfile.ClassModel;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.TypeKind;
 import java.lang.constant.ClassDesc;
 import java.lang.reflect.Method;
@@ -26,6 +25,7 @@ import ch.usi.dag.disl.processor.ArgProcessor;
 import ch.usi.dag.disl.processor.ArgProcessorKind;
 import ch.usi.dag.disl.processor.ArgProcessorMethod;
 import ch.usi.dag.disl.util.JavaNames;
+import ch.usi.dag.disl.util.MethodModelCopy;
 import ch.usi.dag.util.Strings;
 
 
@@ -66,6 +66,7 @@ class ArgProcessorParser extends AbstractParser {
         try {
             final String className = ClassFileHelper.typeName(dislClass);
             return dislClass.methods().parallelStream().unordered()
+                    .map(MethodModelCopy::new)
                     .filter(m -> !JavaNames.isConstructorName(m.methodName().stringValue()))
                     .filter(m -> !JavaNames.isInitializerName(m.methodName().stringValue()))
                     .map(m -> __parseMethodWrapper(className, m))
@@ -76,7 +77,7 @@ class ArgProcessorParser extends AbstractParser {
     }
 
 
-    private ArgProcessorMethod __parseMethodWrapper(final String className, final MethodModel method) {
+    private ArgProcessorMethod __parseMethodWrapper(final String className, final MethodModelCopy method) {
         try {
             return __parseMethod(className, method);
         } catch (final Exception e) {
@@ -89,7 +90,7 @@ class ArgProcessorParser extends AbstractParser {
     }
 
 
-    private ArgProcessorMethod __parseMethod(final String className, final MethodModel method) throws ParserException, GuardException {
+    private ArgProcessorMethod __parseMethod(final String className, final MethodModelCopy method) throws ParserException, GuardException {
         __ensureArgProcessorIsWellDefined(method);
 
         // Parse method annotation and ensure that additional parameter types
@@ -114,7 +115,7 @@ class ArgProcessorParser extends AbstractParser {
     }
 
 
-    private void __ensureArgProcessorIsWellDefined(final MethodModel method) throws ParserException {
+    private void __ensureArgProcessorIsWellDefined(final MethodModelCopy method) throws ParserException {
         __ensureMethodHasAtLeastOneParameter(method);
         __ensureFirstParameterIsObjectOrPrimitive(method);
 
@@ -127,14 +128,14 @@ class ArgProcessorParser extends AbstractParser {
     }
 
 
-    private static void __ensureMethodHasAtLeastOneParameter(final MethodModel methodModel) throws ParserException {
+    private static void __ensureMethodHasAtLeastOneParameter(final MethodModelCopy methodModel) throws ParserException {
         if (methodModel.methodTypeSymbol().parameterCount() < 1) {
             throw new ParserException ("method has no parameters!");
         }
     }
 
 
-    private static void __ensureFirstParameterIsObjectOrPrimitive(final MethodModel method) throws ParserException {
+    private static void __ensureFirstParameterIsObjectOrPrimitive(final MethodModelCopy method) throws ParserException {
         ClassDesc argType = method.methodTypeSymbol().parameterType(0);
         TypeKind typeKind = TypeKind.fromDescriptor(argType.descriptorString());
         // TODO is this equivalent to the asm version???
@@ -169,7 +170,7 @@ class ArgProcessorParser extends AbstractParser {
 
         //
 
-        public static AnnotationData parse(final MethodModel method) {
+        public static AnnotationData parse(final MethodModelCopy method) {
             final AnnotationData result = new AnnotationData();
 
             new AnnotationMapper()

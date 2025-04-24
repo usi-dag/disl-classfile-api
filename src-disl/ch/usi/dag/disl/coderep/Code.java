@@ -1,7 +1,6 @@
 package ch.usi.dag.disl.coderep;
 
 import java.lang.classfile.CodeElement;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.instruction.ExceptionCatch;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,6 +11,7 @@ import ch.usi.dag.disl.localvar.LocalVars;
 import ch.usi.dag.disl.localvar.SyntheticLocalVar;
 import ch.usi.dag.disl.localvar.ThreadLocalVar;
 import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.MethodModelCopy;
 
 
 /**
@@ -23,7 +23,7 @@ import ch.usi.dag.disl.util.ClassFileHelper;
 public class Code {
 
     /** A method representing the code template. */
-    private MethodModel __method;
+    private MethodModelCopy __method;
 
     /** Synthetic-local variables referenced by the code template. */
     private final Set <SyntheticLocalVar> __syntheticLocals;
@@ -44,7 +44,7 @@ public class Code {
     //
 
     public Code (
-        final MethodModel method,
+        final MethodModelCopy method,
         final Set <SyntheticLocalVar> syntheticLocals,
         final Set <ThreadLocalVar> threadLocals,
         final Set <StaticContextMethod> staticContextMethods,
@@ -77,13 +77,13 @@ public class Code {
      * @return An ASM instruction list.
      */
     public List<CodeElement> getInstructions () {
-        if (__method.code().isEmpty()) {
+        if (!__method.hasCode()) {
             return new ArrayList<>();
         }
-        return __method.code().get().elementList();
+        return __method.instructions();
     }
 
-    public MethodModel getMethod() {
+    public MethodModelCopy getMethod() {
         return this.__method;
     }
 
@@ -92,10 +92,10 @@ public class Code {
      * @return A list of try-catch blocks (as represented in ASM).
      */
     public List <ExceptionCatch> getTryCatchBlocks () {
-        if (__method.code().isEmpty()) {
+        if (!__method.hasCode()) {
             return new ArrayList<>();
         }
-        return __method.code().get().exceptionHandlers();
+        return __method.exceptionHandlers();
     }
 
 
@@ -155,7 +155,7 @@ public class Code {
 
 
     // this is needed in case the code of the method is transformed, the ClassFile api do not allow editing methods, but a new method of a new class must be created
-    public void setNewMethod(MethodModel newMethod) {
+    public void setNewMethod(MethodModelCopy newMethod) {
         this.__method = newMethod;
     }
 

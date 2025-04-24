@@ -1,8 +1,7 @@
 package ch.usi.dag.disl.processor;
 
 import ch.usi.dag.disl.exception.DiSLFatalException;
-
-import java.lang.classfile.MethodModel;
+import ch.usi.dag.disl.util.MethodModelCopy;
 import java.lang.classfile.TypeKind;
 import java.lang.constant.ClassDesc;
 import java.util.Collections;
@@ -81,7 +80,7 @@ public enum ArgProcessorKind {
         );
     }
 
-    public static ArgProcessorKind forMethod(final MethodModel method) {
+    public static ArgProcessorKind forMethod(final MethodModelCopy method) {
         List<ClassDesc> argDesc = method.methodTypeSymbol().parameterList();
         if (!argDesc.isEmpty()) {
             return valueOf(argDesc.getFirst());
