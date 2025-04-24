@@ -881,7 +881,9 @@ public abstract class ClassFileHelper {
     }
 
     public static int getMaxStack(List<CodeElement> codeElementList, List<ExceptionCatch> tryCatchBlocks) {
-
+        if (codeElementList.isEmpty()) {
+            return 0;
+        }
         ControlFlowGraph cfg = ControlFlowGraph.build(codeElementList, tryCatchBlocks);
         List<BasicBlockCF> unvisited = cfg.getNodes();
 
@@ -918,60 +920,302 @@ public abstract class ClassFileHelper {
         return maxStack;
     }
 
-    // From org.objectweb.asm.Frame
+    // TODO this file is getting quite long, if there is time refactor this helper by splitting it into different files
     /**
-     * The stack size variation corresponding to each JVM instruction. This
-     * stack variation is equal to the size of the values produced by an
-     * instruction, minus the size of the values consumed by this instruction.
+     * The stack size variation corresponding to each JVM instruction.
      */
-    static final int[] SIZE;
-
-    /**
-     * Computes the stack size variation corresponding to each JVM instruction.
-     */
-    static {
-        int i;
-        int[] b = new int[202];
-        String s = "EFFFFFFFFGGFFFGGFFFEEFGFGFEEEEEEEEEEEEEEEEEEEEDEDEDDDDD"
-                + "CDCDEEEEEEEEEEEEEEEEEEEEBABABBBBDCFFFGGGEDCDCDCDCDCDCDCDCD"
-                + "CDCEEEEDDDDDDDCDCDCEFEFDDEEFFDEDEEEBDDBBDDDDDDCCCCCCCCEFED"
-                + "DDCDCDEEEEEEEEEEFEEEEEEDDEEDDEE";
-        for (i = 0; i < b.length; ++i) {
-            b[i] = s.charAt(i) - 'E';
-        }
-        SIZE = b;
-    }
+    public static final int[] SIZE = {
+    // stack change,    ins,            stack operation
+            0,      // nop              [No change]
+            1,      // aconst_null      → null
+            1,      // iconst_m1        → -1
+            1,      // iconst_0         → 0
+            1,      // iconst_1         → 1
+            1,      // iconst_2         → 2
+            1,      // iconst_3         → 3
+            1,      // iconst_4         → 4
+            1,      // iconst_5         → 5
+            2,      // lconst_0         → 0L
+            2,      // lconst_1         → 1L
+            1,      // fconst_0         → 0.0f
+            1,      // fconst_1         → 1.0f
+            1,      // fconst_2         → 2.0f
+            2,      // dconst_0         → 0.0
+            2,      // dconst_1         → 1.0
+            1,      // bipush           → value
+            1,      // sipush           → value
+            1,      // ldc              → value
+            1,      // ldc_w            → value
+            2,      // ldc2_w           → value
+            1,      // iload            → value
+            2,      // lload            → value
+            1,      // fload            → value
+            2,      // dload            → value
+            1,      // aload            → objectref
+            1,      // iload_0          → value
+            1,      // iload_1          → value
+            1,      // iload_2          → value
+            1,      // iload_3          → value
+            2,      // lload_0          → value
+            2,      // lload_1          → value
+            2,      // lload_2          → value
+            2,      // lload_3          → value
+            1,      // fload_0          → value
+            1,      // fload_1          → value
+            1,      // fload_2          → value
+            1,      // fload_3          → value
+            2,      // dload_0          → value
+            2,      // dload_1          → value
+            2,      // dload_2          → value
+            2,      // dload_3          → value
+            1,      // aload_0          → objectref
+            1,      // aload_1          → objectref
+            1,      // aload_2          → objectref
+            1,      // aload_3          → objectref
+            -1,     // iaload           arrayref, index → value
+            0,      // laload           arrayref, index → value
+            -1,     // faload           arrayref, index → value
+            0,      // daload           arrayref, index → value
+            -1,     // aaload           arrayref, index → objectref
+            -1,     // baload           arrayref, index → value
+            -1,     // caload           arrayref, index → value
+            -1,     // saload           arrayref, index → value
+            -1,     // istore           value →
+            -2,     // lstore           value →
+            -1,     // fstore           value →
+            -2,     // dstore           value →
+            -1,     // astore           objectref →
+            -1,     // istore_0         value →
+            -1,     // istore_1         value →
+            -1,     // istore_2         value →
+            -1,     // istore_3         value →
+            -2,     // lstore_0         value →
+            -2,     // lstore_1         value →
+            -2,     // lstore_2         value →
+            -2,     // lstore_3         value →
+            -1,     // fstore_0         value →
+            -1,     // fstore_1         value →
+            -1,     // fstore_2         value →
+            -1,     // fstore_3         value →
+            -2,     // dstore_0         value →
+            -2,     // dstore_1         value →
+            -2,     // dstore_2         value →
+            -2,     // dstore_3         value →
+            -1,     // astore_0         objectref →
+            -1,     // astore_1         objectref →
+            -1,     // astore_2         objectref →
+            -1,     // astore_3         objectref →
+            -3,     // iastore          arrayref, index, value →
+            -4,     // lastore          arrayref, index, value →
+            -3,     // fastore          arrayref, index, value →
+            -4,     // dastore          arrayref, index, value →
+            -3,     // aastore          arrayref, index, objectref →
+            -3,     // bastore          arrayref, index, value →
+            -3,     // castore          arrayref, index, value →
+            -3,     // sastore          arrayref, index, value →
+            -1,     // pop              value →
+            -2,     // pop2             {value2, value1} →
+            1,      // dup              value → value, value
+            1,      // dup_x1           value2, value1 → value1, value2, value1
+            1,      // dup_x2           value3, value2, value1 → value1, value3, value2, value1
+            2,      // dup2             {value2, value1} → {value2, value1}, {value2, value1}
+            2,      // dup2_x1          value3, {value2, value1} → {value2, value1}, value3, {value2, value1}
+            2,      // dup2_x2          {value4, value3}, {value2, value1} → {value2, value1}, {value4, value3}, {value2, value1}
+            0,      // swap             value2, value1 → value1, value2
+            -1,     // iadd             value1, value2 → result
+            -2,     // ladd             value1, value2 → result
+            -1,     // fadd             value1, value2 → result
+            -2,     // dadd             value1, value2 → result
+            -1,     // isub             value1, value2 → result
+            -2,     // lsub             value1, value2 → result
+            -1,     // fsub             value1, value2 → result
+            -2,     // dsub             value1, value2 → result
+            -1,     // imul             value1, value2 → result
+            -2,     // lmul             value1, value2 → result
+            -1,     // fmul             value1, value2 → result
+            -2,     // dmul             value1, value2 → result
+            -1,     // idiv             value1, value2 → result
+            -2,     // ldiv             value1, value2 → result
+            -1,     // fdiv             value1, value2 → result
+            -2,     // ddiv             value1, value2 → result
+            // TODO is _rem correct >>>>
+            -1,     // irem             value1, value2 → result
+            -2,     // lrem             value1, value2 → result
+            -1,     // frem             value1, value2 → result
+            -2,     // drem             value1, value2 → result
+            0,      // ineg             value → result
+            0,      // lneg             value → result
+            0,      // fneg             value → result
+            0,      // dneg             value → result
+            -1,     // ishl             value1, value2 → result
+            -2,     // lshl             value1, value2 → result
+            -1,     // ishr             value1, value2 → result
+            -2,     // lshr             value1, value2 → result
+            -1,     // iushr            value1, value2 → result
+            -1,     // lushr            value1, value2 → result
+            -1,     // iand             value1, value2 → result
+            -2,     // land             value1, value2 → result
+            -1,     // ior              value1, value2 → result
+            -2,     // lor              value1, value2 → result
+            -1,     // ixor             value1, value2 → result
+            -2,     // lxor             value1, value2 → result
+            0,      // iinc             [No change]
+            1,      // i2l              value → result
+            0,      // i2f              value → result
+            1,      // i2d              value → result
+            -1,     // l2i              value → result
+            -1,     // l2f              value → result
+            0,      // l2d              value → result
+            0,      // f2i              value → result
+            1,      // f2l              value → result
+            1,      // f2d              value → result
+            -1,     // d2i              value → result
+            0,      // d2l              value → result
+            -1,     // d2f              value → result
+            0,      // i2b              value → result
+            0,      // i2c              value → result
+            0,      // i2s              value → result
+            -3,     // lcmp             value1, value2 → result
+            -1,     // fcmpl            value1, value2 → result
+            -1,     // fcmpg            value1, value2 → result
+            -3,     // dcmpl            value1, value2 → result
+            -3,     // dcmpg            value1, value2 → result
+            -1,     // ifeq             value →
+            -1,     // ifne             value →
+            -1,     // iflt             value →
+            -1,     // ifge             value →
+            -1,     // ifgt             value →
+            -1,     // ifle             value →
+            -2,     // if_icmpeq        value1, value2 →
+            -2,     // if_icmpne        value1, value2 →
+            -2,     // if_icmplt        value1, value2 →
+            -2,     // if_icmpge        value1, value2 →
+            -2,     // if_icmpgt        value1, value2 →
+            -2,     // if_icmple        value1, value2 →
+            -2,     // if_acmpeq        value1, value2 →
+            -2,     // if_acmpne        value1, value2 →
+            0,      // goto             [no change]
+            1,      // jsr†             → address
+            0,      // ret†             [No change]
+            // TODO are index and key one slot??
+            -1,     // tableswitch      index →
+            -1,     // lookupswitch     key →
+            -1,     // ireturn          value → [empty]
+            -2,     // lreturn          value → [empty]
+            -1,     // freturn          value → [empty]
+            -2,     // dreturn          value → [empty]
+            -1,     // areturn          objectref → [empty]
+            0,      // return           → [empty]
+            // the following instructions that have -999 is because the value can be 1 or 2
+            // so they should be handled in the function execute(int, CodeElement)
+            -999,   // getstatic        → value
+            -999,   // putstatic        value →
+            -999,   // getfield         objectref → value
+            -999,   // putfield         objectref, value →
+            -999,   // invokevirtual    objectref, [arg1, arg2, ...] → result
+            -999,   // invokespecial    objectref, [arg1, arg2, ...] → result
+            -999,   // invokestatic     [arg1, arg2, ...] → result
+            -999,   // invokeinterface  objectref, [arg1, arg2, ...] → result
+            -999,   // invokedynamic    [arg1, arg2, ...] → result
+            1,      // new              → objectref
+            0,      // newarray         count → arrayref
+            0,      // anewarray        count → arrayref
+            0,      // arraylength      arrayref → length
+            -999,   // athrow           objectref → [empty], objectref
+            0,      // checkcast        objectref → objectref
+            0,      // instanceof       objectref → result
+            1,      // monitorenter     objectref →
+            1,      // monitorexit      objectref →
+            -999,   // wide             [same as for corresponding instructions]
+            -999,   // multianewarray   count1, [count2,...] → arrayref
+            -1,     // ifnull           value →
+            -1,     // ifnonnull        value →
+            0,      // goto_w           [no change]
+            1,      // jsr_w†           → address
+    };
 
 
     private static int execute(int currentStackSize, CodeElement codeElement) {
         switch (codeElement) {
             case FieldInstruction fieldInstruction -> {
-                if (fieldInstruction.opcode() == Opcode.GETFIELD || fieldInstruction.opcode() == Opcode.PUTFIELD) {
-                    return currentStackSize + TypeKind.from(fieldInstruction.typeSymbol()).slotSize() -1;
-                } else {
-                    // for getstatic and putstatic
-                    return currentStackSize + TypeKind.from(fieldInstruction.typeSymbol()).slotSize();
+                int valueSize = TypeKind.from(fieldInstruction.typeSymbol()).slotSize();
+                switch (fieldInstruction.opcode()) {
+                    case GETSTATIC -> {
+                        // → value
+                        return currentStackSize + valueSize;
+                    }
+                    case PUTSTATIC -> {
+                        // value →
+                        return currentStackSize - valueSize;
+                    }
+                    case GETFIELD -> {
+                        // objectref → value
+                        return currentStackSize - 1 + valueSize;
+                    }
+                    case PUTFIELD -> {
+                        // objectref, value →
+                        return currentStackSize - 1 - valueSize;
+                    }
+                    default -> throw new RuntimeException("FieldInstruction cannot have opcode: " + fieldInstruction.opcode());
                 }
             }
             case NewMultiArrayInstruction newMultiArrayInstruction -> {
+                // subtract the number of dimensions and add one which is the ref of the created array
+                // count1, [count2,...] → arrayref
                 return currentStackSize + 1 - newMultiArrayInstruction.dimensions();
             }
             case InvokeInstruction invokeInstruction -> {
+                int argSize = getArgumentAndReturnSize(invokeInstruction.typeSymbol());
                 if (invokeInstruction.opcode() == Opcode.INVOKESTATIC) {
-                    int argSize = getArgumentAndReturnSize(invokeInstruction.typeSymbol());
+                    // [arg1, arg2, ...] → result
                     return currentStackSize - (argSize >> 2) + (argSize & 0x03) + 1;
                 } else {
                     // for invokeVirtual, invokespecial, invokeinterface
-                    int argSize = getArgumentAndReturnSize(invokeInstruction.typeSymbol());
+                    // objectref, [arg1, arg2, ...] → result
                     return currentStackSize - (argSize >> 2) + (argSize & 0x03);
                 }
             }
             case InvokeDynamicInstruction invokeDynamicInstruction -> {
+                // [arg1, arg2, ...] → result
                 int argSize = getArgumentAndReturnSize(invokeDynamicInstruction.typeSymbol());
-                return currentStackSize - (argSize >> 2) + (argSize & 0x03) + 1;
+                return currentStackSize - (argSize >> 2) + (argSize & 0x03);
+            }
+            case ThrowInstruction _ -> {
+                // this is because the stack is cleared and a reference is pushed
+                return 1;
             }
             case Instruction instruction -> {
-                return currentStackSize + SIZE[instruction.opcode().bytecode()];
+                // handle the wide, since the stack operation is equal at the one without wide
+                // we just call the original
+                switch (instruction.opcode()) {
+                    // TODO merge together these
+                    case ALOAD_W, FLOAD_W, ILOAD_W, JSR_W -> {
+                        // → objectref
+                        // → value
+                        // → address
+                        return currentStackSize + 1;
+                    }
+                    case ASTORE_W, FSTORE_W, ISTORE_W -> {
+                        // objectref →
+                        // value →
+                        return currentStackSize - 1;
+                    }
+                    case DLOAD_W, LLOAD_W -> {
+                        // → value
+                        return currentStackSize + 2;
+                    }
+                    case DSTORE_W, LSTORE_W -> {
+                        // value →
+                        return currentStackSize - 2;
+                    }
+                    case GOTO_W, IINC_W, RET_W -> {
+                        // [No change]
+                        return currentStackSize;
+                    }
+                    default -> {
+                        return currentStackSize + SIZE[instruction.opcode().bytecode()];
+                    }
+                }
             }
             default -> {
                 return currentStackSize;
