@@ -200,7 +200,7 @@ class SnippetParser extends AbstractParser {
     private static class SnippetAnnotationData {
         final Class <?> type;
 
-        ClassDesc marker;  // TODO this could be the problem
+        ClassDesc marker;
 
         //
         // Default values of annotation attributes.

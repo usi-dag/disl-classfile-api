@@ -58,7 +58,7 @@ public abstract class ClassFileHelper {
         }
     }
 
-    public static Instruction loadConst(final Object value) {
+    public static ConstantInstruction loadConst(final Object value) {
         switch (value) {
             case Boolean b -> {
                 return ConstantInstruction.ofIntrinsic(
