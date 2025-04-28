@@ -51,7 +51,7 @@ abstract class TypeMatcher {
 
         private Generic (final WildCardMatcher matcher) {
             __matcher = matcher;
-         }
+        }
 
         //
 
@@ -63,13 +63,11 @@ abstract class TypeMatcher {
             // we need to add package separator to such descriptors so that
             // the default package is an empty package.
             //
-//            if (__isObjectType (typeDesc) && !JavaNames.internalNameHasPackage (typeDesc)) {
-//                // TODO this function __fixupDefaultPackage make LString; become L/String and causes problems.
-//                return __matcher.match (__fixupDefaultPackage (typeDesc));
-//            } else {
-//                return __matcher.match (typeDesc);
-//            }
-            return __matcher.match (typeDesc);
+            if (__isObjectType (typeDesc) && !JavaNames.internalNameHasPackage (typeDesc)) {
+                return __matcher.match (__fixupDefaultPackage (typeDesc));
+            } else {
+                return __matcher.match (typeDesc);
+            }
         }
 
         private static final char __OBJECT_TYPE_CHAR__ = 'L';
@@ -81,11 +79,9 @@ abstract class TypeMatcher {
         private static final char __PKG_SEPARATOR_CHAR__ = '/';
 
         private static String __fixupDefaultPackage (final String descriptor) {
-            final StringBuilder result = new StringBuilder (descriptor.length () + 1);
-            result.append (descriptor.charAt (0));
-            result.append (__PKG_SEPARATOR_CHAR__);
-            result.append (descriptor.substring (1));
-            return result.toString ();
+            return String.valueOf(descriptor.charAt(0)) +
+                    __PKG_SEPARATOR_CHAR__ +
+                    descriptor.substring(1);
         }
 
         //
@@ -112,7 +108,7 @@ abstract class TypeMatcher {
         } else {
             final String descPattern = __getDescriptorPattern (trimmed);
             final WildCardMatcher matcher = WildCardMatcher.forPattern (
-                JavaNames.typeToInternal (descPattern)
+                    JavaNames.typeToInternal (descPattern)
             );
 
             return new Generic (matcher);
@@ -133,9 +129,7 @@ abstract class TypeMatcher {
             final StringBuilder result = new StringBuilder ();
 
             final int dimensions = 1 + __getDimensionCount (input, firstPosition + __ARRAY_BRACKETS_LENGTH__);
-            for (int i = dimensions; i > 0; i--) {
-                result.append ("[");
-            }
+            result.append ("[".repeat(Math.max(0, dimensions)));
 
             final String typeName = input.substring (0, firstPosition);
             result.append (__getTypeDescriptor (typeName));
@@ -163,17 +157,16 @@ abstract class TypeMatcher {
     }
 
 
-    @SuppressWarnings ("serial")
     private static final Map <String, TypeKind> __PRIMITIVES__ = new HashMap<>() {{
-        put ("void", TypeKind.VOID);
-        put ("boolean", TypeKind.BOOLEAN);
-        put ("byte", TypeKind.BYTE);
-        put ("char", TypeKind.CHAR);
-        put ("short", TypeKind.SHORT);
-        put ("int", TypeKind.INT);
-        put ("float", TypeKind.FLOAT);
-        put ("long", TypeKind.LONG);
-        put ("double", TypeKind.DOUBLE);
+        put("void", TypeKind.VOID);
+        put("boolean", TypeKind.BOOLEAN);
+        put("byte", TypeKind.BYTE);
+        put("char", TypeKind.CHAR);
+        put("short", TypeKind.SHORT);
+        put("int", TypeKind.INT);
+        put("float", TypeKind.FLOAT);
+        put("long", TypeKind.LONG);
+        put("double", TypeKind.DOUBLE);
     }};
 
     private static String __getTypeDescriptor (final String input) {
@@ -189,10 +182,15 @@ abstract class TypeMatcher {
 
         final TypeKind primitiveType = __PRIMITIVES__.get (input);
         if (primitiveType == null) {
-            final String fqcn = __getClassName(input);
-            ClassDesc classDesc = ClassDesc.of(fqcn);
-            return classDesc.descriptorString();
-
+            final String fqcn = __getClassName (input);
+            try {
+                ClassDesc obj = ClassDesc.ofInternalName(fqcn);
+                return obj.descriptorString();
+            } catch (Exception e) {
+                // this might not seem correct, but otherwise the original tests do not pass.
+                // this was done to preserve the original behaviour
+                return "L" + fqcn + ";";
+            }
         } else {
             return primitiveType.upperBound().descriptorString();
         }
@@ -207,12 +205,11 @@ abstract class TypeMatcher {
 
         } else if (!JavaNames.typeNameHasPackage (input)) {
             // Append package wild card to classes without package specification.
-           // return JavaNames.typeNameJoin (WildCardMatcher.WILDCARD, input);
-            return input;
+            return JavaNames.typeNameJoin (WildCardMatcher.WILDCARD, input);
 
         } else if (input.startsWith (__DEFAULT_PKG_WITH_SEPARATOR__)) {
-            // Strip the [default] package specifier
-            return input.substring (__DEFAULT_PKG_WITH_SEPARATOR__.length ());
+            // Strip the [default] package specifier, leaving the separator.
+            return input.substring (__DEFAULT_PKG_WITH_SEPARATOR__.length () - 1);
 
         } else {
             return input;

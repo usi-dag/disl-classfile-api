@@ -214,12 +214,14 @@ abstract class WildCardMatcher {
         while (fromIndex <= charCount) {
             final int position = pattern.indexOf (WILDCARD, fromIndex);
             if (position >= 0) {
-                result.add (pattern.substring (fromIndex, position));
+                String sub = pattern.substring (fromIndex, position);
+                result.add (sub);
                 fromIndex = position + __WILDCARD_LENGTH__;
 
             } else {
                 // The last card -- may be empty if string ends with wildcard.
-                result.add (pattern.substring (fromIndex));
+                String sub = pattern.substring (fromIndex);
+                result.add (sub);
                 fromIndex = charCount + 1;
             }
         }

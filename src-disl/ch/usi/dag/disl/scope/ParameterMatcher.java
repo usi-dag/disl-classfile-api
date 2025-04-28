@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+
 import ch.usi.dag.disl.util.JavaNames;
 
 
@@ -48,31 +49,31 @@ abstract class ParameterMatcher {
         private final TypeMatcher [] __suffixCard;
 
         private Generic (
-            final String pattern, final List <TypeMatcher []> cards
+                final String pattern, final List <TypeMatcher []> cards
         ) {
             super (pattern);
 
-            __prefixCard = cards.get (0);
-            __suffixCard = cards.get (cards.size () - 1);
+            __prefixCard = cards.getFirst();
+            __suffixCard = cards.getLast();
             __cards = cards.stream ()
-                .filter (a -> a.length > 0)
-                .toArray (TypeMatcher[][]::new);
+                    .filter (a -> a.length > 0)
+                    .toArray (TypeMatcher[][]::new);
         }
 
         //
 
         @Override
         public boolean match (final String methodDesc) {
-            MethodTypeDesc methodTypeDesc = MethodTypeDesc.ofDescriptor(methodDesc);
-            final ClassDesc[] parameters = methodTypeDesc.parameterArray();
+            final MethodTypeDesc methodTypeDesc = MethodTypeDesc.ofDescriptor(methodDesc);
+            final ClassDesc[] params = methodTypeDesc.parameterArray();
 
             int paramsFromInclusive = 0;
-            int paramsToExclusive = parameters.length;
+            int paramsToExclusive = params.length;
 
             int cardsFromInclusive = 0;
             if (__prefixCard.length > 0) {
                 // The first card should match at the beginning.
-                if (!__matchCard (__prefixCard, parameters, 0, paramsToExclusive)) {
+                if (!__matchCard (__prefixCard, params, 0, paramsToExclusive)) {
                     return false;
                 }
 
@@ -84,7 +85,7 @@ abstract class ParameterMatcher {
             if (__suffixCard.length > 0) {
                 // The last card should match at the end
                 final int tailFromInclusive = Math.max (0, paramsToExclusive - __suffixCard.length);
-                if (!__matchCard (__suffixCard, parameters, tailFromInclusive, paramsToExclusive)) {
+                if (!__matchCard (__suffixCard, params, tailFromInclusive, paramsToExclusive)) {
                     return false;
                 }
 
@@ -97,7 +98,7 @@ abstract class ParameterMatcher {
             // on all parameters.
             //
             if (cardsFromInclusive > cardsToExclusive) {
-                return (paramsToExclusive - paramsFromInclusive) == -parameters.length;
+                return (paramsToExclusive - paramsFromInclusive) == -params.length;
             }
 
             //
@@ -108,7 +109,7 @@ abstract class ParameterMatcher {
             while (cardsFromInclusive < cardsToExclusive) {
                 final TypeMatcher [] card = __cards [cardsFromInclusive];
 
-                final int cardMatchIndex = __indexOf (card, parameters, paramsFromInclusive, paramsToExclusive);
+                final int cardMatchIndex = __indexOf (card, params, paramsFromInclusive, paramsToExclusive);
                 if (cardMatchIndex < 0) {
                     return false;
                 }
@@ -121,8 +122,8 @@ abstract class ParameterMatcher {
         }
 
         private boolean __matchCard (
-            final TypeMatcher [] card, final ClassDesc [] params,
-            final int fromInclusive, final int toExclusive
+                final TypeMatcher [] card, final ClassDesc [] params,
+                final int fromInclusive, final int toExclusive
         ) {
             if (card.length > (toExclusive - fromInclusive)) {
                 // not enough parameters to match the card
@@ -132,7 +133,7 @@ abstract class ParameterMatcher {
             int paramIndex = fromInclusive;
             for (final TypeMatcher matcher : card) {
                 final ClassDesc param = params [paramIndex++];
-                if (!matcher.match (param.descriptorString ())) {
+                if (!matcher.match (param.descriptorString())) {
                     return false;
                 }
             }
@@ -141,8 +142,8 @@ abstract class ParameterMatcher {
         }
 
         private int __indexOf (
-            final TypeMatcher [] card, final ClassDesc [] params,
-            final int fromInclusive, final int toExclusive
+                final TypeMatcher [] card, final ClassDesc [] params,
+                final int fromInclusive, final int toExclusive
         ) {
             for (int index = fromInclusive; index < toExclusive; index++) {
                 if (__matchCard (card, params, index, toExclusive)) {
@@ -224,21 +225,21 @@ abstract class ParameterMatcher {
         final List <TypeMatcher> card = new ArrayList <> ();
 
         __splitter__.splitAsStream (pattern)
-            .map (String::trim)
-            .map (s -> s.isEmpty () ? WildCardMatcher.WILDCARD : s)
-            .forEachOrdered (s -> {
-                if (!s.equals (WILDCARD)) {
-                    card.add (TypeMatcher.forPattern (s));
+                .map (String::trim)
+                .map (s -> s.isEmpty () ? WildCardMatcher.WILDCARD : s)
+                .forEachOrdered (s -> {
+                    if (!s.equals (WILDCARD)) {
+                        card.add (TypeMatcher.forPattern (s));
 
-                } else {
-                    // flush current card
-                    result.add (card.toArray (new TypeMatcher [card.size ()]));
-                    card.clear ();
-                }
-            });
+                    } else {
+                        // flush current card
+                        result.add (card.toArray (new TypeMatcher[0]));
+                        card.clear ();
+                    }
+                });
 
         // flush last card
-        result.add (card.toArray (new TypeMatcher [card.size ()]));
+        result.add (card.toArray (new TypeMatcher[0]));
         return result;
     }
 
