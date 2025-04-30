@@ -466,17 +466,16 @@ abstract class AbstractParser {
      * @return the modified result object
      */
     static <T> T parseAnnotation(final Annotation annotation, final T result) {
-        // TODO error might be here
         if (annotation.elements().isEmpty()) {
             return result;
         }
         try {
             for (AnnotationElement element: annotation.elements()) {
 
-                    String name = element.name().stringValue();
-                    Object value = getAnnotationValue(element.value());
+                String name = element.name().stringValue();
+                Object value = getAnnotationValue(element.value());
 
-                    __setFieldValue(name, value, result);
+                __setFieldValue(name, value, result);
             }
             return result;
         } catch (final Exception e) {
@@ -487,7 +486,6 @@ abstract class AbstractParser {
         }
     }
 
-    // TODO is this correct ????
     private static Object getAnnotationValue(AnnotationValue annotationValue) {
         switch (annotationValue) {
             case AnnotationValue.OfBoolean ofBoolean -> {
@@ -517,7 +515,10 @@ abstract class AbstractParser {
             case AnnotationValue.OfString ofString -> {
                 return ofString.stringValue();
             }
-            // TODO what to do with other case like OfClass, OfArray, OfEnum ?????
+            case AnnotationValue.OfClass ofClass -> {
+                return ofClass.classSymbol();
+            }
+            // TODO what to do with other case like, OfArray, OfEnum ?????
             default -> {
                 return null;
             }
