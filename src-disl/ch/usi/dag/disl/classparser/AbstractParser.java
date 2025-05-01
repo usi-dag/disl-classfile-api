@@ -518,7 +518,13 @@ abstract class AbstractParser {
             case AnnotationValue.OfClass ofClass -> {
                 return ofClass.classSymbol();
             }
-            // TODO what to do with other case like, OfArray, OfEnum ?????
+            case AnnotationValue.OfEnum ofEnum -> {
+                return ofEnum.classSymbol();
+            }
+            // TODO what to do with other case like OfArray, ?????
+//            case AnnotationValue.OfArray ofArray -> {
+//                return ofArray.values();  // this return a list of annotationValue
+//            }
             default -> {
                 return null;
             }
