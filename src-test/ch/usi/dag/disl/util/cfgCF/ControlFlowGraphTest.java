@@ -96,7 +96,7 @@ public class ControlFlowGraphTest {
     }
 
     private ClassModel __loadClass(final Class<?> cls) throws IOException {
-        return ClassModelHelper.FULL.load(cls.getName());
+        return ClassModelHelper.DEFAULT.load(cls.getName());
     }
 
     private MethodModel __findMethod(final ClassModel owner, final Predicate<? super MethodModel> filter) {

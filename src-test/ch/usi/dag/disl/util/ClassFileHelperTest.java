@@ -183,7 +183,7 @@ public class ClassFileHelperTest {
 
     private static ClassModel __loadClass(Class<?> c) {
         try {
-            return ClassModelHelper.FULL.load(c.getName());
+            return ClassModelHelper.DEFAULT.load(c.getName());
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }

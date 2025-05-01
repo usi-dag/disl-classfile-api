@@ -22,7 +22,9 @@ public enum ClassModelHelper {
 
     FULL(List.of(
             ClassFile.StackMapsOption.GENERATE_STACK_MAPS  // this should be equivalent to ClassReader.EXPAND_FRAMES
-    ));
+    )),
+
+    DEFAULT(List.of());  // use the default options of the classFile
 
     private final List<ClassFile.Option> __options;
 

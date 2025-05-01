@@ -71,7 +71,7 @@ public final class ReflectionTest {
     private void __loadClass (final java.lang.Class <?> cls) {
         try {
             __scl.notifyClassLoaded (
-                ClassModelHelper.OUTLINE.load (cls.getName ())
+                ClassModelHelper.DEFAULT.load (cls.getName ())
             );
         } catch (final IOException ioe) {
             throw new RuntimeException (ioe);

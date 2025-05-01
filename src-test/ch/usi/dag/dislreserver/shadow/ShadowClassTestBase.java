@@ -249,7 +249,7 @@ abstract class ShadowClassTestBase {
 
     static ClassModel createClassNode (final Class <?> type) {
         try {
-            return ClassModelHelper.OUTLINE.load (type.getName ());
+            return ClassModelHelper.DEFAULT.load (type.getName ());
 
         } catch (final IOException ioe) {
             throw new RuntimeException ("could not load byte code for "+ type.getName (), ioe);
