@@ -248,10 +248,7 @@ final class Job {
      * {@code true} if a job is finished or has finished within the given time
      * limit.
      *
-     * @param duration
-     *        the time limit duration
-     * @param unit
-     *        the unit of the time limit duration
+     * @param duration the time limit duration
      * @return {@code true} if a job has finished, {@code false} otherwise.
      */
     public boolean waitFor (final Duration duration) {
