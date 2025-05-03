@@ -30,7 +30,7 @@ public class ClassFileCodeTransformer {
     public static MethodModel applyTransformers(MethodModelCopy oldMethod, List<MethodTransform> transforms) {
         // first chain all the transform
         final MethodTransform transform = transforms.stream().reduce(identityTransform, MethodTransform::andThen);
-        return applyTransformers(oldMethod, transform);
+        return applyTransformers2(oldMethod, transform);
     }
 
     public static MethodModel applyTransformers(MethodModelCopy oldMethod, MethodTransform transform) {
@@ -62,7 +62,49 @@ public class ClassFileCodeTransformer {
                 .orElseThrow();
     }
 
+    /**
+     * A method is transformed using first the list of instructions in MethodModelCopy instead of the instructions of the
+     * original MethodModel
+     * @param oldMethod the method to transform
+     * @param methodTransform the transform to apply
+     * @return the new MethodModel
+     */
+    public static MethodModel applyTransformers2(MethodModelCopy oldMethod, MethodTransform methodTransform) {
+        final String name = oldMethod.methodName().stringValue();
+        final MethodTypeDesc methodDesc = oldMethod.methodTypeSymbol();
+        final ClassDesc tempClass = ClassDesc.of("TempClass");
+        byte[] transformedClass = ClassFile.of().build(tempClass, classBuilder -> {
+            MethodTransform firstTransform = makeMethodWithInstructions(oldMethod.instructions());
+            classBuilder.transformMethod(oldMethod.getOriginal(), firstTransform.andThen(methodTransform));
+        });
+
+        return ClassFile.of().parse(transformedClass).methods().stream()
+                .filter(m -> m.methodName().equalsString(name) && m.methodTypeSymbol().equals(methodDesc))
+                .findFirst()
+                .orElseThrow();
+    }
+
+
     // various Transformers:
+
+    /**
+     * this just add the code in the method
+     * @param instructions list of instructions
+     * @return a transform that just add the code in the method
+     */
+    public static MethodTransform makeMethodWithInstructions(List<CodeElement> instructions) {
+        return ((builder, element) -> {
+            if (element instanceof CodeModel) {
+                builder.withCode(codeBuilder -> {
+                    for (CodeElement instruction: instructions) {
+                        codeBuilder.with(instruction);
+                    }
+                });
+            } else {
+                builder.with(element);
+            }
+        });
+    }
 
     /**
      * insert an exception handler around the code
@@ -83,13 +125,13 @@ public class ClassFileCodeTransformer {
         // HANDLER_END:     }
         final ClassDesc printStreamDesc = ClassDesc.ofDescriptor(PrintStream.class.descriptorString());
         return (methodBuilder, methodElement) -> {
-            if (methodElement instanceof CodeModel) {
+            if (methodElement instanceof CodeModel codeModel) {
                 methodBuilder.withCode(codeBuilder -> {
                     Label HANDLER_END = codeBuilder.newLabel(); // label that goes at the end
 
                     codeBuilder
                             .trying(tryHandler -> {
-                                for (CodeElement instruction: ((CodeModel) methodElement).elementList()) {
+                                for (CodeElement instruction: codeModel.elementList()) {
                                     tryHandler.with(instruction); // add all the original instructions
                                 }
                                 tryHandler.goto_(HANDLER_END); // TODO is this actually needed, of the builder automatically add it??
@@ -474,33 +516,27 @@ public class ClassFileCodeTransformer {
     }
 
 
-    // TODO this is a test to see if is possible to use ClassFile Transformer, since the transformers are chainable one after the other
-    //  more transformer could be used for a single method
     /**
      * replace all return instruction with a GOTO to the end of the snippet
      * @return the MethodTransform
      */
     public static MethodTransform replaceReturnsWithGoto() {
         return (methodBuilder, methodElement) -> {
-            if (methodElement instanceof CodeModel) {
-                List<CodeElement> oldInstructions = ((CodeModel) methodElement).elementList();
+            if (methodElement instanceof CodeModel codeModel) {
+                List<CodeElement> oldInstructions = codeModel.elementList();
                 final List<CodeElement> returnInstructions = oldInstructions.stream()
                         .filter(i -> i instanceof ReturnInstruction).toList();
 
                 methodBuilder.withCode(codeBuilder -> {
                     if (returnInstructions.size() == 1) {
-                        // TODO Question: is possible to have a method where the last instruction is not return?????
-                        for (int i = 0; i < oldInstructions.size() -1; i++) {
-                            codeBuilder.with(oldInstructions.get(i));  // add all the old instructions except the last return
+                        // The return instruction might not be the last instruction, instead it could be a LabelTarget
+                        // remove the return
+                        List<CodeElement> withoutReturn = oldInstructions.stream().filter(c -> !(c instanceof ReturnInstruction)).toList();
+                        for (CodeElement element: withoutReturn) {
+                            codeBuilder.with(element);
                         }
-
-                        if ( oldInstructions.size() > 1) {
-                            CodeElement beforeLast = oldInstructions.get(oldInstructions.size() -2);
-                            // if there is a label target before the last return instruction (meaning that the return is bound by a label) we need to add an
-                            // instruction to replace the bind, otherwise the code builder will complain
-                            if (beforeLast instanceof LabelTarget) {
-                                codeBuilder.nop();
-                            }
+                        if (withoutReturn.getLast() instanceof LabelTarget) {
+                            codeBuilder.nop(); // add a nop otherwise the builder might trow since the label would be unbounded
                         }
                     } else { // > 1
                         final Label newLabel = codeBuilder.newLabel();
@@ -535,6 +571,6 @@ public class ClassFileCodeTransformer {
         if (!oldMethod.hasCode()) {
             return oldMethod;  // Do nothing if there is no code
         }
-        return new MethodModelCopy(applyTransformers(oldMethod, replaceReturnsWithGoto()));
+        return new MethodModelCopy(applyTransformers2(oldMethod, replaceReturnsWithGoto()));
     }
 }
