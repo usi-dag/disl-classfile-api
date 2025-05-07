@@ -171,7 +171,7 @@ public final class ShadowClassTable {
                 //
                 if (ClassFileHelper.getInternalName(type).contains ("$$Lambda$")) {
                     return new LambdaShadowClass (
-                        netReference, type, classLoader, superClass
+                        netReference, type.descriptorString(), classLoader, superClass
                     );
 
                 } else {
@@ -181,8 +181,8 @@ public final class ShadowClassTable {
 
             return new ObjectShadowClass (
                 netReference, type, classLoader, superClass, ClassFile.of(
-                    ClassFile.DebugElementsOption.DROP_DEBUG,
-                    ClassFile.StackMapsOption.DROP_STACK_MAPS
+//                    ClassFile.DebugElementsOption.DROP_DEBUG,
+//                    ClassFile.StackMapsOption.DROP_STACK_MAPS
                 ).parse(classCode)
             );
 

@@ -56,14 +56,13 @@ public class LambdaShadowClassTest extends ShadowClassTestBase {
         return __newShadowClass (type, null);
     }
 
-
     private static ShadowClass __newShadowClass (
         final Class <?> type, final ShadowClass superclass
     ) {
         return __classCache__.computeIfAbsent (
             type, t -> new LambdaShadowClass (
                 __uniqueId__.getAndIncrement (),
-                ClassDesc.ofDescriptor(t.descriptorString()), null, superclass
+                t.descriptorString(), null, superclass
             )
         );
     }
