@@ -4,6 +4,7 @@ import java.lang.classfile.*;
 import java.lang.classfile.instruction.*;
 import java.lang.constant.ClassDesc;
 import java.lang.reflect.AccessFlag;
+import java.lang.reflect.Field;
 import java.util.*;
 
 import ch.usi.dag.disl.util.*;
@@ -125,14 +126,11 @@ abstract class AbstractParser {
     }
 
 
-    // TODO replace the description
     private static class SLAnnotationData {
         /**
          * The default for the {@link SyntheticLocal#initialize} attribute.
          */
-        String [] initialize = {
-            Initialize.class.descriptorString(), Initialize.ALWAYS.name ()
-        };
+        String initialize = Initialize.ALWAYS.name();
     }
 
 
@@ -147,7 +145,7 @@ abstract class AbstractParser {
 
         final SLAnnotationData slAnnotationData = parseAnnotation(annotation, new SLAnnotationData());
 
-        final Initialize initMode = Initialize.valueOf(slAnnotationData.initialize[1]);
+        final Initialize initMode = Initialize.valueOf(slAnnotationData.initialize);
 
         return new SyntheticLocalVar(className, field.fieldName().stringValue(), field.fieldTypeSymbol(), initMode);
     }
@@ -178,8 +176,7 @@ abstract class AbstractParser {
             // with GETFIELD, PUTFIELD, GETSTATIC, and PUTSTATIC instructions.
             //
             // RFC LB: Could we only consider PUTSTATIC instructions?
-            if (instruction instanceof FieldInstruction) {
-                final FieldInstruction lastInstruction = (FieldInstruction) instruction;
+            if (instruction instanceof FieldInstruction lastInstruction) {
 
                 // Skip accesses to fields that are not synthetic locals.
                 final SyntheticLocalVar slv = slvs.get(SyntheticLocalVar.fqFieldNameFor(
@@ -519,7 +516,7 @@ abstract class AbstractParser {
                 return ofClass.classSymbol();
             }
             case AnnotationValue.OfEnum ofEnum -> {
-                return ofEnum.classSymbol();
+                return ofEnum.constantName().stringValue();
             }
             // TODO what to do with other case like OfArray, ?????
 //            case AnnotationValue.OfArray ofArray -> {
@@ -535,7 +532,8 @@ abstract class AbstractParser {
         final String name, final Object value, final T target
     ) {
         try {
-            target.getClass ().getDeclaredField (name).set (target, value);
+            Field field = target.getClass ().getDeclaredField (name);
+            field.set(target, value);
 
         } catch (final NoSuchFieldException | IllegalAccessException e) {
             throw new InitializationException (
