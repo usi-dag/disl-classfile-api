@@ -1,6 +1,7 @@
 package ch.usi.dag.disl.classparser;
 
 import java.lang.classfile.*;
+import java.lang.classfile.attribute.ExceptionsAttribute;
 import java.lang.classfile.instruction.*;
 import java.lang.constant.ClassDesc;
 import java.lang.reflect.AccessFlag;
@@ -443,8 +444,8 @@ abstract class AbstractParser {
 
     static void ensureMethodThrowsNoExceptions(final MethodModelCopy method) throws ParserException {
         if(method.hasCode()) {
-            List<ExceptionCatch> exceptionCatches = method.exceptionHandlers();
-            if (!exceptionCatches.isEmpty()) {
+            Optional<ExceptionsAttribute> attribute = method.getOriginal().findAttribute(Attributes.exceptions());
+            if (attribute.isPresent()) {
                 throw new ParserException ("method may not throw any exceptions!");
             }
         }
