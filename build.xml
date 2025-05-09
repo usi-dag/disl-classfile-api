@@ -856,6 +856,7 @@
 		-->
 		<mkdir dir="${out.junit}"/>
 		<junit haltonfailure="no" haltonerror="no" failureproperty="junit.failure">
+			<jvmarg value="--enable-preview" />
 			<formatter type="brief" usefile="false"/>
 			<formatter type="xml"/>
 
