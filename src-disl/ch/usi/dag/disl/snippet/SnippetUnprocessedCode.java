@@ -6,12 +6,9 @@ import java.lang.classfile.instruction.ConstantInstruction;
 import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDesc;
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import ch.usi.dag.disl.coderep.ClassFileCodeTransformer;
 import ch.usi.dag.disl.util.ClassFileHelper;
@@ -163,12 +160,11 @@ public class SnippetUnprocessedCode {
             final Map <ClassDesc, ArgProcessor> processors, final Marker marker, final List<CodeElement> allInstructions
     ) throws ProcessorException, ReflectionException {
         // check method invocation
-        if (!(instr instanceof InvokeInstruction)) {
+        if (!(instr instanceof InvokeInstruction min)) {
             return null;
         }
 
         // check if the invocation is processor invocation
-        final InvokeInstruction min = (InvokeInstruction) instr;
         final ClassDesc apcClass = ClassDesc.ofDescriptor(ArgumentProcessorContext.class.descriptorString());
         if (!apcClass.equals(min.owner().asSymbol())) {
             return null;
@@ -185,7 +181,7 @@ public class SnippetUnprocessedCode {
         // NOTE: object parameter is ignored - will be removed by weaver
 
         // the first parameter has to be loaded by LDC
-        if (!(firstParam instanceof ConstantInstruction.LoadConstantInstruction)
+        if (!(firstParam instanceof ConstantInstruction.LoadConstantInstruction constantInstruction)
                 || firstParam.opcode() != Opcode.LDC) {
             throw new ProcessorException (
                     "%s: pass the first (class) argument to the apply() method "+
@@ -201,24 +197,23 @@ public class SnippetUnprocessedCode {
             );
         }
 
-        ConstantInstruction.LoadConstantInstruction constantInstruction = (ConstantInstruction.LoadConstantInstruction) firstParam;
         LoadableConstantEntry constantEntry = constantInstruction.constantEntry();
 
-        // TODO does this lookup actually work????
-        Object entry = null;
-        try {
-            entry = constantEntry.constantValue().resolveConstantDesc(MethodHandles.lookup());
-        } catch (ReflectiveOperationException e) {
-            throw new ReflectionException(e.getMessage());
+        ConstantDesc constantDesc = constantEntry.constantValue();
+        Object entry = solveConstantDesc(constantDesc);
+        if (entry == null) {
+            throw new ProcessorException (
+                    "%s: couldn't resolve the processor type (entry is null)",
+                    __template.location (min)
+            );
         }
-        if (!(entry instanceof ClassDesc)) {
+        if (!(entry instanceof ClassDesc processorDesc)) {
             throw new ProcessorException (
                     "%s: unsupported processor type %s",
                     __template.location (min), entry.getClass().toString()
             );
         }
 
-        final ClassDesc processorDesc = (ClassDesc) entry;
         final ArgumentProcessorMode procApplyType = ArgumentProcessorMode.valueOf(
             ((FieldInstruction) secondParam).name().stringValue()
         );
@@ -243,6 +238,17 @@ public class SnippetUnprocessedCode {
 
         // Create an argument processor invocation instance tied to a particular instruction index.
         return new ProcessorInfo(i, new ProcInvocation(processor, procApplyType));
+    }
+
+    private Object solveConstantDesc(ConstantDesc constantDesc) {
+        if (Objects.requireNonNull(constantDesc) instanceof ClassDesc classDesc) {
+            return classDesc;
+        }
+        try {
+            return constantDesc.resolveConstantDesc(MethodHandles.lookup());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
 }
