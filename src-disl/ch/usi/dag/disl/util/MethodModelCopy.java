@@ -52,14 +52,14 @@ public class MethodModelCopy {
             this.instructions = ClassFileInstructionClone.copyList(codeModel.elementList(), false);
             this.exceptionHandlers = codeModel.exceptionHandlers();
 
-            Optional<CodeAttribute> attribute = codeModel.findAttribute(Attributes.code());
+            Optional<CodeAttribute> attribute = methodModel.findAttribute(Attributes.code());
             if (attribute.isPresent()) {
                 CodeAttribute codeAttribute = attribute.get();
                 this.maxStack = codeAttribute.maxStack();
                 this.maxLocals = codeAttribute.maxLocals();
             } else {
                 this.maxLocals = ClassFileHelper.getMaxLocals(this.instructions, this.methodTypeSymbol, this.flags);
-                this.maxStack = 0; // TODO this should not be really useful, so there is no need to calculate it
+                this.maxStack = ClassFileHelper.getMaxStack(this.instructions, this.exceptionHandlers);
             }
         }
     }

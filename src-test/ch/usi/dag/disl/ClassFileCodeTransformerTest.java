@@ -62,15 +62,8 @@ public class ClassFileCodeTransformerTest {
     }
 
     private static Map<String, MethodModelCopy> makeMap() {
-        ClassModel classModel = __loadClass(TestClass.class);
+        ClassModel classModel = TestUtils.__loadClass(TestClass.class);
         return classModel.methods().stream().collect(Collectors.toMap(m -> m.methodName().stringValue(), MethodModelCopy::new));
     }
 
-    private static ClassModel __loadClass(Class<?> c) {
-        try {
-            return ClassModelHelper.DEFAULT.load(c.getName());
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
-    }
 }

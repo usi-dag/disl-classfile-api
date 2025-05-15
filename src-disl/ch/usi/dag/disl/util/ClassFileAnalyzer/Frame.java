@@ -31,6 +31,7 @@ package ch.usi.dag.disl.util.ClassFileAnalyzer;
 // this code was ported from ASM, but is modified to work with the Java CLass File API
 import java.lang.classfile.*;
 import java.lang.classfile.instruction.*;
+import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 import java.util.ArrayList;
 import java.util.List;
@@ -107,7 +108,7 @@ public class Frame<V extends Value> {
 
     /**
      * Initializes a frame corresponding to the target or to the successor of a jump instruction. This
-     * method is called by {@link Analyzer#analyze(java.lang.constant.ClassDesc, java.lang.classfile.MethodModel)} while
+     * method is called by {@link Analyzer#analyze(ClassDesc, List, List, AccessFlags, int, int, MethodTypeDesc)} while
      * interpreting jump instructions. It is called once for each possible target of the jump
      * instruction, and once for its successor instruction (except for GOTO and JSR), before the frame
      * is merged with the existing frame at this location. The default implementation of this method

@@ -1,6 +1,6 @@
 package ch.usi.dag.disl.util;
 
-import ch.usi.dag.disl.util.ClassFileAPI.ClassModelHelper;
+import ch.usi.dag.disl.TestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -51,11 +51,11 @@ public class ClassFileHelperTest {
         }
     }
 
-    private final ClassModel testClass = __loadClass(TestClass.class);
+    private final ClassModel testClass = TestUtils.__loadClass(TestClass.class);
 
     @Test
     public void loadConstantTest() throws ReflectiveOperationException {
-        MethodModelCopy method = __getMethod(testClass, "loadConstant");
+        MethodModelCopy method = TestUtils.__getMethod(testClass, "loadConstant");
         List<CodeElement> codeElements = method.instructions;
 
         for (CodeElement element: codeElements) {
@@ -81,7 +81,7 @@ public class ClassFileHelperTest {
 
     @Test
     public void getOperandsTest() {
-        MethodModelCopy method = __getMethod(testClass, "loadConstant");
+        MethodModelCopy method = TestUtils.__getMethod(testClass, "loadConstant");
         List<CodeElement> codeElements = method.instructions;
         List<ConstantInstruction> constantInstructions = codeElements.stream()
                 .filter(i -> i instanceof ConstantInstruction)
@@ -177,16 +177,4 @@ public class ClassFileHelperTest {
         Assert.assertNull(ClassFileHelper.getIntConstantOperand(lconst));
     }
 
-    private static MethodModelCopy __getMethod(final ClassModel classModel, final String methodName) {
-        return new MethodModelCopy(classModel.methods().stream().filter(m -> m.methodName().equalsString(methodName)).findFirst().orElseThrow());
-    }
-
-    private static ClassModel __loadClass(Class<?> c) {
-        try {
-            return ClassModelHelper.DEFAULT.load(c.getName());
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
-
-    }
 }
