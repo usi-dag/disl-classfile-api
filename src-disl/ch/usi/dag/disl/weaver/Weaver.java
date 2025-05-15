@@ -82,12 +82,18 @@ public class Weaver {
         start = instructions.get(newStartOffset);
         end = instructions.get(newEndOffset);
 
-        // TODO what if start is not a LabelTarget????
-        final LabelTarget startLabelTarget = (LabelTarget) start;
-        final FutureLabelTarget endLabelTarget = getEndLabel(instructions, end, codeBuilder);
+        if (start instanceof FutureLabelTarget futureLabelTarget) {
+            final FutureLabelTarget endLabelTarget = getEndLabel(instructions, end, codeBuilder);
 
-        ExceptionCatch exceptionCatch = ExceptionCatch.of(endLabelTarget.getLabel(), startLabelTarget.label(), endLabelTarget.getLabel());
-        return new HandlerAndException(exceptionCatch, endLabelTarget);
+            ExceptionCatch exceptionCatch = ExceptionCatch.of(endLabelTarget.getLabel(), futureLabelTarget.getLabel(), endLabelTarget.getLabel());
+            return new HandlerAndException(exceptionCatch, endLabelTarget);
+        } else {
+            final LabelTarget startLabelTarget = (LabelTarget) start;
+            final FutureLabelTarget endLabelTarget = getEndLabel(instructions, end, codeBuilder);
+
+            ExceptionCatch exceptionCatch = ExceptionCatch.of(endLabelTarget.getLabel(), startLabelTarget.label(), endLabelTarget.getLabel());
+            return new HandlerAndException(exceptionCatch, endLabelTarget);
+        }
     }
 
     public record HandlerAndException(ExceptionCatch exceptionCatch, FutureLabelTarget futureLabelTarget){}
@@ -315,7 +321,6 @@ public class Weaver {
                                     codeBuilder.with(element);
                                 }
                             }
-
 
                         } catch (Exception e) {
                             throw new RuntimeException("Exception while instrumenting method: " + methodModel.methodName() + " -> " + e.getMessage());
