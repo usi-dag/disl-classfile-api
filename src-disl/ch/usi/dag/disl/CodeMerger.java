@@ -11,7 +11,7 @@ import ch.usi.dag.disl.dynamicbypass.BypassCheck;
 import ch.usi.dag.disl.exception.DiSLFatalException;
 import ch.usi.dag.disl.util.ClassFileHelper;
 
-import static java.lang.constant.ConstantDescs.CD_Boolean;
+import static java.lang.constant.ConstantDescs.CD_boolean;
 
 
 abstract class CodeMerger {
@@ -20,7 +20,7 @@ abstract class CodeMerger {
 
     private static final String BPC_METHOD = "executeUninstrumented";
 
-    private static final MethodTypeDesc BPC_DESC = MethodTypeDesc.of(CD_Boolean);
+    private static final MethodTypeDesc BPC_DESC = MethodTypeDesc.of(CD_boolean);
 
     private static final int ALLOWED_SIZE = 64 * 1024; // 64KB limit
 
