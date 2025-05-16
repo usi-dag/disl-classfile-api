@@ -14,6 +14,7 @@ import java.lang.classfile.instruction.*;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDesc;
 import java.lang.constant.MethodTypeDesc;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.AccessFlag;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -23,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static java.lang.constant.ConstantDescs.*;
 
 public abstract class ClassFileHelper {
     // TODO this class tries to replicate the utility of AsmHelper
@@ -1199,6 +1202,33 @@ public abstract class ClassFileHelper {
      */
     public static long getDimensions(ClassDesc classDesc) {
         return classDesc.descriptorString().chars().filter(c -> c == '[').count();
+    }
+
+    public static ClassDesc resolveConstantDesc(ConstantDesc constantDesc) throws ReflectiveOperationException {
+        switch (constantDesc) {
+            case ClassDesc classDesc -> {
+                return classDesc;
+            }
+            // TODO should I return the ClassDesc of the primitive or the Wrapper ????
+            case Double _ -> {
+                return CD_double;
+            }
+            case Float _ -> {
+                return CD_float;
+            }
+            case Integer _ -> {
+                return CD_int;
+            }
+            case Long _ -> {
+                return CD_long;
+            }
+            case String _ -> {
+                return CD_String;
+            }
+            default -> {
+                return ClassDesc.ofDescriptor(constantDesc.resolveConstantDesc(MethodHandles.lookup()).getClass().descriptorString());
+            }
+        }
     }
 
 
