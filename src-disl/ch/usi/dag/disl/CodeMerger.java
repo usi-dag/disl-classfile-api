@@ -73,6 +73,22 @@ abstract class CodeMerger {
                                     blockCodeBuilder.with(instruction);
                                 }
                             });
+                            // the function "codeBuilder.ifThenElse(...) will automatically add a GOTO between the two blocks, so it could occur that
+                            // the resulting instruction look like the following:
+//                            0: {opcode: INVOKESTATIC, owner: ch/usi/dag/disl/dynamicbypass/BypassCheck, method name: executeUninstrumented, method type: ()Ljava/lang/Boolean;}
+//                            3: {opcode: IFEQ, target: 14}
+//                            6: {opcode: ALOAD_0, slot: 0}
+//                            7: {opcode: INVOKESPECIAL, owner: java/lang/Object, method name: <init>, method type: ()V}
+//                            10: {opcode: RETURN}
+//                            11: {opcode: GOTO, target: 19}
+//                            14: {opcode: ALOAD_0, slot: 0}
+//                            15: {opcode: INVOKESPECIAL, owner: java/lang/Object, method name: <init>, method type: ()V}
+//                            18: {opcode: RETURN}
+                            // this causes an exception since the target of the GOTO is out of bound, to solve this we need to add another return
+                            // at the end, since is not possible to remove the GOTO after the codeBuilder is invoked.
+                            // TODO Since this problem causes to have an extra GOTO and RETURN instructions it is possible to be optimized further
+                            //  by not using the "codeBuilder.ifThenElse(...)", instead doing it manually.
+                            codeBuilder.return_(TypeKind.from(instrumentedMethod.methodTypeSymbol().returnType()));
                         }
                     );
                 } else {
