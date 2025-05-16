@@ -5,10 +5,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.lang.classfile.*;
+import java.lang.classfile.constantpool.Utf8Entry;
 import java.lang.classfile.instruction.ConstantInstruction;
 import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.classfile.instruction.ReturnInstruction;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,8 +39,30 @@ public class CodeMergerTest {
     public void mergeOriginalCodeTest() {
         Set<String> changedMethods = original.methods().stream().map(ClassFileHelper::nameAndDescriptor).collect(Collectors.toSet());
         byte[] merged = CodeMerger.mergeOriginalCode(original, instrumented, changedMethods);
-        // TODO this test was made to debug an exception thrown by "mergeOriginalCode", need to also add some check for correctness
+        // TODO this test was made to debug an exception thrown by "mergeOriginalCode", may need to also add some more robust testing for future regression tests
         Assert.assertTrue(merged.length > 0);
+
+        ClassModel mergedClass = ClassFile.of().parse(merged);
+        List<MethodModel> mergedMethods = mergedClass.methods();
+        Assert.assertEquals(3, mergedMethods.size());
+
+        List<MethodModel> originalMethods = original.methods();
+        List<MethodModel> instrumentedMethods = instrumented.methods();
+
+        for (MethodModel mergedMethod: mergedMethods) {
+            final Utf8Entry methodName = mergedMethod.methodName();
+
+            Optional<MethodModel> originalMethod = originalMethods.stream().filter(m -> m.methodName().equals(methodName)).findFirst();
+            Optional<MethodModel> instrumentedMethod = instrumentedMethods.stream().filter(m -> m.methodName().equals(methodName)).findFirst();
+            Assert.assertTrue(originalMethod.isPresent());
+            Assert.assertTrue(instrumentedMethod.isPresent());
+
+            List<CodeElement> mergedInstructions = mergedMethod.code().orElseThrow().elementList();
+            List<CodeElement> originalInstructions = originalMethod.get().code().orElseThrow().elementList();
+            List<CodeElement> instrumentedInstructions = instrumentedMethod.get().code().orElseThrow().elementList();
+
+            Assert.assertTrue(mergedInstructions.size() >= originalInstructions.size() + instrumentedInstructions.size());
+        }
     }
 
 
