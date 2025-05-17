@@ -95,11 +95,11 @@ public abstract class ClassFileHelper {
     }
 
     public static String getStringConstOperand(final CodeElement codeElement) {
-        if (codeElement instanceof ConstantInstruction.LoadConstantInstruction) {
-            LoadableConstantEntry entry = ((ConstantInstruction.LoadConstantInstruction) codeElement).constantEntry();
+        if (codeElement instanceof ConstantInstruction.LoadConstantInstruction loadConstantInstruction) {
+            LoadableConstantEntry entry = loadConstantInstruction.constantEntry();
             ConstantDesc constant = entry.constantValue();
-            if (constant instanceof String) {
-                return (String) constant;
+            if (constant instanceof String string) {
+                return string;
             }
         }
         return null; // Not a String literal load instruction.
@@ -223,7 +223,13 @@ public abstract class ClassFileHelper {
             final String ownerDesc, final String name, final String desc, final Opcode opcode
     ) {
         ConstantPoolBuilder constantPoolBuilder = ConstantPoolBuilder.of();
-        ClassEntry classEntry = constantPoolBuilder.classEntry(ClassDesc.ofDescriptor(ownerDesc));
+        ClassDesc classDesc; // ins some case the string ownerDesc was not a valid descriptor, this try/catch also account for that
+        try {
+            classDesc = ClassDesc.ofDescriptor(ownerDesc);
+        } catch (Exception e) {
+            classDesc = ClassDesc.ofInternalName(ownerDesc);
+        }
+        ClassEntry classEntry = constantPoolBuilder.classEntry(classDesc);
         return FieldInstruction.of(
                 opcode,
                 classEntry,
