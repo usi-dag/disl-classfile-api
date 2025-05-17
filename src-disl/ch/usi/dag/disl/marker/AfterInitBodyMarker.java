@@ -46,6 +46,7 @@ public class AfterInitBodyMarker extends AbstractMarker {
 
         final WeavingRegion wr = region.computeDefaultWeavingRegion(methodModel);
         wr.setAfterThrowEnd(instructions.getLast());
+        region.setWeavingRegion(wr);
 
         final List<MarkedRegion> result = new LinkedList<>();
         result.add(region);

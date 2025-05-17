@@ -92,7 +92,7 @@ public abstract class AbstractMarker implements Marker {
          */
         public MarkedRegion (final CodeElement start) {
             this.start = start;
-            this.ends = new LinkedList <CodeElement> ();
+            this.ends = new LinkedList<>();
         }
 
 
