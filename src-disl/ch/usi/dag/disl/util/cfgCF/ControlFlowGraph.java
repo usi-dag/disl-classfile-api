@@ -147,7 +147,7 @@ public class ControlFlowGraph {
             return joints;
         }
 
-        Map<Label, LabelTarget> labelTargetMap = getLabelTargetMap(instructions);
+        Map<Label, CodeElement> labelTargetMap = getLabelTargetMap(instructions);
 
         for (int i = connectedSize; i < connectedNodes.size(); i++) {
             BasicBlockCF current = connectedNodes.get(i);
@@ -156,7 +156,7 @@ public class ControlFlowGraph {
             switch (exit) {
                 case BranchInstruction branch -> {
                     Label target = branch.target();
-                    LabelTarget labelTarget = labelTargetMap.get(target);
+                    CodeElement labelTarget = labelTargetMap.get(target);
                     if (labelTarget != null) {
                         tryVisit(current, labelTarget, exit, joints);
                     }
@@ -169,11 +169,11 @@ public class ControlFlowGraph {
                     Label defaultTarget = lookup.defaultTarget();
                     List<SwitchCase> cases = lookup.cases();
                     List<Label> allLabelsTarget = cases.stream().map(SwitchCase::target).toList();
-                    List<LabelTarget> actualTargets = allLabelsTarget.stream()
+                    List<CodeElement> actualTargets = allLabelsTarget.stream()
                             .filter(labelTargetMap::containsKey)
                             .map(labelTargetMap::get)
                             .toList();
-                    for (LabelTarget labelTarget: actualTargets) {
+                    for (CodeElement labelTarget: actualTargets) {
                         tryVisit(current, labelTarget, exit, joints);
                     }
                     if (labelTargetMap.containsKey(defaultTarget)) {
@@ -184,11 +184,11 @@ public class ControlFlowGraph {
                     Label defaultTarget = tableSwitch.defaultTarget();
                     List<SwitchCase> cases = tableSwitch.cases();
                     List<Label> allLabelsTarget = cases.stream().map(SwitchCase::target).toList();
-                    List<LabelTarget> actualTargets = allLabelsTarget.stream()
+                    List<CodeElement> actualTargets = allLabelsTarget.stream()
                             .filter(labelTargetMap::containsKey)
                             .map(labelTargetMap::get)
                             .toList();
-                    for (LabelTarget labelTarget: actualTargets) {
+                    for (CodeElement labelTarget: actualTargets) {
                         tryVisit(current, labelTarget, exit, joints);
                     }
                     if (labelTargetMap.containsKey(defaultTarget)) {

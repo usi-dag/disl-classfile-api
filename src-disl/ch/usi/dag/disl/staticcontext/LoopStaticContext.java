@@ -4,6 +4,8 @@ import ch.usi.dag.disl.util.ClassFileHelper;
 import ch.usi.dag.disl.util.MethodModelCopy;
 import ch.usi.dag.disl.util.cfgCF.BasicBlockCF;
 import ch.usi.dag.disl.util.cfgCF.ControlFlowGraph;
+
+import java.lang.classfile.CodeElement;
 import java.lang.classfile.Label;
 import java.lang.classfile.instruction.ExceptionCatch;
 import java.lang.classfile.instruction.LabelTarget;
@@ -33,7 +35,7 @@ public class LoopStaticContext extends BasicBlockStaticContext {
         Set<BasicBlockCF> entries = new HashSet<>();
         entries.add(cfg.getBasicBlock(method.instructions().getFirst()));
 
-        Map<Label, LabelTarget> labelTargetMap = ClassFileHelper.getLabelTargetMap(method.instructions());
+        Map<Label, CodeElement> labelTargetMap = ClassFileHelper.getLabelTargetMap(method.instructions());
 
         for (ExceptionCatch tcb : method.exceptionHandlers()) {
             entries.add(cfg.getBasicBlock(labelTargetMap.get(tcb.handler())));

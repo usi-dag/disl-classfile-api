@@ -37,10 +37,10 @@ public class ExceptionHandlerMarker extends AbstractDWRMarker {
 
         cfg.visit(instructions.getFirst());
 
-        Map<Label, LabelTarget> labelTargetMap = ClassFileHelper.getLabelTargetMap(instructions);
+        Map<Label, CodeElement> labelTargetMap = ClassFileHelper.getLabelTargetMap(instructions);
 
         for (ExceptionCatch exceptionCatch: exceptions) {
-            LabelTarget handler = labelTargetMap.get(exceptionCatch.handler());
+            CodeElement handler = labelTargetMap.get(exceptionCatch.handler());
             if (handler == null) {
                 continue; // TODO should throw???
             }

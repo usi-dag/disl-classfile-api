@@ -269,7 +269,7 @@ public class UnprocessedCode {
                 .filter(i -> !(i instanceof ExceptionCatch))
                 .findFirst().orElseThrow());  // TODO this should not happen, but maybe it should be handled with a custom DiSL exception
 
-        Map<Label, LabelTarget> labelTargetMap = getLabelTargetMap(instructions);
+        Map<Label, CodeElement> labelTargetMap = getLabelTargetMap(instructions);
 
         for (int i = exceptionCatches.size() - 1; i >= 0; i--) {
             final ExceptionCatch exceptionCatch = exceptionCatches.get(i);

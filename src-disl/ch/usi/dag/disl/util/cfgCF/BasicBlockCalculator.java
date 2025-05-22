@@ -45,7 +45,7 @@ public class BasicBlockCalculator {
         // differently from ASM in the ClassFile API the target of a branch instruction is not the
         // LabelTarget but just the Label, this map is to facilitate the lookup of the actual element
         // in the instructions.
-        Map<Label, LabelTarget> labelTargetMap = getLabelTargetMap(instructions);
+        Map<Label, CodeElement> labelTargetMap = getLabelTargetMap(instructions);
 
         // Scan all the instructions, identify those that terminate their basic
         // block and collect the starting instructions of the basic blocks that follow them.
@@ -85,7 +85,7 @@ public class BasicBlockCalculator {
                     List<SwitchCase> cases = lookup.cases();
                     List<Label> allLabelsTarget = cases.stream().map(SwitchCase::target).collect(Collectors.toList());
                     allLabelsTarget.add(defaultTarget);
-                    List<LabelTarget> actualTargets = allLabelsTarget.stream()
+                    List<CodeElement> actualTargets = allLabelsTarget.stream()
                             .filter(labelTargetMap::containsKey)
                             .map(labelTargetMap::get)
                             .toList();
@@ -96,7 +96,7 @@ public class BasicBlockCalculator {
                     List<SwitchCase> cases = tableSwitch.cases();
                     List<Label> allLabelsTarget = cases.stream().map(SwitchCase::target).collect(Collectors.toList());
                     allLabelsTarget.add(defaultTarget);
-                    List<LabelTarget> actualTargets = allLabelsTarget.stream()
+                    List<CodeElement> actualTargets = allLabelsTarget.stream()
                             .filter(labelTargetMap::containsKey)
                             .map(labelTargetMap::get)
                             .toList();

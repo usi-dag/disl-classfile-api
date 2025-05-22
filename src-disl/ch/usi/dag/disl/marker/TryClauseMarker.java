@@ -31,14 +31,14 @@ public class TryClauseMarker extends AbstractDWRMarker {
 
         List<CodeElement> instructions = methodModel.instructions();
 
-        Map<Label, LabelTarget> labelTargetMap = ClassFileHelper.getLabelTargetMap(instructions);
+        Map<Label, CodeElement> labelTargetMap = ClassFileHelper.getLabelTargetMap(instructions);
 
         for (ExceptionCatch exceptionCatch: methodModel.exceptionHandlers()) {
             Label startLabel = exceptionCatch.tryStart();
             Label endLabel = exceptionCatch.tryEnd();
 
-            LabelTarget startTarget = labelTargetMap.get(startLabel);
-            LabelTarget endTarget = labelTargetMap.get(endLabel);
+            CodeElement startTarget = labelTargetMap.get(startLabel);
+            CodeElement endTarget = labelTargetMap.get(endLabel);
             if (startTarget == null || endTarget == null) {
                 continue; //TODO should throw an exception???
             }

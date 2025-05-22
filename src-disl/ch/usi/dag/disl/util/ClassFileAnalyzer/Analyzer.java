@@ -30,6 +30,7 @@ package ch.usi.dag.disl.util.ClassFileAnalyzer;
 
 // this code was ported from ASM, but is modified to work with the Java CLass File API
 import ch.usi.dag.disl.CustomCodeElements.FutureLabelTarget;
+import ch.usi.dag.disl.util.ClassFileHelper;
 import ch.usi.dag.disl.util.MethodModelCopy;
 
 import java.lang.classfile.*;
@@ -147,22 +148,7 @@ public class Analyzer<V extends Value> {
         this.inInstructionsToProcess = new boolean[instructionListSize];
         this.instructionsToProcess = new int[instructionListSize];
         this.numInstructionsToProcess = 0;
-        this.labelTargetMap = instructions.stream()
-                .filter(e -> e instanceof LabelTarget || e instanceof FutureLabelTarget)
-                .filter(e -> {
-                    if (e instanceof FutureLabelTarget futureLabelTarget) {
-                        return futureLabelTarget.hasLabel();
-                    }
-                    return true;
-                })
-                .collect(Collectors.toMap(e -> {
-                    if (e instanceof LabelTarget labelTarget) {
-                        return labelTarget.label();
-                    } else {
-                        FutureLabelTarget futureLabelTarget = (FutureLabelTarget) e;
-                        return futureLabelTarget.getLabel();
-                    }
-                }, v -> v));
+        this.labelTargetMap = ClassFileHelper.getLabelTargetMap(instructions);
         this.maxLocals = maxLocals;
         this.maxStack = maxStack;
 

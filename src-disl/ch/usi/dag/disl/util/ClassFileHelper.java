@@ -1,5 +1,6 @@
 package ch.usi.dag.disl.util;
 
+import ch.usi.dag.disl.CustomCodeElements.FutureLabelTarget;
 import ch.usi.dag.disl.exception.DiSLFatalException;
 import ch.usi.dag.disl.util.cfgCF.BasicBlockCF;
 import ch.usi.dag.disl.util.cfgCF.ControlFlowGraph;
@@ -437,13 +438,25 @@ public abstract class ClassFileHelper {
         return null;
     }
 
-    // create a map from Label to its actual instruction LabelTarget, this is for convenience since
+    // create a map from Label to its actual instruction LabelTarget (of FutureLabelTarget), this is for convenience since
     // in the classFile the jump instructions do not contain the LabelTarget but only the Label
-    public static Map<Label, LabelTarget> getLabelTargetMap(List<CodeElement> instructions) {
+    public static Map<Label, CodeElement> getLabelTargetMap(List<CodeElement> instructions) {
         return instructions.stream()
-                .filter(i -> i instanceof LabelTarget)
-                .map(i -> (LabelTarget)i).
-                collect(Collectors.toMap(LabelTarget::label, i -> i));
+                .filter(e -> e instanceof LabelTarget || e instanceof FutureLabelTarget)
+                .filter(e -> {
+                    if (e instanceof FutureLabelTarget futureLabelTarget) {
+                        return futureLabelTarget.hasLabel();
+                    }
+                    return true;
+                })
+                .collect(Collectors.toMap(e -> {
+                    if (e instanceof LabelTarget labelTarget) {
+                        return labelTarget.label();
+                    } else {
+                        FutureLabelTarget futureLabelTarget = (FutureLabelTarget) e;
+                        return futureLabelTarget.getLabel();
+                    }
+                }, v -> v));
     }
 
     public static CodeElement nextInstruction(List<CodeElement> instructions, CodeElement start) {
@@ -819,7 +832,7 @@ public abstract class ClassFileHelper {
 
         int maxStack = getMaxStack(0, cfg.getBasicBlock(codeElementList.getFirst()), unvisited);
 
-        Map<Label, LabelTarget> labelTargetMap = ClassFileHelper.getLabelTargetMap(codeElementList);
+        Map<Label, CodeElement> labelTargetMap = ClassFileHelper.getLabelTargetMap(codeElementList);
 
         for (ExceptionCatch exceptionCatch: tryCatchBlocks) {
             maxStack = Math.max(

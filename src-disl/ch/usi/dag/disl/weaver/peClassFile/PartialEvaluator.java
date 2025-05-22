@@ -30,7 +30,7 @@ public class PartialEvaluator {
     private final List<ExceptionCatch> exceptionCatches;
     private final MethodTypeDesc methodTypeDesc;
     private final AccessFlags flags;
-    private final Map<Label, LabelTarget> labelTargetMap;
+    private final Map<Label, CodeElement> labelTargetMap;
 
 
     public PartialEvaluator(List<CodeElement> instructions, List<ExceptionCatch> exceptionCatches,
@@ -582,7 +582,7 @@ public class PartialEvaluator {
             switch (instr) {
                 case BranchInstruction branchInstruction -> {
                     Label target = branchInstruction.target();
-                    LabelTarget labelTarget = labelTargetMap.get(target);
+                    CodeElement labelTarget = labelTargetMap.get(target);
                     if (ClassFileHelper.firstPreviousRealInstruction(instructions, labelTarget) != instr) {
                         continue;
                     }
@@ -597,12 +597,12 @@ public class PartialEvaluator {
                 case LookupSwitchInstruction lookupSwitchInstruction -> {
                     boolean flag = false;
                     for (SwitchCase switchCase: lookupSwitchInstruction.cases()) {
-                        LabelTarget labelTarget = labelTargetMap.get(switchCase.target());
+                        CodeElement labelTarget = labelTargetMap.get(switchCase.target());
                         if (ClassFileHelper.firstPreviousRealInstruction(instructions, labelTarget) != instr) {
                             flag = true;
                         }
                     }
-                    LabelTarget defaultTarget = labelTargetMap.get(lookupSwitchInstruction.defaultTarget());
+                    CodeElement defaultTarget = labelTargetMap.get(lookupSwitchInstruction.defaultTarget());
                     if (flag ||
                             ClassFileHelper.firstPreviousRealInstruction(instructions, defaultTarget) != instr) {
                         continue;
@@ -615,12 +615,12 @@ public class PartialEvaluator {
                 case TableSwitchInstruction tableSwitchInstruction -> {
                     boolean flag = false;
                     for (SwitchCase switchCase: tableSwitchInstruction.cases()) {
-                        LabelTarget labelTarget = labelTargetMap.get(switchCase.target());
+                        CodeElement labelTarget = labelTargetMap.get(switchCase.target());
                         if (ClassFileHelper.firstPreviousRealInstruction(instructions, labelTarget) != instr) {
                             flag = true;
                         }
 
-                        LabelTarget defaultTarget = labelTargetMap.get(tableSwitchInstruction.defaultTarget());
+                        CodeElement defaultTarget = labelTargetMap.get(tableSwitchInstruction.defaultTarget());
                         if (flag ||
                                 ClassFileHelper.firstPreviousRealInstruction(instructions, defaultTarget) != instr) {
                             continue;
@@ -645,8 +645,8 @@ public class PartialEvaluator {
 
         // TODO here I made iterate over a copy since we are modifying the list
         for (final ExceptionCatch tcb: exceptionCatches.toArray(new ExceptionCatch[0])) {
-            LabelTarget first = labelTargetMap.get(tcb.tryStart());
-            LabelTarget last = labelTargetMap.get(tcb.tryEnd());
+            CodeElement first = labelTargetMap.get(tcb.tryStart());
+            CodeElement last = labelTargetMap.get(tcb.tryEnd());
             if (first == last) {
                 exceptionCatches.remove(tcb);
                 isOptimized |= removeUnusedBB(cfg);
