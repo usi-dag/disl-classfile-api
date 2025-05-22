@@ -29,6 +29,7 @@ package ch.usi.dag.disl.util.ClassFileAnalyzer;
 
 
 // this code was ported from ASM, but is modified to work with the Java CLass File API
+import ch.usi.dag.disl.CustomCodeElements.FutureLabelTarget;
 import ch.usi.dag.disl.util.MethodModelCopy;
 
 import java.lang.classfile.*;
@@ -195,7 +196,8 @@ public class Analyzer<V extends Value> {
             CodeElement codeElement = null;
             try {
                 codeElement = instructions.get(instructionIndex);
-                if (codeElement instanceof PseudoInstruction) {
+                if (codeElement instanceof PseudoInstruction || codeElement instanceof FutureLabelTarget) {
+                    // FutureLabelTarget extend CustomAttribute but has the same meaning as LabelTarget which is a PseudoInstruction
                     currentFrame.init(oldFrame);
                     merge(instructionIndex + 1, oldFrame, subroutine);
                     newControlFlowEdge(instructionIndex, instructionIndex + 1);
