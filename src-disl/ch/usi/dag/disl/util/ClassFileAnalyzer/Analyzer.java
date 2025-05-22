@@ -70,7 +70,7 @@ public class Analyzer<V extends Value> {
     private int numInstructionsToProcess;
 
     /** this map is to have a faster search */
-    private Map<Label, LabelTarget> labelTargetMap;
+    private Map<Label, CodeElement> labelTargetMap;
 
     private int maxLocals;
     private int maxStack;
@@ -148,9 +148,21 @@ public class Analyzer<V extends Value> {
         this.instructionsToProcess = new int[instructionListSize];
         this.numInstructionsToProcess = 0;
         this.labelTargetMap = instructions.stream()
-                .filter(e -> e instanceof LabelTarget)
-                .map(e -> (LabelTarget)e)
-                .collect(Collectors.toMap(LabelTarget::label, v -> v));
+                .filter(e -> e instanceof LabelTarget || e instanceof FutureLabelTarget)
+                .filter(e -> {
+                    if (e instanceof FutureLabelTarget futureLabelTarget) {
+                        return futureLabelTarget.hasLabel();
+                    }
+                    return true;
+                })
+                .collect(Collectors.toMap(e -> {
+                    if (e instanceof LabelTarget labelTarget) {
+                        return labelTarget.label();
+                    } else {
+                        FutureLabelTarget futureLabelTarget = (FutureLabelTarget) e;
+                        return futureLabelTarget.getLabel();
+                    }
+                }, v -> v));
         this.maxLocals = maxLocals;
         this.maxStack = maxStack;
 
