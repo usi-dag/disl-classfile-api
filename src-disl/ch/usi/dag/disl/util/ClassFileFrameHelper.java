@@ -188,13 +188,13 @@ public class ClassFileFrameHelper {
     }
 
     public static Map<CodeElement, Frame<BasicValue>> createBasicMapping(
-            ClassDesc owner, MethodModelCopy method) {
-        return createMapping(getBasicAnalyzer(), owner, method);
+            ClassDesc owner, MethodModelCopy method, List<CodeElement> instructions) {
+        return createMapping(getBasicAnalyzer(), owner, instructions, method.exceptionHandlers(), method.methodTypeSymbol(), method.flags());
     }
 
     public static Map<CodeElement, Frame<SourceValue>> createSourceMapping(
-            ClassDesc owner, MethodModelCopy method) {
-        return createMapping(getSourceAnalyzer(), owner, method);
+            ClassDesc owner, MethodModelCopy method, List<CodeElement> instructions) {
+        return createMapping(getSourceAnalyzer(), owner, instructions, method.exceptionHandlers(), method.methodTypeSymbol(), method.flags());
     }
 
 }

@@ -12,7 +12,6 @@ public class FutureLabelTarget extends CustomAttribute<FutureLabelTarget> {
     private final Label label;
 
     public FutureLabelTarget() {
-
         super(new FutureLabelTargetMapper());
         label = null;
     }

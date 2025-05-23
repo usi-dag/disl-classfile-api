@@ -12,6 +12,7 @@ import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.instruction.LabelTarget;
 import java.lang.constant.ClassDesc;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -35,7 +36,7 @@ public class ClassFileFrameHelperTest {
     public void createSourceMappingTest() {
         ClassDesc owner = testClass.thisClass().asSymbol();
         MethodModelCopy method = TestUtils.__getMethod(testClass, "a");
-        Map<CodeElement, Frame<SourceValue>> sourceMapping = ClassFileFrameHelper.createSourceMapping(owner, method);
+        Map<CodeElement, Frame<SourceValue>> sourceMapping = ClassFileFrameHelper.createSourceMapping(owner, method, method.instructions());
         Assert.assertFalse(sourceMapping.isEmpty());
         for (CodeElement element: method.instructions()) {
             Assert.assertTrue(sourceMapping.containsKey(element));
@@ -47,7 +48,7 @@ public class ClassFileFrameHelperTest {
     public void createBasicMappingTest() {
         ClassDesc owner = testClass.thisClass().asSymbol();
         MethodModelCopy method = TestUtils.__getMethod(testClass, "a");
-        Map<CodeElement, Frame<BasicValue>> basicMapping = ClassFileFrameHelper.createBasicMapping(owner, method);
+        Map<CodeElement, Frame<BasicValue>> basicMapping = ClassFileFrameHelper.createBasicMapping(owner, method, method.instructions());
         Assert.assertFalse(basicMapping.isEmpty());
         for (CodeElement element: method.instructions()) {
             Assert.assertTrue(basicMapping.containsKey(element));
@@ -97,6 +98,54 @@ public class ClassFileFrameHelperTest {
                     return codeElement;
                 }
         ).toList();
+
+        Map<CodeElement, Frame<SourceValue>> basicMapping = ClassFileFrameHelper.createMapping(
+                ClassFileFrameHelper.getSourceAnalyzer(),
+                owner,
+                changedInstructions,
+                method.exceptionHandlers,
+                method.methodTypeSymbol,
+                method.flags
+        );
+
+        Assert.assertFalse(basicMapping.isEmpty());
+        Assert.assertEquals(basicMapping.size(), changedInstructions.size());
+        for (CodeElement element: changedInstructions) {
+            Assert.assertTrue(basicMapping.containsKey(element));
+        }
+    }
+
+    @Test
+    public void testFutureLabelNoLabelBasicMapping() {
+        ClassDesc owner = testClass.thisClass().asSymbol();
+        MethodModelCopy method = TestUtils.__getMethod(testClass, "a");
+
+        List<CodeElement> changedInstructions = new ArrayList<>(method.instructions());
+        changedInstructions.add(7, new FutureLabelTarget());
+
+        Map<CodeElement, Frame<BasicValue>> basicMapping = ClassFileFrameHelper.createMapping(
+                ClassFileFrameHelper.getBasicAnalyzer(),
+                owner,
+                changedInstructions,
+                method.exceptionHandlers,
+                method.methodTypeSymbol,
+                method.flags
+        );
+
+        Assert.assertFalse(basicMapping.isEmpty());
+        Assert.assertEquals(basicMapping.size(), changedInstructions.size());
+        for (CodeElement element: changedInstructions) {
+            Assert.assertTrue(basicMapping.containsKey(element));
+        }
+    }
+
+    @Test
+    public void testFutureLabelNoLabelSourceMapping() {
+        ClassDesc owner = testClass.thisClass().asSymbol();
+        MethodModelCopy method = TestUtils.__getMethod(testClass, "a");
+
+        List<CodeElement> changedInstructions = new ArrayList<>(method.instructions());
+        changedInstructions.add(7, new FutureLabelTarget());
 
         Map<CodeElement, Frame<SourceValue>> basicMapping = ClassFileFrameHelper.createMapping(
                 ClassFileFrameHelper.getSourceAnalyzer(),

@@ -21,6 +21,7 @@ import ch.usi.dag.disl.snippet.Shadow;
 import ch.usi.dag.disl.snippet.Shadow.WeavingRegion;
 import ch.usi.dag.disl.snippet.Snippet;
 import ch.usi.dag.disl.util.MethodModelCopy;
+import ch.usi.dag.disl.util.WriteInfo;
 
 public class WeavingInfo {
 
@@ -102,8 +103,8 @@ public class WeavingInfo {
             }
         }
 
-        basicFrameMap = ClassFileFrameHelper.createBasicMapping(classModel.thisClass().asSymbol(), methodModel);
-        sourceFrameMap = ClassFileFrameHelper.createSourceMapping(classModel.thisClass().asSymbol(), methodModel);
+        basicFrameMap = ClassFileFrameHelper.createBasicMapping(classModel.thisClass().asSymbol(), methodModel, instructionsToInstrument);
+        sourceFrameMap = ClassFileFrameHelper.createSourceMapping(classModel.thisClass().asSymbol(), methodModel, instructionsToInstrument);
 
         Instruction last = ClassFileHelper.firstPreviousRealInstruction(instructionsToInstrument, instructionsToInstrument.getLast());
 
@@ -127,7 +128,8 @@ public class WeavingInfo {
     }
 
     public boolean stackNotEmpty(CodeElement loc) {
-        return basicFrameMap.get(loc).getStackSize() > 0;
+        Frame<BasicValue> frame = basicFrameMap.get(loc);
+        return frame.getStackSize() > 0;
     }
 
     public List<StoreInstruction> backupStack(CodeElement loc, int startFrom) {
