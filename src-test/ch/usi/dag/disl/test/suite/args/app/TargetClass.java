@@ -52,13 +52,13 @@ public class TargetClass {
 
         TargetClass t = new TargetClass();
         t.test_int(42);
-        t.test_Integer(new Integer(42));
+        t.test_Integer(42);
 
         t.test_float(42.42f);
-        t.test_Float(new Float(42.42f));
+        t.test_Float(42.42f);
 
         t.test_double(42.42);
-        t.test_Double(new Double(42.42));
+        t.test_Double(42.42);
 
         t.test_String("my test string");
 
