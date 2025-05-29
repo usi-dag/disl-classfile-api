@@ -9,8 +9,8 @@ import java.lang.constant.ConstantDesc;
 import java.lang.constant.MethodTypeDesc;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.AccessFlag;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+
 import ch.usi.dag.disl.util.*;
 import ch.usi.dag.disl.util.ClassFileAnalyzer.AnalyzerException;
 import ch.usi.dag.disl.util.ClassFileAnalyzer.BasicValue;
@@ -216,6 +216,8 @@ public class WeavingCode {
         Frame<BasicValue> basicFrame = info.getBasicFrame(weavingLocation);
         final Frame<SourceValue> sourceFrame = info.getSourceFrame(weavingLocation);
 
+        // NOTE: INVALID_SLOT is -1 and if an instruction is created with this slot it will generate an exception, but
+        // in the code "exceptionSlot" is used only when "throwing" is true, so it shouldn't be a problem
         final int exceptionSlot = throwing? methodMaxLocals++ : INVALID_SLOT;
 
         // Iterate over a copy -- we will be modifying the underlying list.
@@ -283,7 +285,8 @@ public class WeavingCode {
                 ConstantDesc expectedType = __expectTypeConstLoad(valueTypeIns, "DynamicContext", methodName, "type");
                 TypeKind realExpectedType;
                 try {
-                    realExpectedType = TypeKind.from(expectedType.resolveConstantDesc(MethodHandles.lookup()).getClass());
+                    ClassDesc classDesc = ClassFileHelper.resolveConstantDesc(expectedType);
+                    realExpectedType = TypeKind.from(classDesc);
                 } catch (Exception e) {
                     throw new InvalidContextUsageException (
                             "%s: Could not resolve ConstantDesc %s when accessing stack",
@@ -495,8 +498,8 @@ public class WeavingCode {
                 final ClassDesc realFieldDesc;
                 final ClassDesc realOwnerType;
                 try {
-                    realFieldDesc = ClassDesc.ofDescriptor(fieldType.resolveConstantDesc(MethodHandles.lookup()).getClass().descriptorString());
-                    realOwnerType = ClassDesc.ofDescriptor(ownerType.resolveConstantDesc(MethodHandles.lookup()).getClass().descriptorString());
+                    realFieldDesc = ClassFileHelper.resolveConstantDesc(fieldType);
+                    realOwnerType = ClassFileHelper.resolveConstantDesc(ownerType);
                 } catch (Exception e) {
                     throw new InvalidContextUsageException (
                             "%s: Could not resolve ConstantDesc %s or %s when accessing stack",
@@ -597,8 +600,8 @@ public class WeavingCode {
                 final ClassDesc realFieldDesc;
                 final ClassDesc realOwnerType;
                 try {
-                    realFieldDesc = ClassDesc.ofDescriptor(fieldType.resolveConstantDesc(MethodHandles.lookup()).getClass().descriptorString());
-                    realOwnerType = ClassDesc.ofDescriptor(ownerType.resolveConstantDesc(MethodHandles.lookup()).getClass().descriptorString());
+                    realFieldDesc = ClassFileHelper.resolveConstantDesc(fieldType);
+                    realOwnerType = ClassFileHelper.resolveConstantDesc(ownerType);
                 } catch (Exception e) {
                     throw new InvalidContextUsageException (
                             "%s: Could not resolve ConstantDesc %s or %s when accessing stack",
@@ -823,11 +826,11 @@ public class WeavingCode {
             switch (instructions.get(index)) {
                 case LoadInstruction loadInstruction -> instructions.set(
                         index,
-                        LoadInstruction.of(loadInstruction.opcode(), loadInstruction.slot() + amount)
+                        LoadInstruction.of(loadInstruction.typeKind(), loadInstruction.slot() + amount)
                 );
                 case StoreInstruction storeInstruction -> instructions.set(
                         index,
-                        StoreInstruction.of(storeInstruction.opcode(), storeInstruction.slot() + amount)
+                        StoreInstruction.of(storeInstruction.typeKind(), storeInstruction.slot() + amount)
                 );
                 case IncrementInstruction incrementInstruction -> instructions.set(
                         index,
@@ -1170,18 +1173,22 @@ public class WeavingCode {
                     // Return null as receiver for static methods.
                     ClassFileHelper.insert(invokeIns,
                             isStatic ? ClassFileHelper.loadNull() :
-                                    ClassFileHelper.loadObjectVar(-methodMaxLocals),
-                            // TODO ins the original is: -method.maxLocals
-                            //  Why is NEGATIVE??????????
+                                    // originally it was passed -methodMaxLocals
+                                    ClassFileHelper.loadThis(),
                             instructions);
                 } else if (mode == ArgumentProcessorMode.CALLSITE_ARGS) {
-                    final Instruction callee = ClassFileHelper.firstNextRealInstruction(instructions, shadow.getRegionStart());
+                    final Instruction callee = ClassFileHelper.firstNextRealInstruction(this.methodInstructions, shadow.getRegionStart());
+                    // after testing, I determined that the RegionStart element is contained in the method instructions (in the original since it was a linked
+                    // list I wrongly assumed that it was instead contained in the "instruction" parameter of this method)
                     if (!(callee instanceof InvokeInstruction calleeInvoke)) {
                         throw new DiSLFatalException("In snippet "
                                 + snippet.getOriginClassName() + "."
                                 + snippet.getOriginMethodName()
                                 + " - unexpected bytecode when applying"
-                                + " \"ArgumentProcessorContext.getReceiver\"");
+                                + " \"ArgumentProcessorContext.getReceiver\""
+                                + " expected an InvokeInstruction, got instead: "
+                                + (callee == null? "null": callee.toString())
+                        );
                     }
                     final Frame<SourceValue> frame = info.getSourceFrame(callee);
 
@@ -1373,6 +1380,7 @@ public class WeavingCode {
      * Removes a matching instruction from the instruction list, otherwise
      * throws a {@link DiSLFatalException}.
      */
+    // TODO sometime this throw because the actual instruction is LDC or SIPUSH, should this be valid????
     private static void __removeInstruction(final Opcode expected, final CodeElement element, final List<CodeElement> instructions) {
         char initialLetter = expected.name().charAt(0);
         if (element instanceof Instruction instruction
@@ -1381,9 +1389,15 @@ public class WeavingCode {
         ) {
             instructions.remove(instruction);
         } else {
+            String additionalInfo = "no additional info.";
+            if (element instanceof Instruction instruction) {
+                additionalInfo = "instruction kind = " + instruction.opcode().kind() + "\n";
+                additionalInfo += "expected kind = " + expected.kind() + "\n";
+                additionalInfo += "initialLetter = " + initialLetter;
+            }
             throw new DiSLFatalException (
-                    "refusing to remove instruction: expected %s, found %s",
-                    expected.name(), element.toString()
+                    "refusing to remove instruction: expected %s, found %s | additional info: %s",
+                    expected.name(), element.toString(), additionalInfo
             );
         }
 
