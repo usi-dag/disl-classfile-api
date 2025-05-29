@@ -173,15 +173,17 @@ public class ClassFileCodeTransformer {
      */
     public static MethodTransform shiftLocalVarSlotCodeTransformer(final int offset) {
         return (methodBuilder, methodElement) -> {
-            if (methodElement instanceof CodeModel) {
-                methodBuilder.transformCode((CodeModel) methodElement, (codeBuilder, codeElement) -> {
+            if (methodElement instanceof CodeModel codeModel) {
+                methodBuilder.transformCode(codeModel, (codeBuilder, codeElement) -> {
                     switch (codeElement) {
                         case LoadInstruction loadInstruction -> {
-                            LoadInstruction withOffset = LoadInstruction.of(loadInstruction.opcode(), loadInstruction.slot() + offset);
+                            final int newSlot = Math.max(0, loadInstruction.slot() + offset);
+                            LoadInstruction withOffset = LoadInstruction.of(loadInstruction.typeKind(), newSlot);
                             codeBuilder.with(withOffset);
                         }
                         case StoreInstruction storeInstruction -> {
-                            StoreInstruction withOffset = StoreInstruction.of(storeInstruction.opcode(), storeInstruction.slot() + offset);
+                            int newSlot = Math.max(0,storeInstruction.slot() + offset);
+                            StoreInstruction withOffset = StoreInstruction.of(storeInstruction.typeKind(), newSlot);
                             codeBuilder.with(withOffset);
                         }
                         case DiscontinuedInstruction.RetInstruction retInstruction -> {  // this instruction is unlikely to happen, but the asm version handle it
