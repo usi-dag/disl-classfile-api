@@ -1224,28 +1224,30 @@ public abstract class ClassFileHelper {
     }
 
     public static ClassDesc resolveConstantDesc(ConstantDesc constantDesc) throws ReflectiveOperationException {
-        switch (constantDesc) {
-            case ClassDesc classDesc -> {
-                return classDesc;
-            }
-            // TODO should I return the ClassDesc of the primitive or the Wrapper ????
-            case Double _ -> {
-                return CD_double;
-            }
-            case Float _ -> {
-                return CD_float;
-            }
-            case Integer _ -> {
-                return CD_int;
-            }
-            case Long _ -> {
-                return CD_long;
-            }
-            case String _ -> {
-                return CD_String;
-            }
-            default -> {
-                return ClassDesc.ofDescriptor(constantDesc.resolveConstantDesc(MethodHandles.lookup()).getClass().descriptorString());
+        try {
+            return ClassDesc.ofDescriptor(constantDesc.resolveConstantDesc(MethodHandles.lookup()).getClass().descriptorString());
+        } catch (Exception e) {
+            switch (constantDesc) {
+                case ClassDesc classDesc -> {
+                    return classDesc;
+                }
+                // TODO should I return the ClassDesc of the primitive or the Wrapper ????
+                case Double _ -> {
+                    return CD_double;
+                }
+                case Float _ -> {
+                    return CD_float;
+                }
+                case Integer _ -> {
+                    return CD_int;
+                }
+                case Long _ -> {
+                    return CD_long;
+                }
+                case String _ -> {
+                    return CD_String;
+                }
+                default -> throw new RuntimeException(e); // in case it doesn't work I throw the original exception
             }
         }
     }
