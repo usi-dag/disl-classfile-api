@@ -124,11 +124,12 @@ public class WeavingCode {
 
             // Remove the invocation sequence.
             __removeInstruction(Opcode.ALOAD,
-                    ClassFileHelper.nextInstruction(
+                    ClassFileHelper.previousInstruction(
                             instructions,
                             invokeInstruction
                     ),
-                    instructions
+                    instructions,
+                    "rewriteStaticContextCalls"
             );
             instructions.remove(invokeInstruction);
         }
@@ -183,7 +184,8 @@ public class WeavingCode {
                 __removeInstruction(
                         Opcode.ALOAD,
                         ClassFileHelper.previousRealInstruction(instructions, classNameInstruction),
-                        instructions
+                        instructions,
+                        "rewriteClassContextCalls"
                         );
                 instructions.remove(classNameInstruction);
                 instructions.remove(invokeInstruction);
@@ -255,7 +257,8 @@ public class WeavingCode {
                 // Remove the invocation sequence.
                 __removeInstruction(Opcode.ALOAD,
                         ClassFileHelper.previousRealInstruction(instructions, invokeInstruction),
-                        instructions);
+                        instructions,
+                        "rewriteDynamicContextCalls1");
                 instructions.remove(invokeInstruction);
             } else if ("getException".equals(methodName)) {
                 //               ALOAD (DynamicContext interface reference)
@@ -271,7 +274,7 @@ public class WeavingCode {
                 // Remove the invocation sequence.
                 __removeInstruction(Opcode.ALOAD,
                         ClassFileHelper.previousRealInstruction(instructions, invokeInstruction),
-                        instructions);
+                        instructions, "rewriteDynamicContextCalls2");
                 instructions.remove(invokeInstruction);
             } else if ("getStackValue".equals(methodName)) {
                 //               ALOAD (DynamicContext interface reference)
@@ -337,7 +340,7 @@ public class WeavingCode {
                         Opcode.ALOAD,
                         ClassFileHelper.previousRealInstruction(
                                 instructions, itemIndexIns),
-                        instructions);
+                        instructions, "rewriteDynamicContextCalls3");
                 instructions.remove(itemIndexIns);
                 instructions.remove(valueTypeIns);
                 instructions.remove(invokeInstruction);
@@ -403,7 +406,7 @@ public class WeavingCode {
                 // Remove the invocation sequence.
                 __removeInstruction(Opcode.ALOAD,
                         ClassFileHelper.previousRealInstruction(instructions, paramIndexIns),
-                        instructions);
+                        instructions, "rewriteDynamicContextCalls4");
                 instructions.remove(paramIndex);
                 instructions.remove(valueTypeIns);
                 instructions.remove(invokeInstruction);
@@ -467,7 +470,7 @@ public class WeavingCode {
                 // Remove the invocation sequence.
                 __removeInstruction(Opcode.ALOAD,
                         ClassFileHelper.previousRealInstruction(instructions, slotIndexIns),
-                        instructions);
+                        instructions, "rewriteDynamicContextCalls5");
                 instructions.remove(slotIndexIns);
                 instructions.remove(valueTypeIns);
                 instructions.remove(invokeInstruction);
@@ -520,7 +523,7 @@ public class WeavingCode {
                 final Instruction ifaceLoadIns = ClassFileHelper.previousRealInstruction(
                         instructions, ownerLoadIns);
 
-                __removeInstruction(Opcode.ALOAD, ifaceLoadIns, instructions);
+                __removeInstruction(Opcode.ALOAD, ifaceLoadIns, instructions, "rewriteDynamicContextCalls6");
                 // keep the owner load instruction
                 instructions.remove(ownerTypeIns);
                 instructions.remove(fieldNameIns);
@@ -570,7 +573,7 @@ public class WeavingCode {
                 final Instruction ownerLoadIns = ClassFileHelper.previousRealInstruction(instructions, ownerNameIns);
                 final Instruction ifaceLoadIns = ClassFileHelper.previousRealInstruction(instructions, ownerLoadIns);
 
-                __removeInstruction(Opcode.ALOAD, ifaceLoadIns, instructions);
+                __removeInstruction(Opcode.ALOAD, ifaceLoadIns, instructions, "rewriteDynamicContextCalls7");
                 instructions.remove(ownerNameIns);
                 instructions.remove(fieldNameIns);
                 instructions.remove(fieldDescIns);
@@ -619,7 +622,7 @@ public class WeavingCode {
                 // Remove the invocation sequence.
                 __removeInstruction(Opcode.ALOAD,
                         ClassFileHelper.previousRealInstruction(instructions, ownerTypeIns),
-                        instructions);
+                        instructions, "rewriteDynamicContextCalls8");
                 instructions.remove(ownerTypeIns);
                 instructions.remove(fieldNameIns);
                 instructions.remove(fieldTypeIns);
@@ -661,7 +664,7 @@ public class WeavingCode {
                 // Remove the invocation sequence.
                 __removeInstruction(Opcode.ALOAD,
                         ClassFileHelper.previousRealInstruction(instructions, ownerNameIns),
-                        instructions);
+                        instructions, "rewriteDynamicContextCalls9");
                 instructions.remove(ownerNameIns);
                 instructions.remove(fieldNameIns);
                 instructions.remove(fieldDescIns);
@@ -893,7 +896,7 @@ public class WeavingCode {
             }
 
             Instruction toRemove = ClassFileHelper.previousRealInstruction(instructions, invokeInstruction);
-            __removeInstruction(Opcode.ALOAD, toRemove, instructions);
+            __removeInstruction(Opcode.ALOAD, toRemove, instructions, "rewriteArgumentContextCalls");
             instructions.remove(invokeInstruction);
         }
     }
@@ -1155,7 +1158,7 @@ public class WeavingCode {
                 // Insert getArgs() code and remove the invocation sequence.
                 ClassFileHelper.insertAll(invokeIns, getArgIns, instructions);
 
-                __removeInstruction(Opcode.ALOAD, ClassFileHelper.previousRealInstruction(instructions, enumLoadIns), instructions);
+                __removeInstruction(Opcode.ALOAD, ClassFileHelper.previousRealInstruction(instructions, enumLoadIns), instructions, "rewriteArgumentProcessorContextCalls1");
                 instructions.remove(enumLoadIns);
                 instructions.remove(invokeIns);
 
@@ -1233,7 +1236,7 @@ public class WeavingCode {
                 // Remove the invocation sequence.
                 __removeInstruction(Opcode.ALOAD,
                         ClassFileHelper.previousRealInstruction(instructions, enumLoadIns),
-                        instructions);
+                        instructions, "rewriteArgumentProcessorContextCalls2");
                 instructions.remove(enumLoadIns);
                 instructions.remove(invokeIns);
 
@@ -1380,8 +1383,7 @@ public class WeavingCode {
      * Removes a matching instruction from the instruction list, otherwise
      * throws a {@link DiSLFatalException}.
      */
-    // TODO sometime this throw because the actual instruction is LDC or SIPUSH, should this be valid????
-    private static void __removeInstruction(final Opcode expected, final CodeElement element, final List<CodeElement> instructions) {
+    private static void __removeInstruction(final Opcode expected, final CodeElement element, final List<CodeElement> instructions, String from) {
         char initialLetter = expected.name().charAt(0);
         if (element instanceof Instruction instruction
                 && instruction.opcode().kind().equals(expected.kind())
@@ -1393,10 +1395,11 @@ public class WeavingCode {
             if (element instanceof Instruction instruction) {
                 additionalInfo = "instruction kind = " + instruction.opcode().kind() + "\n";
                 additionalInfo += "expected kind = " + expected.kind() + "\n";
-                additionalInfo += "initialLetter = " + initialLetter;
+                additionalInfo += "initialLetter = " + initialLetter + "\n";
+                additionalInfo += "origin error: " + from;
             }
             throw new DiSLFatalException (
-                    "refusing to remove instruction: expected %s, found %s | additional info: %s",
+                    "refusing to remove instruction: expected %s, found %s | additional info: %s\n",
                     expected.name(), element.toString(), additionalInfo
             );
         }
