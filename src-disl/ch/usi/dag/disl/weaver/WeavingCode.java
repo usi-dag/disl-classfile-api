@@ -124,7 +124,7 @@ public class WeavingCode {
 
             // Remove the invocation sequence.
             __removeInstruction(Opcode.ALOAD,
-                    ClassFileHelper.previousInstruction(
+                    ClassFileHelper.previousRealInstruction(
                             instructions,
                             invokeInstruction
                     ),
