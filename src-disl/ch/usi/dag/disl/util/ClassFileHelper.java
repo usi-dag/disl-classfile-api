@@ -1253,4 +1253,59 @@ public abstract class ClassFileHelper {
     }
 
 
+    /**
+     * If the ConstantDesc represent a boxed primitive type then return the unboxed TypeKind
+     * otherwise return null. Example: if the desc is an Integer then return INT
+     * @param desc the constant descriptor
+     * @return the unboxed TypeKind or null
+     */
+    public static TypeKind unboxToPrimitive(ConstantDesc desc) {
+        switch (desc) {
+            case Float _ -> {
+                return TypeKind.FLOAT;
+            }
+            case Integer _ -> {
+                return TypeKind.INT;
+            }
+            case Double _ -> {
+                return TypeKind.DOUBLE;
+            }
+            case Long _ -> {
+                return TypeKind.LONG;
+            }
+            case ClassDesc classDesc -> {
+                return unboxToPrimitive(classDesc);
+            }
+            default -> {
+                return null;
+            }
+        }
+
+    }
+
+    private static TypeKind unboxToPrimitive(ClassDesc desc) {
+        if (desc.isPrimitive()) {
+            return TypeKind.from(desc);
+        }
+        if (CD_Integer.equals(desc)) {
+            return TypeKind.INT;
+        } else if (CD_Float.equals(desc)) {
+            return TypeKind.FLOAT;
+        } else if (CD_Long.equals(desc)) {
+            return TypeKind.LONG;
+        } else if (CD_Double.equals(desc)) {
+            return TypeKind.DOUBLE;
+        } else if (CD_Boolean.equals(desc)) {
+            return TypeKind.BOOLEAN;
+        } else if (CD_Byte.equals(desc)) {
+            return TypeKind.BYTE;
+        } else if (CD_Short.equals(desc)) {
+            return TypeKind.SHORT;
+        } else if (CD_Character.equals(desc)) {
+            return TypeKind.CHAR;
+        }
+        return null;
+    }
+
+
 }

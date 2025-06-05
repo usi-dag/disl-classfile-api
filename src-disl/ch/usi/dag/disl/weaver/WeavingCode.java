@@ -288,8 +288,12 @@ public class WeavingCode {
                 ConstantDesc expectedType = __expectTypeConstLoad(valueTypeIns, "DynamicContext", methodName, "type");
                 TypeKind realExpectedType;
                 try {
-                    ClassDesc classDesc = ClassFileHelper.resolveConstantDesc(expectedType);
-                    realExpectedType = TypeKind.from(classDesc);
+                    TypeKind primitiveType = ClassFileHelper.unboxToPrimitive(expectedType);
+                    if (primitiveType == null) {
+                        realExpectedType = TypeKind.from(ClassFileHelper.resolveConstantDesc(expectedType));
+                    } else {
+                        realExpectedType = primitiveType;
+                    }
                 } catch (Exception e) {
                     throw new InvalidContextUsageException (
                             "%s: Could not resolve ConstantDesc %s when accessing stack",
@@ -378,7 +382,12 @@ public class WeavingCode {
                         valueTypeIns, "DynamicContext", methodName, "type");
                 final TypeKind realExpectedType;
                 try {
-                    realExpectedType = TypeKind.from(expectedType.resolveConstantDesc(MethodHandles.lookup()).getClass());
+                    TypeKind primitiveType = ClassFileHelper.unboxToPrimitive(expectedType);
+                    if (primitiveType == null) {
+                        realExpectedType = TypeKind.from(expectedType.resolveConstantDesc(MethodHandles.lookup()).getClass());
+                    } else {
+                        realExpectedType = primitiveType;
+                    }
                 } catch (Exception e) {
                     throw new InvalidContextUsageException (
                             "%s: Could not resolve ConstantDesc %s when accessing stack",
@@ -445,7 +454,12 @@ public class WeavingCode {
                         valueTypeIns, "DynamicContext", methodName, "type");
                 final TypeKind realExpectedType;
                 try {
-                    realExpectedType = TypeKind.from(expectedType.resolveConstantDesc(MethodHandles.lookup()).getClass());
+                    TypeKind primitiveType = ClassFileHelper.unboxToPrimitive(expectedType);
+                    if (primitiveType == null) {
+                        realExpectedType = TypeKind.from(expectedType.resolveConstantDesc(MethodHandles.lookup()).getClass());
+                    } else {
+                        realExpectedType = primitiveType;
+                    }
                 } catch (Exception e) {
                     throw new InvalidContextUsageException (
                             "%s: Could not resolve ConstantDesc %s when accessing stack",
@@ -454,7 +468,7 @@ public class WeavingCode {
                 }
                 final TypeKind actualType = basicFrame.getLocal(varSlot).getTypeKind();
 
-                if (!realExpectedType.equals(actualType)) {
+                 if (!realExpectedType.equals(actualType)) {
                     throw new InvalidContextUsageException (
                             "%s: expected %s but found %s when accessing variable slot %d",
                             __location (snippet, invokeInstruction), expectedType, actualType, varSlot
@@ -1337,6 +1351,8 @@ public class WeavingCode {
     private String __expectStringConstLoad(final CodeElement codeElement, final String iFace,
                                            final String method, final String param) throws InvalidContextUsageException {
         final String result = ClassFileHelper.getStringConstOperand(codeElement);
+        // TODO in the test dynamiccontext "result" is null when "getStaticFieldValue" is invoked at line 20 of the snippet, I suspect this is due to
+        //  the method being invoked with FieldAccessStaticContext variables instead of constants
         __ensureOperandNotNull(result, codeElement, iFace, method, param, "String");
         return result;
     }
