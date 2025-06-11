@@ -27,7 +27,7 @@ import ch.usi.dag.disl.util.JavaNames;
  * @author Lukas Marek
  * @author Lubomir Bulej
  */
-abstract class ExclusionSet {
+public abstract class ExclusionSet {
 
     public static Set <Scope> prepare (final Stream <URL> urlStream) {
         try {
