@@ -9,7 +9,7 @@ public class FutureLabelTarget extends CustomAttribute<FutureLabelTarget> {
     // The idea is that before adding this element to the codeBuilder we
     // replace it with an actual LabelTarget, if we do have a Label stored in this
     // class we can use it. Otherwise, we can just create a new Label
-    private final Label label;
+    private Label label;
 
     public FutureLabelTarget() {
         super(new FutureLabelTargetMapper());
@@ -27,6 +27,10 @@ public class FutureLabelTarget extends CustomAttribute<FutureLabelTarget> {
 
     public Label getLabel() {
         return this.label;
+    }
+
+    public void setLabel(Label label) {
+        this.label = label;
     }
 
 }
