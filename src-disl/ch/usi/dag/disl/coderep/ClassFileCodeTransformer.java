@@ -127,14 +127,12 @@ public class ClassFileCodeTransformer {
         return (methodBuilder, methodElement) -> {
             if (methodElement instanceof CodeModel codeModel) {
                 methodBuilder.withCode(codeBuilder -> {
-                    Label HANDLER_END = codeBuilder.newLabel(); // label that goes at the end
 
                     codeBuilder
                             .trying(tryHandler -> {
                                 for (CodeElement instruction: codeModel.elementList()) {
                                     tryHandler.with(instruction); // add all the original instructions
                                 }
-                                tryHandler.goto_(HANDLER_END); // TODO is this actually needed, of the builder automatically add it??
                             }, catchHandler -> {
                                 catchHandler.catchingAll(blockCodeBuilder -> {
                                     // The caught exception will be on top of the operand stack when the catch block is entered.
@@ -156,7 +154,6 @@ public class ClassFileCodeTransformer {
                                     codeBuilder.athrow();
                                 });
                             })
-                            .labelBinding(HANDLER_END) // the label need to be bound to an instruction
                             .nop();
                 });
             } else {
@@ -222,7 +219,7 @@ public class ClassFileCodeTransformer {
         final ClassDesc ownerDesc = ClassDesc.ofDescriptor(ch.usi.dag.disl.dynamicbypass.DynamicBypass.class.descriptorString());
 
         return  (methodBuilder, methodElement) -> {
-            if (methodElement instanceof CodeModel) {
+            if (methodElement instanceof CodeModel codeModel) {
                 methodBuilder.withCode(codeBuilder -> {
                     // add invocation at the beginning
                     codeBuilder.invokestatic(
@@ -232,7 +229,7 @@ public class ClassFileCodeTransformer {
                             false
                             );
                     // add all other elements
-                    for (CodeElement codeElement: ((CodeModel) methodElement).elementList()) {
+                    for (CodeElement codeElement: codeModel.elementList()) {
                         codeBuilder.with(codeElement);
                     }
                     // add invocation at the end
