@@ -23,6 +23,7 @@ import ch.usi.dag.disl.staticcontext.generator.SCGenerator;
 import ch.usi.dag.disl.util.ClassFileHelper;
 import ch.usi.dag.disl.util.Logging;
 import ch.usi.dag.disl.util.MethodModelCopy;
+import ch.usi.dag.disl.util.WriteInfo;
 import ch.usi.dag.disl.weaver.Weaver;
 import ch.usi.dag.util.logging.Logger;
 
@@ -131,6 +132,10 @@ public final class DiSL {
         final Transformers transformers = Transformers.load (resources.transformers ());
         final Set <Scope> excludedScopes = ExclusionSet.prepare (resources.instrumentationResources ());
         final DislClasses dislClasses = DislClasses.load (codeOptions, resources.dislClasses ());
+//
+//        resources.serialize("serialized.txt");
+//        WriteInfo info = WriteInfo.getInstance();
+//        codeOptions.forEach(c -> info.writeLine("{{{CodeOption: " + codeOptions + " }}}"));
 
         // TODO put checker here
         // like After should catch normal and abnormal execution
@@ -148,7 +153,7 @@ public final class DiSL {
      * Derives code options from global properties. This is a transitional
      * compatibility method for the transition to per-request code options.
      */
-    private static Set <CodeOption> __codeOptionsFrom (
+    public static Set <CodeOption> __codeOptionsFrom (
         final Properties properties
     ) {
         final Set <CodeOption> result = EnumSet.noneOf (CodeOption.class);
@@ -347,48 +352,64 @@ public final class DiSL {
 
         final Set <String> changedMethods = new HashSet<>();
         // TODO also here might use ClassModelHelper to pass some options
-        byte[] instrumentedClass = ClassFile.of().build(classModel.thisClass().asSymbol(), classBuilder -> {
-            for (ClassElement classElement: classModel) {
-                if (Objects.requireNonNull(classElement) instanceof MethodModel methodModel) {
-                    boolean methodChanged;
+        try {
+            byte[] instrumentedClass = ClassFile.of().build(classModel.thisClass().asSymbol(), classBuilder -> {
+                for (ClassElement classElement: classModel) {
+                    if (Objects.requireNonNull(classElement) instanceof MethodModel methodModel) {
+                        boolean methodChanged;
 
-                    try {
                         MethodModelCopy methodModelCopy = new MethodModelCopy(methodModel);
-                        methodChanged = instrumentMethod(classModel, methodModelCopy, classBuilder);
+                        try {
+                            methodChanged = instrumentMethod(classModel, methodModelCopy, classBuilder);
+                        } catch (DiSLException e) {
+                            throw new RuntimeException(e);
+                        }
 
                         if (!methodChanged) {
-                            classBuilder.with(methodModel); // if the method was not changed then add it back like the original
-                        } else {
-                            changedMethods.add(ClassFileHelper.nameAndDescriptor(methodModel));
-                        }
-                    } catch (Exception e) {
-                        throw new RuntimeException("An exception occurred: " + e.getMessage());
+                                classBuilder.with(methodModel); // if the method was not changed then add it back like the original
+                            } else {
+                                changedMethods.add(ClassFileHelper.nameAndDescriptor(methodModel));
+                            }
+
+                    } else {
+                        classBuilder.with(classElement); // add all other elements as the original
+                    }
+                }
+
+                // If the instrumented class is the Thread class, add fields that
+                // will provide thread-local variables to the code in the snippets.
+                if (classModel.thisClass().asSymbol().descriptorString().equals(Thread.class.descriptorString())) {
+
+                    final Set<ThreadLocalVar> tlvs = __collectReferencedTLVs(__dislClasses.getSnippets());
+
+                    if (__codeOptions.contains(CodeOption.DYNAMIC_BYPASS)) {
+                        tlvs.add(__createBypassTlv());
                     }
 
-                } else {
-                    classBuilder.with(classElement); // add all other elements as the original
+                    if (!tlvs.isEmpty()) {
+                        ClassFileTLVInserter.insertThreadLocalVariables(tlvs, classBuilder, classModel);
+                    }
                 }
-            }
+            });
 
-            // If the instrumented class is the Thread class, add fields that
-            // will provide thread-local variables to the code in the snippets.
-            if (classModel.thisClass().asSymbol().descriptorString().equals(Thread.class.descriptorString())) {
+            boolean classChanged = !changedMethods.isEmpty();
 
-                final Set<ThreadLocalVar> tlvs = __collectReferencedTLVs(__dislClasses.getSnippets());
-
-                if (__codeOptions.contains(CodeOption.DYNAMIC_BYPASS)) {
-                    tlvs.add(__createBypassTlv());
-                }
-
-                if (!tlvs.isEmpty()) {
-                    ClassFileTLVInserter.insertThreadLocalVariables(tlvs, classBuilder, classModel);
-                }
-            }
-        });
-
-        boolean classChanged = !changedMethods.isEmpty();
-
-        return classChanged? new InstrumentedClass(classModel, changedMethods, instrumentedClass): null;
+            return classChanged? new InstrumentedClass(classModel, changedMethods, instrumentedClass): null;
+        } catch (Exception e) {
+//            WriteInfo info = WriteInfo.getInstance();
+//            if (e.getMessage() == null) {
+//                info.writeLine("An exception occurred: somehow the message from the exception is null ");
+//                throw new RuntimeException(e);
+//            }
+//            info.writeLine(">>>>>> Exception in instrumentClass");
+//            info.writeLine("Message: " + e.getMessage());
+//            info.writeLine(String.valueOf(e.getClass()));
+//            for ( StackTraceElement element: e.getStackTrace()) {
+//                info.writeLine(element.toString());
+//            }
+//            info.writeLine("<<< Exception end");
+            throw new RuntimeException(e);
+        }
     }
 
 
@@ -426,8 +447,10 @@ public final class DiSL {
 
         final byte [] transformedBytes = __transformers.apply(originalBytes); // TODO this is done by the user
 
-        // TODO might use ClassModelHelper to pass some options
-        final ClassModel classModel = ClassFile.of().parse(transformedBytes);
+        // TODO might use ClassModelHelper to pass some options instead of this
+        //  also for now the lines will need to be dropped since there can be cases where
+        //  there can be multiples lines represented by the same object
+        final ClassModel classModel = ClassFile.of(ClassFile.LineNumbersOption.DROP_LINE_NUMBERS).parse(transformedBytes);
 
         Reflection.systemClassLoader ().notifyClassLoaded(classModel);
 
