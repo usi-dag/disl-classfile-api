@@ -16,7 +16,7 @@ public class TestUtils {
 
     public static ClassModel __loadClass(Class<?> c) {
         try {
-            return ClassModelHelper.DEFAULT.load(c.getName());
+            return ClassModelHelper.DROPLINES.load(c.getName());
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
