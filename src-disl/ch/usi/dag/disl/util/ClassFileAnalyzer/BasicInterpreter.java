@@ -115,6 +115,8 @@ public class BasicInterpreter extends Interpreter<BasicValue> {
             case DCONST_1:
                 return BasicValue.DOUBLE_VALUE;
             case LDC:
+            case LDC_W:
+            case LDC2_W:
                 ConstantInstruction.LoadConstantInstruction constantInstruction = (ConstantInstruction.LoadConstantInstruction) instruction;
                 TypeKind typeKind = constantInstruction.typeKind();
                 try {
@@ -133,7 +135,7 @@ public class BasicInterpreter extends Interpreter<BasicValue> {
                 TypeKind objDesc = TypeKind.from(newObjectInstruction.getClass());
                 return newValue(objDesc);
             default:
-                throw new AssertionError();
+                throw new AssertionError("Invalid Opcode: " + instruction.opcode() + " in BasicInterpreter.newOperation(Instruction instruction)");
         }
     }
 
