@@ -561,7 +561,19 @@ public class ClassFileCodeTransformer {
         };
     }
 
-
+    public static MethodTransform removeLineNumbersAndLocalVariableInfo() {
+        return (methodBuilder, methodElement) -> {
+            if (methodElement instanceof CodeModel codeModel) {
+                methodBuilder.transformCode(codeModel, (codeBuilder, codeElement) -> {
+                    if (!(codeElement instanceof LineNumber || codeElement instanceof LocalVariable || codeElement instanceof LocalVariableType)) {
+                        codeBuilder.with(codeElement);
+                    }
+                });
+            } else {
+                methodBuilder.with(methodElement);
+            }
+        };
+    }
 
     public static MethodModelCopy replaceReturnsWithGoto(final MethodModelCopy oldMethod) {
         // TODO this method create a new class with the method edited and then return only the new method, there might be
@@ -570,6 +582,6 @@ public class ClassFileCodeTransformer {
         if (!oldMethod.hasCode()) {
             return oldMethod;  // Do nothing if there is no code
         }
-        return new MethodModelCopy(applyTransformers2(oldMethod, replaceReturnsWithGoto()));
+        return new MethodModelCopy(applyTransformers2(oldMethod, replaceReturnsWithGoto().andThen(removeLineNumbersAndLocalVariableInfo())));
     }
 }

@@ -109,6 +109,9 @@ public class UnprocessedCode {
 
         // Process code:
         // - replace all RETURN instructions with a GOTO to the end of a method
+        // - In this function also all PseudoInstruction that represents lines and local variable
+        //   are removed, if that were not the case they might conflict with the local variable
+        //   of the code to be instrumented
         final MethodModelCopy method = ClassFileCodeTransformer.replaceReturnsWithGoto(__method);
 
         return new Code (
