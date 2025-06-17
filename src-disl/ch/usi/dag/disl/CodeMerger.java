@@ -63,13 +63,13 @@ abstract class CodeMerger {
                             codeBuilder.invokestatic(BPC_CLASS, BPC_METHOD, BPC_DESC);
                             // execute the "then" if the stack has on top true, else it will execute the "else" block
                             codeBuilder.ifThenElse(blockCodeBuilder -> {
-                                List<CodeElement> instrumentedInstructions = instrumentedMethod.code().orElseThrow().elementList();
-                                for (CodeElement instruction: instrumentedInstructions) {
+                                List<CodeElement> originalInstructions = originalMethod.code().orElseThrow().elementList();
+                                for (CodeElement instruction: originalInstructions) {
                                     blockCodeBuilder.with(instruction);
                                 }
                             }, blockCodeBuilder -> {
-                                List<CodeElement> originalInstructions = originalMethod.code().orElseThrow().elementList();
-                                for (CodeElement instruction: originalInstructions) {
+                                List<CodeElement> instrumentedInstructions = instrumentedMethod.code().orElseThrow().elementList();
+                                for (CodeElement instruction: instrumentedInstructions) {
                                     blockCodeBuilder.with(instruction);
                                 }
                             });
