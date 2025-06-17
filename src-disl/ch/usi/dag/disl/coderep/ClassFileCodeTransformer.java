@@ -138,7 +138,7 @@ public class ClassFileCodeTransformer {
                                     // The caught exception will be on top of the operand stack when the catch block is entered.
 
                                     // get print class
-                                    codeBuilder.getstatic(ClassDesc.ofDescriptor(System.class.descriptorString()), "out", printStreamDesc);
+                                    codeBuilder.getstatic(ClassDesc.ofDescriptor(System.class.descriptorString()), "err", printStreamDesc);
                                     // load constant
                                     blockCodeBuilder.loadConstant(String.format("%s: failed to handle an exception", location)); // load string
                                     // print string
@@ -146,7 +146,7 @@ public class ClassFileCodeTransformer {
 
                                     codeBuilder.dup();
                                     // print stack trace
-                                    codeBuilder.invokestatic(ClassDesc.ofDescriptor(Throwable.class.descriptorString()), "printStackTrace", MethodTypeDesc.of(CD_void));
+                                    codeBuilder.invokevirtual(ClassDesc.ofDescriptor(Throwable.class.descriptorString()), "printStackTrace", MethodTypeDesc.of(CD_void));
                                     // system exit
                                     codeBuilder.loadConstant(666);
                                     codeBuilder.invokestatic(ClassDesc.ofDescriptor(System.class.descriptorString()), "exit", MethodTypeDesc.of(CD_void, CD_int));
