@@ -107,4 +107,47 @@ public class MethodModelCopy {
     public MethodModel getOriginal() {
         return original;
     }
+
+    // private constructor for cloning
+    private MethodModelCopy(
+            MethodModel original,
+            Utf8Entry methodName,
+            Utf8Entry methodType,
+            MethodTypeDesc methodTypeSymbol,
+            AccessFlags flags,
+            Optional<ClassModel> parent,
+            boolean hasCode,
+            List<CodeElement> instructions,
+            List<ExceptionCatch> exceptionHandlers,
+            int maxStack,
+            int maxLocals
+    ) {
+        this.original = original;
+        this.methodName = methodName;
+        this.methodType = methodType;
+        this.methodTypeSymbol = methodTypeSymbol;
+        this.flags = flags;
+        this.instructions = new ArrayList<>(instructions);  // create a new arrayList since the original could be modified
+        this.parent = parent;
+        this.hasCode = hasCode;
+        this.exceptionHandlers = new ArrayList<>(exceptionHandlers); // also create a new list
+        this.maxStack = maxStack;
+        this.maxLocals = maxLocals;
+    }
+
+    public MethodModelCopy duplicate() {
+        return new MethodModelCopy(
+            this.original,
+            this.methodName,
+            this.methodType,
+            this.methodTypeSymbol,
+            this.flags,
+            this.parent,
+            this.hasCode,
+            this.instructions,
+            this.exceptionHandlers,
+            this.maxStack,
+            this.maxLocals
+        );
+    }
 }

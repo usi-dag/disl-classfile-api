@@ -60,9 +60,11 @@ public class Code {
     }
 
 
-    // TODO need to find other way around instead of cloning
     private Code (final Code that) {
-        __method = that.__method;
+        // In the original version the MethodNode is cloned with a helper, since the classFile do not allow
+        // to clone code I implemented a method in MethodModelCopy that should duplicate the array of instructions
+        // (not the instructions themselves)
+        __method = that.__method.duplicate();
 
         // The following immutables can be shared.
         __syntheticLocals = that.__syntheticLocals;
@@ -146,7 +148,7 @@ public class Code {
     //
 
     /**
-     * Creates a clone of this code. TODO CodeModel cannot be copied so this method is not working as intended
+     * Creates a clone of this code.
      */
     @Override
     public Code clone () {
