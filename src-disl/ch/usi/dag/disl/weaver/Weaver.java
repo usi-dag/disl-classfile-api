@@ -57,7 +57,7 @@ public class Weaver {
     ) {
         int newStartOffset = instructions.indexOf(start);
         final int newEndOffset = instructions.indexOf(end);
-        final Map<Label, LabelTarget> labelTargetMap = ClassFileHelper.getLabelTargetMap(instructions);
+        final Map<Label, CodeElement> labelTargetMap = ClassFileHelper.getLabelTargetMap(instructions);
 
 
         for (final ExceptionCatch tcb: exceptionCatches) {
@@ -84,7 +84,11 @@ public class Weaver {
 
         if (start instanceof FutureLabelTarget futureLabelTarget) {
             final FutureLabelTarget endLabelTarget = getEndLabel(instructions, end, codeBuilder);
-
+            // futureLabelTarget.getLabel() could be null, to avoid null pointer exception here we can add a new label
+            // TODO this might not be needed need to investigate once everything is working
+            if (futureLabelTarget.getLabel() == null) {
+                futureLabelTarget.setLabel(codeBuilder.newLabel());
+            }
             ExceptionCatch exceptionCatch = ExceptionCatch.of(endLabelTarget.getLabel(), futureLabelTarget.getLabel(), endLabelTarget.getLabel());
             return new HandlerAndException(exceptionCatch, endLabelTarget);
         } else {
@@ -110,7 +114,7 @@ public class Weaver {
             final SCGenerator staticInfoHolder, final PIResolver piResolver,
             final WeavingInfo info, final Snippet snippet, final SnippetCode code,
             final Shadow shadow, final CodeElement loc, final List<CodeElement> instructionsToInstrument,
-            List<ExceptionCatch> exceptionCatches, int methodMaxLocals
+            List<ExceptionCatch> exceptionCatches, int methodMaxLocals, CodeBuilder codeBuilder
     ) throws InvalidContextUsageException {
 
         int newMethodMaxLocals = methodMaxLocals;
@@ -140,9 +144,13 @@ public class Weaver {
             List<CodeElement> instrumentedMethodInstructions = wc.getInstrumentedMethodInstructions();
             newMethodMaxLocals = wc.getMethodMaxLocals();
 
-            ClassFileHelper.insertAll(loc, instrumentedSnippet, instrumentedMethodInstructions);
+            // Inserting a snippet more than once in the code can causes problems due to the labels,
+            // this happens because after a snippet is inserted a second time we also have TargetLabels that
+            // are duplicated and this will confuse the ClassFile when the labels are being bound.
+            List<CodeElement> alteredLabels = ClassFileHelper.replaceBranchAndLabelsTarget(instrumentedSnippet, codeBuilder);
+            ClassFileHelper.insertAll(loc, alteredLabels, instrumentedMethodInstructions);
 
-            return new InstrumentedResult(instrumentedSnippet, instrumentedMethodInstructions, instrumentedExceptions, newMethodMaxLocals);
+            return new InstrumentedResult(alteredLabels, instrumentedMethodInstructions, instrumentedExceptions, newMethodMaxLocals);
 
         } catch (AnalyzerException ex) {
             throw new InvalidContextUsageException("Exception while transforming: " + ex.getMessage());
@@ -191,7 +199,7 @@ public class Weaver {
     }
 
 
-    public static MethodTransform instrumentCode(
+    private static MethodTransform instrumentCode(
             ClassModel classModel,
             MethodModelCopy methodModel,
             final Map <Snippet, List <Shadow>> snippetShadows,
@@ -216,8 +224,9 @@ public class Weaver {
                             int maxLocals = methodModel.maxLocals();
 
                             final WeavingInfo info = new WeavingInfo(classModel, methodModel, snippetShadows, codeToInstrument, exceptions);
+                            List<ExceptionCatch> exceptionsToAdd = new ArrayList<>();
 
-                            for (final Snippet snippet: info.getSortedSnippets()) {
+                            for (final Snippet snippet : info.getSortedSnippets()) {
                                 final List<Shadow> shadows = snippetShadows.get(snippet);
                                 final SnippetCode code = snippet.getCode();
 
@@ -231,16 +240,14 @@ public class Weaver {
                                 // For @Before snippets, insert the snippet code just before the region entry.
                                 if (snippet.hasAnnotation(Before.class)) {
                                     int phaseMaxLocals = maxLocals;
-                                    for (final Shadow shadow: shadows) {
+                                    for (final Shadow shadow : shadows) {
                                         final CodeElement loc = shadow.getWeavingRegion().getStart();
-
                                         InstrumentedResult result = __insert(
                                                 methodModel, staticInfoHolder, piResolver, info, snippet, code, shadow,
-                                                loc, codeToInstrument, exceptions, maxLocals);
+                                                loc, codeToInstrument, exceptions, maxLocals, codeBuilder);
 
                                         codeToInstrument = result.instrumentedMethodInstructions;
                                         exceptions = result.exceptionCatches;
-
                                         // Reset method max locals after each snippet, but keep
                                         // track of the max locals for all snippets in this phase.
                                         phaseMaxLocals = Math.max(result.maxLocals, phaseMaxLocals);
@@ -253,11 +260,11 @@ public class Weaver {
                                 // For regular after (after returning), insert the snippet after each adjusted exit of a region.
                                 if (snippet.hasAnnotation(AfterReturning.class) || snippet.hasAnnotation(After.class)) {
                                     int phaseMaxLocals = maxLocals;
-                                    for (final Shadow shadow: shadows) {
-                                        for (final CodeElement loc: shadow.getWeavingRegion().getEnds()) {
+                                    for (final Shadow shadow : shadows) {
+                                        for (final CodeElement loc : shadow.getWeavingRegion().getEnds()) {
                                             InstrumentedResult result = __insert(
                                                     methodModel, staticInfoHolder, piResolver, info, snippet, code, shadow,
-                                                    loc, codeToInstrument, exceptions, maxLocals);
+                                                    loc, codeToInstrument, exceptions, maxLocals, codeBuilder);
 
                                             codeToInstrument = result.instrumentedMethodInstructions;
                                             exceptions = result.exceptionCatches;
@@ -276,7 +283,7 @@ public class Weaver {
                                 if (snippet.hasAnnotation(AfterThrowing.class) || snippet.hasAnnotation(After.class)) {
                                     int phaseMaxLocals = maxLocals;
 
-                                    for (final Shadow shadow: shadows) {
+                                    for (final Shadow shadow : shadows) {
                                         // after-throwing inserts the snippet once, and marks
                                         // the start and the very end as the scope
                                         final WeavingRegion region = shadow.getWeavingRegion();
@@ -288,15 +295,21 @@ public class Weaver {
 
                                         wc.transform(staticInfoHolder, piResolver, true);
 
-
                                         HandlerAndException handlerAndException = getExceptionCatchBlock(
                                                 codeToInstrument, exceptions, region.getAfterThrowStart(), loc, codeBuilder);
 
                                         codeToInstrument = wc.getInstrumentedMethodInstructions();
                                         exceptions = wc.getExceptionCatches();
 
+                                        //boolean before4 = ClassFileHelper.findDoubleLabel(codeToInstrument);
+                                        //List<CodeElement> copy = codeToInstrument.stream().toList();
+
+                                        // TODO this is be the origin of the problem of the double label !!!
+                                        //  on the test dispatch the following line insert a snippet of code that already contain a label, this causes problem
+                                        //  later when I try to create the LabelMap because the same key will point to two distinct elements and this crashes the program
                                         ClassFileHelper.insertAll(handlerAndException.futureLabelTarget, wc.getInstrumentedSnippetInstructions(), codeToInstrument);
-                                        exceptions.add(handlerAndException.exceptionCatch);
+                                        //boolean after4 = ClassFileHelper.findDoubleLabel(codeToInstrument);
+                                        exceptionsToAdd.add(handlerAndException.exceptionCatch); // since exception is an unmodifiable list
 
                                         phaseMaxLocals = Math.max(phaseMaxLocals, wc.getMethodMaxLocals());
                                     }
@@ -308,22 +321,39 @@ public class Weaver {
 
                             // TODO is it necessary to add the exceptions?? or the ClassFile will
                             //  compute them automatically????
-                            for (ExceptionCatch exceptionCatch: exceptions) {
+                            exceptionsToAdd.addAll(exceptions);
+                            for (ExceptionCatch exceptionCatch : exceptionsToAdd) {
                                 codeBuilder.with(exceptionCatch);
                             }
 
-                            for (CodeElement element: codeToInstrument) {
+                            for (CodeElement element : codeToInstrument) {
                                 if (element instanceof FutureLabelTarget futureLabelTarget) {
-                                    codeBuilder.labelBinding(
-                                            futureLabelTarget.hasLabel() ? futureLabelTarget.getLabel() : codeBuilder.newLabel()
-                                    );
+                                    if (futureLabelTarget.hasLabel()) {
+                                        codeBuilder.labelBinding(futureLabelTarget.getLabel());
+                                    }
+//                                    codeBuilder.labelBinding(
+//                                            futureLabelTarget.hasLabel() ? futureLabelTarget.getLabel() : codeBuilder.newLabel()
+//                                    );
                                 } else {
                                     codeBuilder.with(element);
                                 }
                             }
-
                         } catch (Exception e) {
-                            throw new RuntimeException("Exception while instrumenting method: " + methodModel.methodName() + " -> " + e.getMessage());
+//                            WriteInfo info = WriteInfo.getInstance();
+//                            info.writeLine(">>> Exception in instrumentCode method " + e.getClass());
+//
+//                            if (e.getMessage() != null) {
+//                                info.writeLine(e.getMessage());
+//                            }
+//                            for ( StackTraceElement element: e.getStackTrace()) {
+//                                info.writeLine(element.toString());
+//                            }
+//                            info.writeLine("<<< End Exception in instrumentCode method");
+                            System.out.println(">>>> " + e.getMessage());
+                            for (StackTraceElement stackTraceElement: e.getStackTrace()) {
+                                System.out.println(stackTraceElement);
+                            }
+                            throw new RuntimeException(e);
                         }
                     });
                 } else {

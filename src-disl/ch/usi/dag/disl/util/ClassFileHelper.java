@@ -19,10 +19,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.AccessFlag;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -406,7 +403,7 @@ public abstract class ClassFileHelper {
         if (index < 0) {
             return null;
         }
-        while (index > 0) {
+        while (index >= 0) {
             if (instructions.get(index) instanceof Instruction) {
                 return (Instruction) instructions.get(index);
             }
@@ -429,7 +426,7 @@ public abstract class ClassFileHelper {
         if (index < 0) {
             return null;
         }
-        while (index > 0) {
+        while (index >= 0) {
             if (instructions.get(index) instanceof Instruction) {
                 return (Instruction) instructions.get(index);
             }
@@ -441,22 +438,54 @@ public abstract class ClassFileHelper {
     // create a map from Label to its actual instruction LabelTarget (of FutureLabelTarget), this is for convenience since
     // in the classFile the jump instructions do not contain the LabelTarget but only the Label
     public static Map<Label, CodeElement> getLabelTargetMap(List<CodeElement> instructions) {
-        return instructions.stream()
-                .filter(e -> e instanceof LabelTarget || e instanceof FutureLabelTarget)
-                .filter(e -> {
-                    if (e instanceof FutureLabelTarget futureLabelTarget) {
-                        return futureLabelTarget.hasLabel();
-                    }
+        try {
+            return instructions.stream()
+                    .filter(e -> e instanceof LabelTarget || e instanceof FutureLabelTarget)
+                    .filter(e -> {
+                        if (e instanceof FutureLabelTarget futureLabelTarget) {
+                            return futureLabelTarget.hasLabel();
+                        }
+                        return true;
+                    })
+                    .collect(Collectors.toMap(e -> {
+                        if (e instanceof LabelTarget labelTarget) {
+                            return labelTarget.label();
+                        } else {
+                            FutureLabelTarget futureLabelTarget = (FutureLabelTarget) e;
+                            return futureLabelTarget.getLabel();
+                        }
+                    }, v -> v));
+        } catch (Exception e) {
+            // TODO in case there two equal labels, then this will throw.
+            //  Need to understand why this can happen, since it should not be possible to have the same labels in two different spots
+            findDoubleLabel(instructions);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static boolean findDoubleLabel(List<CodeElement> instructions) {
+        Map<Label, Integer> map = new HashMap<>();
+        for (int i = 0; i < instructions.size(); i++) {
+            CodeElement element = instructions.get(i);
+            Label label = null;
+            if (element instanceof LabelTarget labelTarget) {
+                label = labelTarget.label();
+            } else if (element instanceof FutureLabelTarget f && f.hasLabel()) {
+                label = f.getLabel();
+            }
+            if (label != null) {
+                if (map.containsKey(label)) {
+                    int index = map.get(label);
+                    System.out.println("label already in map, elements at index: " + index + " and: " + i + " have the same label" );
+                    System.out.println("index: " + index + " -> " + instructions.get(index));
+                    System.out.println("index: " + i + " -> " + instructions.get(i));
                     return true;
-                })
-                .collect(Collectors.toMap(e -> {
-                    if (e instanceof LabelTarget labelTarget) {
-                        return labelTarget.label();
-                    } else {
-                        FutureLabelTarget futureLabelTarget = (FutureLabelTarget) e;
-                        return futureLabelTarget.getLabel();
-                    }
-                }, v -> v));
+                } else {
+                    map.put(label, i);
+                }
+            }
+        }
+        return false;
     }
 
     public static CodeElement nextInstruction(List<CodeElement> instructions, CodeElement start) {
@@ -1307,5 +1336,130 @@ public abstract class ClassFileHelper {
         return null;
     }
 
+    /**
+     * replace all branch instructions labels with new labels and replace the labelTarget with futureLabelTarget with the new label
+     * this is used on snippets so the if the snippet is added more that once in the same code there won't be any
+     * confusion when the labels are being bound
+     * @param originalList the instruction to modify
+     * @param codeBuilder a codeBuilder to create new labels
+     * @return the modified list of instructions
+     */
+    public static List<CodeElement> replaceBranchAndLabelsTarget(List<CodeElement> originalList, CodeBuilder codeBuilder){
+        List<CodeElement> toModify = new ArrayList<>(originalList);
+
+        // TODO: is probably possible to optimise by using only a single map from Original Label to the new FutureLabelTarget (todo after everything work)
+        Map<Label, CodeElement> labelToOriginalTarget = getLabelTargetMap(toModify);
+        Map<CodeElement, FutureLabelTarget> originalTargetToFutureTarget = new HashMap<>();
+
+        // step 1: replace all LabelTarget (and FutureLabelTarget) with new FutureLabelTarget, also keep track of them with the map "originalTargetToFutureTarget"
+        for (int index = 0; index < toModify.size(); index++) {
+            CodeElement current = toModify.get(index);
+            if (current instanceof LabelTarget || current instanceof FutureLabelTarget) {
+                FutureLabelTarget newFutureLabelTarget = new FutureLabelTarget(codeBuilder.newLabel());
+                toModify.set(index, newFutureLabelTarget);
+                originalTargetToFutureTarget.put(current, newFutureLabelTarget);
+            }
+        }
+
+        // step 2: replace all the BranchInstruction, Lookupswitch/Tableswitch, exceptionCatch and CharacterRange with a second pass
+        for (int index = 0; index < toModify.size(); index++) {
+            CodeElement current = toModify.get(index);
+            switch (current) {
+                case BranchInstruction branchInstruction -> {
+                    Label original = branchInstruction.target();
+                    CodeElement originalLabelTarget = labelToOriginalTarget.get(original);
+                    FutureLabelTarget newFutureLabelTarget = originalTargetToFutureTarget.get(originalLabelTarget);
+                    Label newLabel = newFutureLabelTarget.getLabel();
+                    BranchInstruction newBranchInstruction = getNewBranch(branchInstruction, newLabel);
+                    toModify.set(index, newBranchInstruction);
+                }
+                case TableSwitchInstruction tableSwitchInstruction -> {
+                    TableSwitchInstruction newTableSwitch = getNewTableSwitch(tableSwitchInstruction, labelToOriginalTarget, originalTargetToFutureTarget);
+                    toModify.set(index, newTableSwitch);
+                }
+                case LookupSwitchInstruction lookupSwitchInstruction -> {
+                    LookupSwitchInstruction newLookUpSwitch = getNewLookUpSwitch(lookupSwitchInstruction, labelToOriginalTarget, originalTargetToFutureTarget);
+                    toModify.set(index, newLookUpSwitch);
+                }
+                case ExceptionCatch exceptionCatch -> {
+                    ExceptionCatch newExceptionCatch = getNewExceptionCatch(exceptionCatch, labelToOriginalTarget, originalTargetToFutureTarget);
+                    toModify.set(index, newExceptionCatch);
+                }
+                case CharacterRange characterRange -> {
+                    CharacterRange newCharacterRange = getNewCharacterRange(characterRange, labelToOriginalTarget, originalTargetToFutureTarget);
+                    toModify.set(index, newCharacterRange);
+                }
+                default -> {
+                    // do nothing
+                }
+            }
+        }
+
+        return toModify;
+    }
+
+    // helper functions for "replaceBranchAndLabelsTarget"
+
+    private static BranchInstruction getNewBranch(BranchInstruction old, Label newLabel) {
+        return BranchInstruction.of(old.opcode(), newLabel);
+    }
+
+    // TODO TableSwitchInstruction and LookupSwitchInstruction are similar so maybe there is a way to combine the two in a single helper function (todo after everything work)
+    private static TableSwitchInstruction getNewTableSwitch(
+            TableSwitchInstruction old,
+            Map<Label, CodeElement> labelToOriginalTarget,
+            Map<CodeElement, FutureLabelTarget> originalTargetToFutureTarget
+    ){
+        Label oldDefaultTarget = old.defaultTarget();
+        Label newDefaultTarget = originalTargetToFutureTarget.get(labelToOriginalTarget.get(oldDefaultTarget)).getLabel();
+
+        List<SwitchCase> oldSwitchCaseList = old.cases();
+        List<SwitchCase> newSwitchCaseList = new ArrayList<>();
+
+        for (SwitchCase originalSwitchCase: oldSwitchCaseList) {
+            Label originalLabel = originalSwitchCase.target();
+            Label newLabel = originalTargetToFutureTarget.get(labelToOriginalTarget.get(originalLabel)).getLabel();
+            SwitchCase newSwitchCase = SwitchCase.of(originalSwitchCase.caseValue(), newLabel);
+            newSwitchCaseList.add(newSwitchCase);
+        }
+
+        return TableSwitchInstruction.of(old.lowValue(), old.highValue(), newDefaultTarget, newSwitchCaseList);
+    }
+
+    private static LookupSwitchInstruction getNewLookUpSwitch(
+            LookupSwitchInstruction old,
+            Map<Label, CodeElement> labelToOriginalTarget,
+            Map<CodeElement, FutureLabelTarget> originalTargetToFutureTarget
+    ) {
+        Label oldDefaultTarget = old.defaultTarget();
+        Label newDefaultTarget = originalTargetToFutureTarget.get(labelToOriginalTarget.get(oldDefaultTarget)).getLabel();
+
+        List<SwitchCase> oldSwitchCaseList = old.cases();
+        List<SwitchCase> newSwitchCaseList = new ArrayList<>();
+
+        for (SwitchCase originalSwitchCase: oldSwitchCaseList) {
+            Label originalLabel = originalSwitchCase.target();
+            Label newLabel = originalTargetToFutureTarget.get(labelToOriginalTarget.get(originalLabel)).getLabel();
+            SwitchCase newSwitchCase = SwitchCase.of(originalSwitchCase.caseValue(), newLabel);
+            newSwitchCaseList.add(newSwitchCase);
+        }
+
+        return LookupSwitchInstruction.of(newDefaultTarget, newSwitchCaseList);
+    }
+
+    private static ExceptionCatch getNewExceptionCatch(ExceptionCatch old, Map<Label, CodeElement> labelToOriginalTarget,
+                                                       Map<CodeElement, FutureLabelTarget> originalTargetToFutureTarget) {
+        Label newHandler = originalTargetToFutureTarget.get(labelToOriginalTarget.get(old.handler())).getLabel();
+        Label newTryStart = originalTargetToFutureTarget.get(labelToOriginalTarget.get(old.tryStart())).getLabel();
+        Label newTryEnd = originalTargetToFutureTarget.get(labelToOriginalTarget.get(old.tryEnd())).getLabel();
+        return ExceptionCatch.of(newHandler, newTryStart, newTryEnd, old.catchType());
+    }
+
+    private static CharacterRange getNewCharacterRange(CharacterRange old, Map<Label, CodeElement> labelToOriginalTarget,
+                                                       Map<CodeElement, FutureLabelTarget> originalTargetToFutureTarget) {
+        Label newStart = originalTargetToFutureTarget.get(labelToOriginalTarget.get(old.startScope())).getLabel();
+        Label newEnd = originalTargetToFutureTarget.get(labelToOriginalTarget.get(old.endScope())).getLabel();
+        return CharacterRange.of(newStart, newEnd, old.characterRangeStart(), old.characterRangeEnd(), old.flags());
+    }
 
 }

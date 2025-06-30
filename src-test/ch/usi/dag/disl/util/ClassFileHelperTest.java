@@ -11,8 +11,13 @@ import java.lang.classfile.constantpool.LoadableConstantEntry;
 import java.lang.classfile.instruction.ConstantInstruction;
 import java.lang.classfile.instruction.ExceptionCatch;
 import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.AccessFlag;
+import java.util.ArrayList;
 import java.util.List;
+
+import static java.lang.constant.ConstantDescs.CD_void;
 
 public class ClassFileHelperTest {
 
@@ -175,6 +180,103 @@ public class ClassFileHelperTest {
         Assert.assertEquals(Integer.valueOf(5), ClassFileHelper.getIntConstantOperand(iconst));
         Assert.assertEquals(Integer.valueOf(1000000), ClassFileHelper.getIntConstantOperand(ldc));
         Assert.assertNull(ClassFileHelper.getIntConstantOperand(lconst));
+    }
+
+    public static class BranchClass {
+        public void t(int i) {
+            if (i > 0) {
+                System.out.println("A");
+            }
+        }
+
+        public void h(int i) {
+            switch (i) {
+                case 1 -> System.out.println("1");
+                case 2 -> System.out.println("2");
+                case 3 -> System.out.println("3");
+                default -> System.out.println("default");
+            }
+        }
+    }
+
+    @Test
+    public void replaceBranchAndLabelsTargetTest() {
+        // this test need a codeBuilder and creating (or transforming) is basically the only way to get one.
+        ClassFile.of().build(ClassDesc.of("Test"), classBuilder -> {
+            classBuilder.withMethodBody("A", MethodTypeDesc.of(CD_void), AccessFlag.PUBLIC.mask(), codeBuilder -> {
+
+                ClassModel classModel = TestUtils.__loadClass(BranchClass.class);
+                MethodModelCopy methodModel = TestUtils.__getMethod(classModel, "t");
+                List<CodeElement> instructions = methodModel.instructions;
+
+                List<CodeElement> d = new ArrayList<>();
+                d.addAll(instructions);
+                d.addAll(instructions);
+
+                Assert.assertTrue(ClassFileHelper.findDoubleLabel(d));
+
+                List<CodeElement> e = new ArrayList<>();
+                e.addAll(ClassFileHelper.replaceBranchAndLabelsTarget(instructions, codeBuilder));
+                e.addAll(ClassFileHelper.replaceBranchAndLabelsTarget(instructions, codeBuilder));
+
+                Assert.assertFalse(ClassFileHelper.findDoubleLabel(e));
+
+                Assert.assertEquals(d.size(), e.size());
+
+                for (int i = 0; i < d.size(); i++) {
+                    CodeElement dElement = d.get(i);
+                    CodeElement eElement = e.get(i);
+                    if (dElement instanceof Instruction instruction) {
+                        Assert.assertTrue(eElement instanceof Instruction);
+                        Assert.assertEquals(instruction.opcode(), ((Instruction) eElement).opcode());
+                    } else {
+                        Assert.assertFalse(eElement instanceof Instruction);
+                    }
+                }
+
+                codeBuilder.return_();
+            });
+        });
+    }
+
+    @Test
+    public void replaceBranchAndLabelsTargetTest2() {
+        // this test need a codeBuilder and creating (or transforming) is basically the only way to get one.
+        ClassFile.of().build(ClassDesc.of("Test"), classBuilder -> {
+            classBuilder.withMethodBody("A", MethodTypeDesc.of(CD_void), AccessFlag.PUBLIC.mask(), codeBuilder -> {
+
+                ClassModel classModel = TestUtils.__loadClass(BranchClass.class);
+                MethodModelCopy methodModel = TestUtils.__getMethod(classModel, "h");
+                List<CodeElement> instructions = methodModel.instructions;
+
+                List<CodeElement> d = new ArrayList<>();
+                d.addAll(instructions);
+                d.addAll(instructions);
+
+                Assert.assertTrue(ClassFileHelper.findDoubleLabel(d));
+
+                List<CodeElement> e = new ArrayList<>();
+                e.addAll(ClassFileHelper.replaceBranchAndLabelsTarget(instructions, codeBuilder));
+                e.addAll(ClassFileHelper.replaceBranchAndLabelsTarget(instructions, codeBuilder));
+
+                Assert.assertFalse(ClassFileHelper.findDoubleLabel(e));
+
+                Assert.assertEquals(d.size(), e.size());
+
+                for (int i = 0; i < d.size(); i++) {
+                    CodeElement dElement = d.get(i);
+                    CodeElement eElement = e.get(i);
+                    if (dElement instanceof Instruction instruction) {
+                        Assert.assertTrue(eElement instanceof Instruction);
+                        Assert.assertEquals(instruction.opcode(), ((Instruction) eElement).opcode());
+                    } else {
+                        Assert.assertFalse(eElement instanceof Instruction);
+                    }
+                }
+
+                codeBuilder.return_(); // this is just so that the test do not crash
+            });
+        });
     }
 
 }
