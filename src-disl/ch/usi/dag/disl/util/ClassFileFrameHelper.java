@@ -75,8 +75,8 @@ public class ClassFileFrameHelper {
         return frame.getStack(frame.getStackSize() - 1 - index);
     }
 
-    public static int dupStack(Frame<SourceValue> frame, List<CodeElement> instructions,
-                               int operand, ClassDesc type, int slot) {
+    public static int dupStack(Frame<SourceValue> frame,
+                               int operand, ClassDesc type, int slot, List<CodeElement> methodInstructions) {
         SourceValue source = getStackByIndex(frame, operand);
         for (final CodeElement codeElement: source.instructions) {
             // if the instruction duplicates two-size operand(s), weaver should
@@ -88,21 +88,21 @@ public class ClassFileFrameHelper {
                         if (source.size != 1) {
                             break;
                         }
-                        dupStack(frame, instructions, operand + 2, type, slot);
+                        dupStack(frame, operand + 2, type, slot, methodInstructions);
                     }
                     case DUP2_X1 -> {
                         if (source.size != 1) {
                             break;
                         }
 
-                        dupStack (frame, instructions, operand + 3, type, slot);
+                        dupStack (frame, operand + 3, type, slot, methodInstructions);
                     }
                     case DUP2_X2 -> {
                         if (source.size != 1) {
                             break;
                         }
                         SourceValue x2 = getStackByIndex (frame, operand + 2);
-                        dupStack (frame, instructions, operand + (4 - x2.size), type, slot);
+                        dupStack (frame, operand + (4 - x2.size), type, slot, methodInstructions);
                     }
                     case SWAP -> {
                         if (operand > 0 &&
@@ -110,11 +110,11 @@ public class ClassFileFrameHelper {
                             ClassFileHelper.insertBefore(
                                     instruction,
                                     StackInstruction.of(Opcode.DUP),
-                                    instructions);
+                                    methodInstructions);
                             ClassFileHelper.insertBefore(
                                     instruction,
                                     ClassFileHelper.storeVar(TypeKind.from(type), slot),
-                                    instructions);
+                                    methodInstructions);
                         }
                     }
                     // TODO what about DUP_X1 and DUP_X2
@@ -122,6 +122,13 @@ public class ClassFileFrameHelper {
                         // Do nothing
                     }
                 }
+                // insert 'dup' instruction and then store to a local slot
+                ClassFileHelper.insert(instruction, ClassFileHelper.storeVar(TypeKind.from(type), slot), methodInstructions);
+                ClassFileHelper.insert(
+                        instruction,
+                        StackInstruction.of(source.size == 2? Opcode.DUP2: Opcode.DUP),
+                        methodInstructions
+                );
             }
         }
         return source.size;

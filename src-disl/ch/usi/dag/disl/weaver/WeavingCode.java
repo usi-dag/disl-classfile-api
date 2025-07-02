@@ -207,11 +207,19 @@ public class WeavingCode {
     private static final String __DYNAMIC_CONTEXT_INTERNAL_NAME__ =
         DynamicContext.class.getName().replace('.', '/');
 
-    // Search for an instruction sequence that stands for a request for dynamic
-    // information, and replace them with a load instruction.
-    // NOTE that if the user requests for the stack value, some store
-    // instructions will be inserted to the target method, and new local slot
-    // will be used for storing this.
+
+    /**
+     * Search for an instruction sequence that stands for a request for dynamic
+     * information, and replace them with a load instruction.
+     * NOTE that if the user requests for the stack value, some store
+     * instructions will be inserted to the target method, and new local slot
+     * will be used for storing this.
+     * @param throwing (not sure)
+     * @param instructions the instruction of the snippet (it is basically the same as this.snippetInstructions,
+     *                     I am not sure why it is passed as a parameter instead of using this.snippetInstructions, it was like this
+     *                     already in the original DiSL)
+     * @throws InvalidContextUsageException throws if the context is used wrongly
+     */
     private void rewriteDynamicContextCalls(
             final boolean throwing, final List<CodeElement> instructions
     ) throws InvalidContextUsageException {
@@ -327,7 +335,7 @@ public class WeavingCode {
                     // variable. Then load it back from there in place of the
                     // context method invocation.
                     final int varSize = ClassFileFrameHelper.dupStack(
-                            sourceFrame, instructions, itemIndex, realExpectedType.upperBound(), methodMaxLocals
+                            sourceFrame, itemIndex, realExpectedType.upperBound(), methodMaxLocals, this.methodInstructions
                     );
                     ClassFileHelper.insertBefore(
                             afterInvoke, ClassFileHelper.loadVar(realExpectedType, methodMaxLocals), instructions);
