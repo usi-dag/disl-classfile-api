@@ -424,7 +424,7 @@ public class WeavingCode {
                 __removeInstruction(Opcode.ALOAD,
                         ClassFileHelper.previousRealInstruction(instructions, paramIndexIns),
                         instructions, "rewriteDynamicContextCalls4");
-                instructions.remove(paramIndex);
+                instructions.remove(paramIndexIns);
                 instructions.remove(valueTypeIns);
                 instructions.remove(invokeInstruction);
                 __removeIfCheckCast(afterInvoke, instructions);
