@@ -83,6 +83,10 @@ public abstract class ClassFileHelper {
                     return ConstantInstruction.ofLoad(Opcode.LDC, constantEntry);
                 }
             }
+            case String s -> {
+                ConstantPoolBuilder constantPoolBuilder = ConstantPoolBuilder.of();
+                return ConstantInstruction.ofLoad(Opcode.LDC, constantPoolBuilder.stringEntry(s));
+            }
             default -> {
                 ConstantPoolBuilder constantPoolBuilder = ConstantPoolBuilder.of();
                 ClassDesc classDesc = ClassDesc.ofDescriptor(value.getClass().descriptorString());

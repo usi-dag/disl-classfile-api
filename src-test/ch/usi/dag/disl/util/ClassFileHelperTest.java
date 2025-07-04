@@ -66,22 +66,50 @@ public class ClassFileHelperTest {
         for (CodeElement element: codeElements) {
             if (element instanceof ConstantInstruction constantInstruction) {
                 Object constant = constantInstruction.constantValue().resolveConstantDesc(MethodHandles.lookup());
-                ConstantInstruction constantElement = (ConstantInstruction) ClassFileHelper.loadConst(constant);
+                ConstantInstruction constantElement = ClassFileHelper.loadConst(constant);
                 Assert.assertEquals(constantElement.opcode(), constantInstruction.opcode());
                 Assert.assertEquals(constantElement.typeKind(), constantInstruction.typeKind());
             }
         }
-        Assert.assertEquals(Opcode.ICONST_1, ClassFileHelper.loadConst(true).opcode());
-        Assert.assertEquals(Opcode.ICONST_0, ClassFileHelper.loadConst(false).opcode());
-        Assert.assertEquals(Opcode.ICONST_2, ClassFileHelper.loadConst(2).opcode());
-        Assert.assertEquals(Opcode.ICONST_3, ClassFileHelper.loadConst(3).opcode());
-        Assert.assertEquals(Opcode.BIPUSH, ClassFileHelper.loadConst(Byte.MAX_VALUE).opcode());
-        Assert.assertEquals(Opcode.SIPUSH, ClassFileHelper.loadConst(Short.MAX_VALUE).opcode());
-        Assert.assertEquals(Opcode.LDC, ClassFileHelper.loadConst(40000).opcode());
-        Assert.assertEquals(Opcode.LDC, ClassFileHelper.loadConst("Hello").opcode());
-        Assert.assertEquals(Opcode.LDC, ClassFileHelper.loadConst(new Object()).opcode());
-        Assert.assertEquals(Opcode.LDC, ClassFileHelper.loadConst(new Object[10]).opcode());
+        ConstantInstruction a = ClassFileHelper.loadConst(true);
+        Assert.assertEquals(Opcode.ICONST_1, a.opcode());
+        Assert.assertEquals(1, a.constantValue());
 
+        ConstantInstruction b = ClassFileHelper.loadConst(false);
+        Assert.assertEquals(Opcode.ICONST_0, b.opcode());
+        Assert.assertEquals(0, b.constantValue());
+
+        ConstantInstruction c = ClassFileHelper.loadConst(2);
+        Assert.assertEquals(Opcode.ICONST_2, c.opcode());
+        Assert.assertEquals(2, c.constantValue());
+
+        ConstantInstruction d = ClassFileHelper.loadConst(3);
+        Assert.assertEquals(Opcode.ICONST_3, d.opcode());
+        Assert.assertEquals(3, d.constantValue());
+
+        ConstantInstruction e = ClassFileHelper.loadConst(Byte.MAX_VALUE);
+        Assert.assertEquals(Opcode.BIPUSH, e.opcode());
+        Assert.assertEquals(127, e.constantValue());
+
+        ConstantInstruction f = ClassFileHelper.loadConst(Short.MAX_VALUE);
+        Assert.assertEquals(Opcode.SIPUSH, f.opcode());
+        Assert.assertEquals(32767, f.constantValue());
+
+        ConstantInstruction g = ClassFileHelper.loadConst(40000);
+        Assert.assertEquals(Opcode.LDC, g.opcode());
+        Assert.assertEquals(40000, g.constantValue());
+
+        ConstantInstruction h = ClassFileHelper.loadConst("Hello");
+        Assert.assertEquals(Opcode.LDC, h.opcode());
+        Assert.assertEquals("Hello", h.constantValue());
+
+        ConstantInstruction i = ClassFileHelper.loadConst(new Object());
+        Assert.assertEquals(Opcode.LDC, i.opcode());
+        Assert.assertEquals(ClassDesc.ofDescriptor(Object.class.descriptorString()), i.constantValue());
+
+        ConstantInstruction j = ClassFileHelper.loadConst(new Object[10]);
+        Assert.assertEquals(Opcode.LDC, j.opcode());
+        Assert.assertEquals(ClassDesc.ofDescriptor(Object[].class.descriptorString()), j.constantValue());
     }
 
     @Test
