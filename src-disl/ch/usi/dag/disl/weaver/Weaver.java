@@ -33,7 +33,7 @@ public class Weaver {
     private static FutureLabelTarget getEndLabel(
             List<CodeElement> instructions, CodeElement instruction, CodeBuilder codeBuilder
     ) {
-        if (ClassFileHelper.nextInstruction(instructions, instruction) != null) {
+        if (ClassFileHelper.nextRealInstruction(instructions, instruction) != null) {
             final Label branchLabel = codeBuilder.newLabel();
             final FutureLabelTarget branch = new FutureLabelTarget(branchLabel);
             ClassFileHelper.insert(instruction, branch, instructions);
@@ -304,11 +304,8 @@ public class Weaver {
                                         //boolean before4 = ClassFileHelper.findDoubleLabel(codeToInstrument);
                                         //List<CodeElement> copy = codeToInstrument.stream().toList();
 
-                                        // TODO this is be the origin of the problem of the double label !!!
-                                        //  on the test dispatch the following line insert a snippet of code that already contain a label, this causes problem
-                                        //  later when I try to create the LabelMap because the same key will point to two distinct elements and this crashes the program
-                                        //  one possible solution is to use ClassFileHelper.replaceBranchAndLabelsTarget() on wc.getInstrumentedSnippetInstructions().
-                                        //  this is similar as the solution for method __insert
+                                        // TODO maybe I should also use ClassFileHelper.replaceBranchAndLabelsTarget() on wc.getInstrumentedSnippetInstructions()
+                                        //  like in method __insert() to potentially remove conflict between labels
                                         ClassFileHelper.insertAll(handlerAndException.futureLabelTarget, wc.getInstrumentedSnippetInstructions(), codeToInstrument);
                                         //boolean after4 = ClassFileHelper.findDoubleLabel(codeToInstrument);
                                         exceptionsToAdd.add(handlerAndException.exceptionCatch); // since exception is an unmodifiable list
