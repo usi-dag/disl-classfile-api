@@ -154,7 +154,7 @@ public class ClassFileCodeTransformer {
                                     codeBuilder.athrow();
                                 });
                             })
-                            .nop();
+                            .nop(); // TODO verify that this nop is necessary
                 });
             } else {
                 methodBuilder.with(methodElement);
@@ -535,7 +535,7 @@ public class ClassFileCodeTransformer {
                             codeBuilder.with(element);
                         }
                         if (withoutReturn.getLast() instanceof LabelTarget) {
-                            codeBuilder.nop(); // add a nop otherwise the builder might trow since the label would be unbounded
+                            codeBuilder.nop(); // add a nop otherwise the builder might trow since the label would be unbounded TODO is still necessary???
                         }
                     } else { // > 1
                         final Label newLabel = codeBuilder.newLabel();
@@ -552,7 +552,7 @@ public class ClassFileCodeTransformer {
                         }
 
                         codeBuilder.labelBinding(newLabel);
-                        codeBuilder.nop();  // we need an instruction to bind the label to, otherwise the code builder will complain
+                        codeBuilder.nop();  // we need an instruction to bind the label to, otherwise the code builder will complain TODO is still necessary
                     }
                 });
             } else {
@@ -584,4 +584,33 @@ public class ClassFileCodeTransformer {
         }
         return new MethodModelCopy(applyTransformers2(oldMethod, replaceReturnsWithGoto().andThen(removeLineNumbersAndLocalVariableInfo())));
     }
+
+    private static byte[] removeNopInstructions(byte[] before) {
+        ClassModel classModel = ClassFile.of(ClassFile.LineNumbersOption.DROP_LINE_NUMBERS).parse(before);
+
+        return ClassFile.of() // potentially some option can be passed here
+                .transformClass(classModel, (classBuilder, classElement) ->
+                {
+                    if (classElement instanceof MethodModel methodModel) {
+                        classBuilder.transformMethod(methodModel, ClassFileCodeTransformer.removeNopInstructions());
+                    } else {
+                        classBuilder.with(classElement);
+                    }
+                });
+    }
+
+    public static MethodTransform removeNopInstructions() {
+        return ((builder, element) -> {
+            if (element instanceof CodeModel codeModel) {
+                builder.transformCode(codeModel, (codeBuilder, codeElement) -> {
+                    if (!(codeElement instanceof NopInstruction)) {
+                        codeBuilder.with(codeElement);
+                    }
+                });
+            } else {
+                builder.with(element);
+            }
+        });
+    }
+
 }
