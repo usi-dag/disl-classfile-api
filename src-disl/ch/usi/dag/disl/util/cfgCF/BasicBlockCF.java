@@ -76,11 +76,7 @@ public class BasicBlockCF implements Iterable<CodeElement> {
     }
 
     private CodeElement getNext(CodeElement element) {
-        final int elementIndex = this.instructions.indexOf(element);
-        if (elementIndex >= 0 && elementIndex < this.instructions.size() -1) {
-            return this.instructions.get(elementIndex + 1);
-        }
-        return null;
+        return ClassFileHelper.nextInstruction(this.instructions, element);
     }
 
 
@@ -93,7 +89,7 @@ public class BasicBlockCF implements Iterable<CodeElement> {
 
         @Override
         public boolean hasNext() {
-            return current != getNext(current);
+            return current != getNext(exit);
         }
 
         @Override
@@ -105,8 +101,7 @@ public class BasicBlockCF implements Iterable<CodeElement> {
 
         @Override
         public void remove () {
-            throw new RuntimeException();
-            //throw new DiSLFatalException ("Readonly iterator.");
+            throw new RuntimeException("BasicBlockIterator is a Readonly iterator.");
         }
 
     }
