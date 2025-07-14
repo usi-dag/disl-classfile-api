@@ -863,7 +863,9 @@ public abstract class ClassFileHelper {
         ControlFlowGraph cfg = ControlFlowGraph.build(codeElementList, tryCatchBlocks);
         List<BasicBlockCF> unvisited = cfg.getNodes();
 
-        int maxStack = getMaxStack(0, cfg.getBasicBlock(codeElementList.getFirst()), unvisited);
+        Instruction firstReal = ClassFileHelper.firstNextRealInstruction(codeElementList, codeElementList.getFirst());
+
+        int maxStack = getMaxStack(0, cfg.getBasicBlock(firstReal), unvisited);
 
         Map<Label, CodeElement> labelTargetMap = ClassFileHelper.getLabelTargetMap(codeElementList);
 
@@ -877,17 +879,36 @@ public abstract class ClassFileHelper {
         return maxStack;
     }
 
-    private static int getMaxStack(int currentStackSize, BasicBlockCF bb, List<BasicBlockCF> unvisited) {
+    private static int getMaxStack(final int initialStackSize, BasicBlockCF bb, List<BasicBlockCF> unvisited) {
         if (!unvisited.remove(bb)) {
             return 0;
         }
 
-        int maxStack = currentStackSize;
+//        List<String> strings = new ArrayList<>();
+//        int index = 0;
+
+        int maxStack = initialStackSize;
+        int currentStackSize = initialStackSize;
 
         for (CodeElement element: bb) {
             currentStackSize = execute(currentStackSize, element);
+//            if (element instanceof Instruction instruction) {
+//                strings.add("stack: " + result + ", index: " + index + ", " + instruction);
+//            } else {
+//                strings.add("stack: " + result + ", index: " + index);
+//            }
+//            index++;
+
             maxStack = Math.max(currentStackSize, maxStack);
         }
+
+//        WriteInfo info = WriteInfo.getInstance();
+//        info.writeLine("START INSTRUCTIONS").writeLine("-------------------------");
+//        info.writeLine("Initial Stack: " + initialStackSize);
+//        info.writeLine("BB: " + bb).writeLine("unvisited: " + unvisited.size());
+//        for (String s: strings) {
+//            info.writeLine(s);
+//        }
 
         for (BasicBlockCF next: bb.getSuccessors()) {
             maxStack = Math.max(getMaxStack(currentStackSize, next, unvisited), maxStack);
@@ -1154,7 +1175,7 @@ public abstract class ClassFileHelper {
             case InvokeDynamicInstruction invokeDynamicInstruction -> {
                 // [arg1, arg2, ...] → result
                 int argSize = getArgumentAndReturnSize(invokeDynamicInstruction.typeSymbol());
-                return currentStackSize - (argSize >> 2) + (argSize & 0x03);
+                return currentStackSize - (argSize >> 2) + (argSize & 0x03) + 1;
             }
             case ThrowInstruction _ -> {
                 // this is because the stack is cleared and a reference is pushed
