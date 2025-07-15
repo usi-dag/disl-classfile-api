@@ -304,9 +304,9 @@ public class Weaver {
                                         //boolean before4 = ClassFileHelper.findDoubleLabel(codeToInstrument);
                                         //List<CodeElement> copy = codeToInstrument.stream().toList();
 
-                                        // TODO maybe I should also use ClassFileHelper.replaceBranchAndLabelsTarget() on wc.getInstrumentedSnippetInstructions()
-                                        //  like in method __insert() to potentially remove conflict between labels
-                                        ClassFileHelper.insertAll(handlerAndException.futureLabelTarget, wc.getInstrumentedSnippetInstructions(), codeToInstrument);
+                                        // replace the labels
+                                        List<CodeElement> instructionWithLabelReplaced = ClassFileHelper.replaceBranchAndLabelsTarget(wc.getInstrumentedSnippetInstructions(), codeBuilder);
+                                        ClassFileHelper.insertAll(handlerAndException.futureLabelTarget, instructionWithLabelReplaced, codeToInstrument);
                                         //boolean after4 = ClassFileHelper.findDoubleLabel(codeToInstrument);
                                         exceptionsToAdd.add(handlerAndException.exceptionCatch); // since exception is an unmodifiable list
 
