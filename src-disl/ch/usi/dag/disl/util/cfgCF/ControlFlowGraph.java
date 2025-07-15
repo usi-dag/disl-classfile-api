@@ -40,7 +40,7 @@ public class ControlFlowGraph {
         methodExit = new HashSet<>();
 
         // Generating basic blocks
-        List<CodeElement> separators = BasicBlockCalculator.getAll(instructions, tryCatchBlocks, false);
+        List<CodeElement> separators = BasicBlockCalculator.getAll(this.instructions, tryCatchBlocks, false);
         CodeElement last = instructions.getLast();
         separators.add(last);
 
@@ -60,7 +60,7 @@ public class ControlFlowGraph {
 
     public ControlFlowGraph(MethodModelCopy methodModel) {
         if (!methodModel.hasCode()) {
-            throw new RuntimeException("No code for method: " + methodModel.methodName().stringValue());  // TODO improve exception
+            throw new RuntimeException("No code for method: " + methodModel.methodName().stringValue() + " while making a ControlFlowGraph");
         }
         this(methodModel.instructions(), methodModel.exceptionHandlers());
     }
@@ -195,9 +195,7 @@ public class ControlFlowGraph {
                         tryVisit(current, labelTargetMap.get(defaultTarget), exit, joints);
                     }
                 }
-                case ReturnInstruction _ -> {
-                    methodExit.add(current);
-                }
+                case ReturnInstruction _, ThrowInstruction _ -> methodExit.add(current);
                 default -> {
                     CodeElement next = ClassFileHelper.nextInstruction(instructions, exit);
                     tryVisit(current, next, exit, joints);
