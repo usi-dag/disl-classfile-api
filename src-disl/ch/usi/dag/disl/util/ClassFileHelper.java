@@ -884,13 +884,31 @@ public abstract class ClassFileHelper {
             return 0;
         }
 
+//        List<String> strings = new ArrayList<>();
+//        int index = 0;
+
         int maxStack = initialStackSize;
         int currentStackSize = initialStackSize;
 
         for (CodeElement element: bb) {
             currentStackSize = execute(currentStackSize, element);
+
+//            if (element instanceof Instruction instruction) {
+//                strings.add("stack: " + currentStackSize + ", index: " + index + ", " + instruction);
+//            } else {
+//                strings.add("stack: " + currentStackSize + ", index: " + index);
+//            }
+//            index++;
+
             maxStack = Math.max(currentStackSize, maxStack);
         }
+//        WriteInfo info = WriteInfo.getInstance();
+//        info.writeLine("START INSTRUCTIONS").writeLine("-------------------------");
+//        info.writeLine("Initial Stack: " + initialStackSize);
+//        info.writeLine("BB: " + bb).writeLine("unvisited: " + unvisited.size());
+//        for (String s: strings) {
+//            info.writeLine(s);
+//        }
 
         for (BasicBlockCF next: bb.getSuccessors()) {
             maxStack = Math.max(getMaxStack(currentStackSize, next, unvisited), maxStack);
@@ -1027,9 +1045,9 @@ public abstract class ClassFileHelper {
             0,      // fneg             value → result
             0,      // dneg             value → result
             -1,     // ishl             value1, value2 → result
-            -2,     // lshl             value1, value2 → result
+            -1,     // lshl             value1, value2 → result
             -1,     // ishr             value1, value2 → result
-            -2,     // lshr             value1, value2 → result
+            -1,     // lshr             value1, value2 → result
             -1,     // iushr            value1, value2 → result
             -1,     // lushr            value1, value2 → result
             -1,     // iand             value1, value2 → result

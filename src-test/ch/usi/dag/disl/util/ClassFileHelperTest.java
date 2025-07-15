@@ -14,6 +14,7 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.AccessFlag;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -272,6 +273,37 @@ public class ClassFileHelperTest {
             Assert.assertEquals(maxLocals, ClassFileHelper.getMaxLocals(elements, methodModel.methodTypeSymbol(), methodModel.flags()));
         }
     }
+
+    @Test
+    public void getMaxStackByteBuffer() {
+        ClassModel classModel = TestUtils.__loadClass(ByteBuffer.class);
+        List<MethodModel> methodModelList = classModel.methods();
+
+        Assert.assertFalse(methodModelList.isEmpty());
+
+        for (MethodModel methodModel: methodModelList) {
+            if (methodModel.code().isEmpty()) {
+                System.out.println("    Skipping method without code: " + methodModel.methodName());
+                continue;
+            }
+            CodeModel code = methodModel.code().get();
+            List<CodeElement> elements = ClassFileInstructionClone.copyList(code.elementList(), false);
+            List<ExceptionCatch> exceptionCatches = code.exceptionHandlers();
+            CodeAttribute attribute = methodModel.findAttribute(Attributes.code()).orElseThrow();
+            int maxStack = attribute.maxStack();
+            int maxLocals = attribute.maxLocals();
+
+            Assert.assertEquals(
+                    "Error in stack of method: " + methodModel.methodName() + " - " + methodModel.methodTypeSymbol().descriptorString(),
+                    maxStack,
+                    ClassFileHelper.getMaxStack(elements, exceptionCatches));
+            Assert.assertEquals(
+                    "Error in locals of method: " + methodModel.methodName() + " - " + methodModel.methodTypeSymbol().descriptorString(),
+                    maxLocals,
+                    ClassFileHelper.getMaxLocals(elements, methodModel.methodTypeSymbol(), methodModel.flags()));
+        }
+    }
+
 
     @Test
     public void getStringConstOperandTest() {
