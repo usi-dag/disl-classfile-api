@@ -26,14 +26,20 @@ public class ClassFileHelperTest {
         SECOND
     }
 
-    public static class TestClass {
+    public static final class TestClass {
 
+        private static final int REPL = 0;
         final boolean a = true;
         final int b = 10;
         final byte c = 1;
         final char d = 'a';
         final TestEnum e = TestEnum.FIRST;
         final String f = "F";
+
+        boolean a2;
+        int b2;
+        byte c2;
+        char d2;
 
         public void loadConstant() {
             doNothing(a);
@@ -54,6 +60,66 @@ public class ClassFileHelperTest {
         public int otherMath(int a, int b) {
             return a * 2 + b / 2;
         }
+
+        public TestClass(boolean a, int s, int x) {
+            this.a2 = a;
+            if (s > 0) {
+                b2 = 5;
+                c2 = 2;
+            }
+            switch (x) {
+                case 0 -> {d2 = 'b';}
+                case 1 -> {d2 = 'c';}
+                default -> {}
+            }
+        }
+
+        private TestClass(byte[] v, byte c) {
+            this.value = v;
+            this.coder = c;
+        }
+
+        private TestClass(){};
+        byte[] value;
+        byte coder;
+
+        private int length() {
+            return 0;
+        }
+
+        private boolean isLatin1() {
+            return true;
+        }
+
+        private boolean contentEquals(byte[] v, CharSequence c, int i) {
+            return false;
+        }
+
+        public boolean contentEquals(CharSequence cs) {
+            // Argument is a String
+            if (cs instanceof String) {
+                return equals(cs);
+            }
+            // Argument is a generic CharSequence
+            int n = cs.length();
+            if (n != length()) {
+                return false;
+            }
+            byte[] val = this.value;
+            if (isLatin1()) {
+                for (int i = 0; i < n; i++) {
+                    if ((val[i] & 0xff) != cs.charAt(i)) {
+                        return false;
+                    }
+                }
+            } else {
+                if (!contentEquals(val, cs, n)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
     }
 
     private final ClassModel testClass = TestUtils.__loadClass(TestClass.class);
@@ -181,6 +247,29 @@ public class ClassFileHelperTest {
             int maxLocals = attribute.maxLocals();
             Assert.assertEquals(maxStack, ClassFileHelper.getMaxStack(elements, exceptionCatches));
             Assert.assertEquals(maxLocals, ClassFileHelper.getMaxLocals(elements, method.methodTypeSymbol(), method.flags()));
+        }
+    }
+
+
+    @Test
+    public void getMaxStackString() {
+        ClassModel classModel = TestUtils.__loadClass(String.class);
+        List<MethodModel> methodModelList = classModel.methods();
+
+        for (MethodModel methodModel: methodModelList) {
+            if (methodModel.code().isEmpty()) {
+                System.out.println("    Skipping method without code: " + methodModel.methodName());
+                continue;
+            }
+            CodeModel code = methodModel.code().get();
+            List<CodeElement> elements = ClassFileInstructionClone.copyList(code.elementList(), false);
+            List<ExceptionCatch> exceptionCatches = code.exceptionHandlers();
+            CodeAttribute attribute = methodModel.findAttribute(Attributes.code()).orElseThrow();
+            int maxStack = attribute.maxStack();
+            int maxLocals = attribute.maxLocals();
+
+            Assert.assertEquals(maxStack, ClassFileHelper.getMaxStack(elements, exceptionCatches));
+            Assert.assertEquals(maxLocals, ClassFileHelper.getMaxLocals(elements, methodModel.methodTypeSymbol(), methodModel.flags()));
         }
     }
 

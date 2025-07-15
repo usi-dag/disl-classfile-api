@@ -884,31 +884,13 @@ public abstract class ClassFileHelper {
             return 0;
         }
 
-//        List<String> strings = new ArrayList<>();
-//        int index = 0;
-
         int maxStack = initialStackSize;
         int currentStackSize = initialStackSize;
 
         for (CodeElement element: bb) {
             currentStackSize = execute(currentStackSize, element);
-//            if (element instanceof Instruction instruction) {
-//                strings.add("stack: " + result + ", index: " + index + ", " + instruction);
-//            } else {
-//                strings.add("stack: " + result + ", index: " + index);
-//            }
-//            index++;
-
             maxStack = Math.max(currentStackSize, maxStack);
         }
-
-//        WriteInfo info = WriteInfo.getInstance();
-//        info.writeLine("START INSTRUCTIONS").writeLine("-------------------------");
-//        info.writeLine("Initial Stack: " + initialStackSize);
-//        info.writeLine("BB: " + bb).writeLine("unvisited: " + unvisited.size());
-//        for (String s: strings) {
-//            info.writeLine(s);
-//        }
 
         for (BasicBlockCF next: bb.getSuccessors()) {
             maxStack = Math.max(getMaxStack(currentStackSize, next, unvisited), maxStack);
@@ -1121,8 +1103,8 @@ public abstract class ClassFileHelper {
             -999,   // athrow           objectref → [empty], objectref
             0,      // checkcast        objectref → objectref
             0,      // instanceof       objectref → result
-            1,      // monitorenter     objectref →
-            1,      // monitorexit      objectref →
+            -1,      // monitorenter     objectref →
+            -1,      // monitorexit      objectref →
             -999,   // wide             [same as for corresponding instructions]
             -999,   // multianewarray   count1, [count2,...] → arrayref
             -1,     // ifnull           value →
