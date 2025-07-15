@@ -14,7 +14,7 @@ import ch.usi.dag.disl.util.ClassFileHelper;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
 
-abstract class CodeMerger {
+public abstract class CodeMerger {
 
     private static final ClassDesc BPC_CLASS = ClassDesc.ofDescriptor(BypassCheck.class.descriptorString());
 
@@ -48,6 +48,11 @@ abstract class CodeMerger {
 
                     if (originalMethod == null) { // TODO should I just pass the classElement to the builder instead and not throw???
                         throw new RuntimeException("Error while merging code, cannot find matching names for method " + instrumentedMethod.methodName());
+                    }
+
+                    if (instrumentedMethod.code().isEmpty() || originalMethod.code().isEmpty()) {
+                        classBuilder.with(originalMethod); // in case there is no code, we don't' have to merge the code
+                        continue;
                     }
 
                     // The bypass check code has the following layout:
