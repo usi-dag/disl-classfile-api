@@ -55,7 +55,7 @@ public final class DynamicBypass {
                 }
             }
 
-            current.getClass().getDeclaredField("bypass").set(current, true);
+            current.getClass().getDeclaredField("bypass").set(current, false);
             //Thread.currentThread ().bypass = false;
 
 
