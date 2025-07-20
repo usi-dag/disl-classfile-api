@@ -35,7 +35,8 @@ public enum ClassModelHelper {
 
     public ClassModel load(final String className) throws IOException {
         // this is what asm does internally
-        InputStream inputStream = ClassLoader.getSystemResourceAsStream(className.replace(".", "/") + ".class");
+        String resource = className.replace(".", "/") + ".class";
+        InputStream inputStream = ClassLoader.getSystemResourceAsStream(resource);
         if (inputStream == null) {
             throw new RuntimeException("Input stream is null while loading class " + className);
         }

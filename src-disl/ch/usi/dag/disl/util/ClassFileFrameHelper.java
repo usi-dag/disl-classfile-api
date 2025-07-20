@@ -161,7 +161,7 @@ public class ClassFileFrameHelper {
                     );
         } catch (AnalyzerException e) {
             throw new DiSLFatalException("Cause by AnalyzerException : \n"
-                    + e.getMessage());
+                    + e.getMessage() + "\n Owner: " + owner.toString() + " method desc: " + methodTypeDesc);
         }
         return analyzer.getFrames();
     }

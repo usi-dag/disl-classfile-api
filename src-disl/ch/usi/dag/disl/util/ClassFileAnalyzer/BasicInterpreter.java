@@ -189,12 +189,8 @@ public class BasicInterpreter extends Interpreter<BasicValue> {
             case GETFIELD:
                 FieldInstruction fieldInstruction = (FieldInstruction) instruction;
                 return newValue(TypeKind.from(fieldInstruction.typeSymbol()));
-            case NEWARRAY:
-                NewPrimitiveArrayInstruction newPrimitiveArrayInstruction = (NewPrimitiveArrayInstruction) instruction;
-                return newValue(newPrimitiveArrayInstruction.typeKind());
-            case ANEWARRAY:
-                NewReferenceArrayInstruction newReferenceArrayInstruction = (NewReferenceArrayInstruction) instruction;
-                return newValue(newReferenceArrayInstruction.componentType().typeKind());
+            case NEWARRAY, ANEWARRAY:
+                return BasicValue.REFERENCE_VALUE;
             case CHECKCAST:
                 TypeCheckInstruction typeCheckInstruction = (TypeCheckInstruction) instruction;
                 return newValue(typeCheckInstruction.type().typeKind());

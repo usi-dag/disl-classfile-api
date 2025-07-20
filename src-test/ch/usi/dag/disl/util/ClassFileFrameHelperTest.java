@@ -10,9 +10,11 @@ import org.junit.Test;
 
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeElement;
+import java.lang.classfile.MethodModel;
 import java.lang.classfile.instruction.LabelTarget;
 import java.lang.constant.ClassDesc;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -160,6 +162,32 @@ public class ClassFileFrameHelperTest {
         Assert.assertEquals(basicMapping.size(), changedInstructions.size());
         for (CodeElement element: changedInstructions) {
             Assert.assertTrue(basicMapping.containsKey(element));
+        }
+    }
+
+    @Test
+    public void arraysBasicMappingTest() {
+        Class<?> c = Arrays.class;
+        ClassModel classModel = TestUtils.__loadClass(c);
+
+        List<MethodModel> methods = classModel.methods();
+
+        for (MethodModel methodModel: methods) {
+            MethodModelCopy method = new MethodModelCopy(methodModel);
+
+            try {
+                Map<CodeElement, Frame<BasicValue>> map = ClassFileFrameHelper.createBasicMapping(
+                        ClassDesc.ofDescriptor(c.descriptorString()),
+                        method,
+                        method.instructions
+                );
+                Assert.assertFalse(map.isEmpty());
+            } catch (Exception e) {
+                System.out.println("Method: " + method.methodName + " " + method.methodTypeSymbol.descriptorString());
+                System.out.println(e.getMessage());
+                Assert.fail();
+            }
+
         }
     }
 }
