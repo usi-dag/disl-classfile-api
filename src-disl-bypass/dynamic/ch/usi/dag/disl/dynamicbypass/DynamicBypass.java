@@ -8,35 +8,20 @@ public final class DynamicBypass {
     //
 
     public static boolean isActive () {
-        try {
-            Thread current = Thread.currentThread ();
-            return (boolean) current.getClass().getDeclaredField("bypass").get(current);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
 
-        // return Thread.currentThread ().bypass;
+         return Thread.currentThread ().bypass;
     }
 
 
     public static void activate () {
         Thread current = Thread.currentThread ();
         try {
-            if (debug) {
-                // bypass should be disabled in this state
-                boolean b = (boolean) current.getClass().getDeclaredField("bypass").get(current);
-                if (b) {
-                    throw new RuntimeException (
-                            "fatal error: dynamic bypass activated twice");
-                }
-            }
 
-            current.getClass().getDeclaredField("bypass").set(current, true);
-            //Thread.currentThread ().bypass = true;
+            Thread.currentThread ().bypass = true;
 
 
 
-        } catch (NoSuchFieldException | IllegalAccessException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -46,20 +31,10 @@ public final class DynamicBypass {
         Thread current = Thread.currentThread ();
         try {
 
-            if (debug) {
-                // bypass should be enabled in this state
-                boolean b = (boolean) current.getClass().getDeclaredField("bypass").get(current);
-                if (!b) {
-                    throw new RuntimeException (
-                            "fatal error: dynamic bypass deactivated twice");
-                }
-            }
-
-            current.getClass().getDeclaredField("bypass").set(current, false);
-            //Thread.currentThread ().bypass = false;
+            Thread.currentThread ().bypass = false;
 
 
-        } catch (NoSuchFieldException | IllegalAccessException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }

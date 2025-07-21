@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import ch.usi.dag.disl.dynamicbypass.BypassCheck;
 import ch.usi.dag.disl.exception.DiSLFatalException;
 import ch.usi.dag.disl.util.ClassFileHelper;
+import ch.usi.dag.disl.util.JavaNames;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
@@ -50,8 +51,21 @@ public abstract class CodeMerger {
                         throw new RuntimeException("Error while merging code, cannot find matching names for method " + instrumentedMethod.methodName());
                     }
 
-                    if (instrumentedMethod.code().isEmpty() || originalMethod.code().isEmpty()) {
-                        classBuilder.with(originalMethod); // in case there is no code, we don't' have to merge the code
+                    if (instrumentedClass.thisClass().asSymbol().descriptorString().equals(Thread.class.descriptorString()) &&
+                            JavaNames.isConstructorName(instrumentedMethod.methodName().stringValue())
+                    ) {
+                        // if the class is Thread and the method is a constructor we don't add a dynamic bypass
+                        classBuilder.with(instrumentedMethod);
+                        continue;
+                    }
+
+                    // if there is no code there is no need to merge
+                    if (originalMethod.code().isEmpty()) {
+                        classBuilder.with(instrumentedMethod);
+                        continue;
+                    }
+                    if (instrumentedMethod.code().isEmpty()) {
+                        classBuilder.with(originalMethod);
                         continue;
                     }
 
@@ -63,7 +77,8 @@ public abstract class CodeMerger {
                     //         <original code>
                     //     }
                     classBuilder.transformMethod(originalMethod, (methodBuilder, methodElement) -> {
-                        if (methodElement instanceof CodeModel codeModel) {
+                        if (methodElement instanceof CodeModel codeModel &&
+                                changedMethods.contains(ClassFileHelper.nameAndDescriptor(instrumentedMethod))) {
                             methodBuilder.withCode(codeBuilder -> {
                                 // first invoke the method that will put the boolean result on the stack
                                 codeBuilder.invokestatic(BPC_CLASS, BPC_METHOD, BPC_DESC);

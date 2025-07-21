@@ -20,12 +20,11 @@ import ch.usi.dag.disl.scope.Scope;
 import ch.usi.dag.disl.snippet.Shadow;
 import ch.usi.dag.disl.snippet.Snippet;
 import ch.usi.dag.disl.staticcontext.generator.SCGenerator;
-import ch.usi.dag.disl.util.ClassFileHelper;
-import ch.usi.dag.disl.util.Logging;
-import ch.usi.dag.disl.util.MethodModelCopy;
-import ch.usi.dag.disl.util.WriteInfo;
+import ch.usi.dag.disl.util.*;
 import ch.usi.dag.disl.weaver.Weaver;
 import ch.usi.dag.util.logging.Logger;
+
+import static java.lang.constant.ConstantDescs.CD_boolean;
 
 
 /**
@@ -132,10 +131,6 @@ public final class DiSL {
         final Transformers transformers = Transformers.load (resources.transformers ());
         final Set <Scope> excludedScopes = ExclusionSet.prepare (resources.instrumentationResources ());
         final DislClasses dislClasses = DislClasses.load (codeOptions, resources.dislClasses ());
-//
-//        resources.serialize("serialized.txt");
-//        WriteInfo info = WriteInfo.getInstance();
-//        codeOptions.forEach(c -> info.writeLine("{{{CodeOption: " + codeOptions + " }}}"));
 
         // TODO put checker here
         // like After should catch normal and abnormal execution
@@ -367,47 +362,54 @@ public final class DiSL {
 
                         if (!methodChanged) {
                                 classBuilder.with(methodModel); // if the method was not changed then add it back like the original
-                            } else {
-                                changedMethods.add(ClassFileHelper.nameAndDescriptor(methodModel));
-                            }
+                        } else {
+                            changedMethods.add(ClassFileHelper.nameAndDescriptor(methodModel));
+                        }
 
                     } else {
                         classBuilder.with(classElement); // add all other elements as the original
                     }
                 }
+            });
 
+            byte[] instrumentedThread = null;
+            if (classModel.thisClass().asSymbol().descriptorString().equals(Thread.class.descriptorString())) {
                 // If the instrumented class is the Thread class, add fields that
                 // will provide thread-local variables to the code in the snippets.
-                if (classModel.thisClass().asSymbol().descriptorString().equals(Thread.class.descriptorString())) {
+                ClassModel instrumented = ClassFile.of().parse(instrumentedClass);
 
-                    final Set<ThreadLocalVar> tlvs = __collectReferencedTLVs(__dislClasses.getSnippets());
-
-                    if (__codeOptions.contains(CodeOption.DYNAMIC_BYPASS)) {
-                        tlvs.add(__createBypassTlv());
-                    }
-
-                    if (!tlvs.isEmpty()) {
-                        ClassFileTLVInserter.insertThreadLocalVariables(tlvs, classBuilder, classModel);
-                    }
+                final Set<ThreadLocalVar> tlvs = __collectReferencedTLVs(__dislClasses.getSnippets());
+                if (__codeOptions.contains(CodeOption.DYNAMIC_BYPASS)) {
+                    tlvs.add(__createBypassTlv());
                 }
-            });
+
+                instrumentedThread = ClassFile.of().build(instrumented.thisClass().asSymbol(), classBuilder -> {
+
+                    for (ThreadLocalVar tlv: tlvs) {
+                        // add a new field for each tlv
+                        classBuilder.withField(tlv.getName(), ClassDesc.ofDescriptor(tlv.getDescriptor()), AccessFlag.PUBLIC.mask());
+                    }
+
+                    for (ClassElement classElement: instrumented) {
+                        if (classElement instanceof MethodModel methodModel && JavaNames.isConstructorName(methodModel.methodName().stringValue())) {
+                            // if is a constructor add the initialization code
+                            ClassFileTLVInserter.insertThreadLocalVariables(tlvs, classBuilder, methodModel);
+                        } else {
+                            classBuilder.with(classElement);
+                        }
+                    }
+                });
+            }
 
             boolean classChanged = !changedMethods.isEmpty();
 
+            if (instrumentedThread != null && instrumentedThread.length > 0) {
+                classChanged = true;
+                instrumentedClass = instrumentedThread;
+            }
+
             return classChanged? new InstrumentedClass(classModel, changedMethods, instrumentedClass): null;
         } catch (Exception e) {
-//            WriteInfo info = WriteInfo.getInstance();
-//            if (e.getMessage() == null) {
-//                info.writeLine("An exception occurred: somehow the message from the exception is null ");
-//                throw new RuntimeException(e);
-//            }
-//            info.writeLine(">>>>>> Exception in instrumentClass");
-//            info.writeLine("Message: " + e.getMessage());
-//            info.writeLine(String.valueOf(e.getClass()));
-//            for ( StackTraceElement element: e.getStackTrace()) {
-//                info.writeLine(element.toString());
-//            }
-//            info.writeLine("<<< Exception end");
             throw new RuntimeException(e);
         }
     }
@@ -416,7 +418,7 @@ public final class DiSL {
     private ThreadLocalVar __createBypassTlv () {
         // prepare dynamic bypass thread local variable
         final ThreadLocalVar result = new ThreadLocalVar (
-            null, "bypass", ClassDesc.ofDescriptor(boolean.class.descriptorString()), false
+            null, "bypass", CD_boolean, false
         );
 
         result.setInitialValue (false);
@@ -445,7 +447,7 @@ public final class DiSL {
             __dumpBytesToFile (originalBytes, "err.class");
         }
 
-        final byte [] transformedBytes = __transformers.apply(originalBytes); // TODO this is done by the user
+        final byte [] transformedBytes = __transformers.apply(originalBytes); // this is done by the user
 
         // TODO might use ClassModelHelper to pass some options instead of this
         //  also for now the lines will need to be dropped since there can be cases where
