@@ -98,20 +98,23 @@ public final class DiSLServer {
                     __log.trace ("receiving instrumentation request");
 
                     headBuffer.clear ();
-                    __bufferRecvFrom (__clientSocket, Integer.BYTES, headBuffer);
+                    __bufferRecvFrom (__clientSocket, 1 + Integer.BYTES, headBuffer);
 
                     headBuffer.flip ();
-                    final int messageLength = headBuffer.getInt ();
-                    __log.trace ("expecting message of length %d", messageLength);
+                    final int messageType = headBuffer.get();
+                    __log.trace ("expecting message of Type %d", messageType);
 
-                    if (messageLength == 0) {
+                    if (messageType == 0) {
                         __log.debug ("received empty message, exiting");
                         timer.mark (ElapsedTime.RECEIVE);
                         stats.update (timer);
                         break REQUEST_LOOP;
                     }
 
-                    recvBuffer.clear ();
+                    final int messageLength = headBuffer.getInt();
+                    __log.trace ("expecting message of length %d", messageLength);
+
+                    recvBuffer.clear();
                     if (recvBuffer.remaining () < messageLength) {
                         recvBuffer = __expandBuffer (recvBuffer, messageLength);
                         __log.debug ("expanded receive buffer to %d bytes", recvBuffer.capacity ());
@@ -234,9 +237,9 @@ public final class DiSLServer {
         private void __bufferRecvFrom (
             final SocketChannel sc, final int length, final ByteBuffer buffer
         ) throws IOException {
-            buffer.limit (buffer.position () + length);
-            while (buffer.hasRemaining ()) {
-                final int bytesRead = sc.read (buffer);
+            buffer.limit (buffer.position() + length);
+            while (buffer.hasRemaining()) {
+                final int bytesRead = sc.read(buffer);
                 if (bytesRead < 0) {
                     throw new EOFException ("unexpected end of stream");
                 }

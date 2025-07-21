@@ -29,6 +29,9 @@
 		<dependency org="${asm.org}" name="asm-commons" rev="${asm.rev}" conf="disl->default;devel->sources,javadoc" />
 		<dependency org="${log4j.org}" name="log4j" rev="${log4j.rev}" conf="disl->default;devel->sources,javadoc" />
 		<dependency org="${protobuf.org}" name="${protobuf.lib}" rev="${protobuf.rev}" conf="disl->default;devel->sources,javadoc" />
+		<dependency org="${classgraph.org}" name="${classgraph.lib}" rev="${classgraph.rev}" conf="disl->default;devel->sources,javadoc" />
+		<dependency org="${args4j.org}" name="${args4j.lib}" rev="${args4j.rev}" conf="disl->default;devel->sources,javadoc" />
+		<dependency org="${narcissus.org}" name="${narcissus.lib}" rev="${narcissus.rev}" conf="disl->default;devel->sources,javadoc" />
 	</dependencies>
 
 </ivy-module>

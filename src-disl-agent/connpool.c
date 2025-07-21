@@ -59,14 +59,14 @@ struct connection *
 connection_pool_get_connection (struct connection_pool * cp) {
 	assert (cp != NULL);
 
-	ldebug ("getting connection for %s: ", cp->endpoint->ai_canonname);
+	dlprintf ("getting connection for %s: ", cp->endpoint->ai_canonname);
 
 	//
 	// Grab the first available connection and return. If there is no connection
 	// available, create a new one and add it to the busy connection list.
 	//
 	if (!list_is_empty (&cp->free_connections)) {
-		debug ("reusing a connection [%d in total]\n", cp->connections_count);
+		dprintf ("reusing a connection [%d in total]\n", cp->connections_count);
 		struct list * item = list_remove_after (&cp->free_connections);
 		list_insert_after (item, &cp->busy_connections);
 		return list_item (item, struct connection, cp_link);
@@ -80,7 +80,7 @@ connection_pool_get_connection (struct connection_pool * cp) {
 		list_insert_after (&connection->cp_link, &cp->busy_connections);
 		cp->connections_count++;
 
-		debug ("created new connection [%d in total]\n", cp->connections_count);
+		dprintf ("created new connection [%d in total]\n", cp->connections_count);
 		return connection;
 	}
 }
@@ -129,7 +129,7 @@ void
 connection_pool_close (struct connection_pool * cp) {
 	assert (cp != NULL);
 
-	ldebug (
+	dlprintf (
 		"closing pool for %s: max connections %d\n",
 		cp->endpoint->ai_canonname, cp->connections_count
 	);

@@ -21,7 +21,7 @@
  */
 #define PACKED __attribute__ ((__packed__))
 
-#if defined(WHOLE) && __has_attribute(externally_visible)
+#ifdef WHOLE
 #define VISIBLE __attribute__ ((externally_visible))
 #else
 #define VISIBLE
@@ -51,15 +51,22 @@
  *
  */
 #ifdef NDEBUG
-#  define debug(args...) do {} while (0)
+#  define dprintf(args...) do {} while (0)
 #else
-#  define debug(args...) fprintf (stdout, args); fflush (stdout)
+#  define dprintf(args...) fprintf (stdout, args); fflush (stdout)
 #endif
 
 
-#define ldebug(args...) { \
-	debug ("%s:%d: ", __FUNCTION__, __LINE__); \
-	debug (args); \
+#define dlprintf(args...) { \
+	dprintf ("%s:%d: ", __FUNCTION__, __LINE__); \
+	dprintf (args); \
+}
+
+
+#define dlwrap(code) { \
+	dlprintf (""); \
+	code; \
+	dprintf ("\n"); \
 }
 
 //

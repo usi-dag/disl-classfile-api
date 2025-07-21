@@ -17,6 +17,8 @@ PROTOBUF_C__BEGIN_DECLS
 
 typedef struct _InstrumentClassRequest InstrumentClassRequest;
 typedef struct _InstrumentClassResponse InstrumentClassResponse;
+typedef struct _ControllerRequest ControllerRequest;
+typedef struct _ControllerResponse ControllerResponse;
 
 
 /* --- enums --- */
@@ -27,6 +29,16 @@ typedef enum _InstrumentClassResult {
   INSTRUMENT_CLASS_RESULT__ERROR = 3
     PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(INSTRUMENT_CLASS_RESULT)
 } InstrumentClassResult;
+typedef enum _ControllerAction {
+  CONTROLLER_ACTION__DEPLOY = 0,
+  CONTROLLER_ACTION__UNDEPLOY = 1
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(CONTROLLER_ACTION)
+} ControllerAction;
+typedef enum _ControllerResult {
+  CONTROLLER_RESULT__OK = 0,
+  CONTROLLER_RESULT__KO = 1
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(CONTROLLER_RESULT)
+} ControllerResult;
 
 /* --- messages --- */
 
@@ -36,10 +48,13 @@ struct  _InstrumentClassRequest
   int32_t flags;
   char *classname;
   ProtobufCBinaryData classbytes;
+  int32_t classloadertag;
+  ProtobufCBinaryData classloaderbytes;
+  ProtobufCBinaryData supertypesbytes;
 };
 #define INSTRUMENT_CLASS_REQUEST__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&instrument_class_request__descriptor) \
-    , 0, (char *)protobuf_c_empty_string, {0,NULL} }
+    , 0, (char *)protobuf_c_empty_string, {0,NULL}, 0, {0,NULL}, {0,NULL} }
 
 
 struct  _InstrumentClassResponse
@@ -52,6 +67,28 @@ struct  _InstrumentClassResponse
 #define INSTRUMENT_CLASS_RESPONSE__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&instrument_class_response__descriptor) \
     , INSTRUMENT_CLASS_RESULT__CLASS_UNMODIFIED, (char *)protobuf_c_empty_string, {0,NULL} }
+
+
+struct  _ControllerRequest
+{
+  ProtobufCMessage base;
+  ControllerAction action;
+  char *snippetname;
+};
+#define CONTROLLER_REQUEST__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&controller_request__descriptor) \
+    , CONTROLLER_ACTION__DEPLOY, (char *)protobuf_c_empty_string }
+
+
+struct  _ControllerResponse
+{
+  ProtobufCMessage base;
+  ControllerResult result;
+  char *errormessage;
+};
+#define CONTROLLER_RESPONSE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&controller_response__descriptor) \
+    , CONTROLLER_RESULT__OK, (char *)protobuf_c_empty_string }
 
 
 /* InstrumentClassRequest methods */
@@ -92,6 +129,44 @@ InstrumentClassResponse *
 void   instrument_class_response__free_unpacked
                      (InstrumentClassResponse *message,
                       ProtobufCAllocator *allocator);
+/* ControllerRequest methods */
+void   controller_request__init
+                     (ControllerRequest         *message);
+size_t controller_request__get_packed_size
+                     (const ControllerRequest   *message);
+size_t controller_request__pack
+                     (const ControllerRequest   *message,
+                      uint8_t             *out);
+size_t controller_request__pack_to_buffer
+                     (const ControllerRequest   *message,
+                      ProtobufCBuffer     *buffer);
+ControllerRequest *
+       controller_request__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   controller_request__free_unpacked
+                     (ControllerRequest *message,
+                      ProtobufCAllocator *allocator);
+/* ControllerResponse methods */
+void   controller_response__init
+                     (ControllerResponse         *message);
+size_t controller_response__get_packed_size
+                     (const ControllerResponse   *message);
+size_t controller_response__pack
+                     (const ControllerResponse   *message,
+                      uint8_t             *out);
+size_t controller_response__pack_to_buffer
+                     (const ControllerResponse   *message,
+                      ProtobufCBuffer     *buffer);
+ControllerResponse *
+       controller_response__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   controller_response__free_unpacked
+                     (ControllerResponse *message,
+                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
 typedef void (*InstrumentClassRequest_Closure)
@@ -100,6 +175,12 @@ typedef void (*InstrumentClassRequest_Closure)
 typedef void (*InstrumentClassResponse_Closure)
                  (const InstrumentClassResponse *message,
                   void *closure_data);
+typedef void (*ControllerRequest_Closure)
+                 (const ControllerRequest *message,
+                  void *closure_data);
+typedef void (*ControllerResponse_Closure)
+                 (const ControllerResponse *message,
+                  void *closure_data);
 
 /* --- services --- */
 
@@ -107,8 +188,12 @@ typedef void (*InstrumentClassResponse_Closure)
 /* --- descriptors --- */
 
 extern const ProtobufCEnumDescriptor    instrument_class_result__descriptor;
+extern const ProtobufCEnumDescriptor    controller_action__descriptor;
+extern const ProtobufCEnumDescriptor    controller_result__descriptor;
 extern const ProtobufCMessageDescriptor instrument_class_request__descriptor;
 extern const ProtobufCMessageDescriptor instrument_class_response__descriptor;
+extern const ProtobufCMessageDescriptor controller_request__descriptor;
+extern const ProtobufCMessageDescriptor controller_response__descriptor;
 
 PROTOBUF_C__END_DECLS
 

@@ -256,6 +256,18 @@
 			<fileset dir="${lib.disl.dir}" includes="protobuf*.jar"/>
 		</path>
 
+		<path id="classgraph.classpath">
+			<fileset dir="${lib.disl.dir}" includes="classgraph*.jar"/>
+		</path>
+
+		<path id="args4j.classpath">
+			<fileset dir="${lib.disl.dir}" includes="args4j*.jar"/>
+		</path>
+
+		<path id="narcissus.classpath">
+			<fileset dir="${lib.disl.dir}" includes="narcissus*.jar"/>
+		</path>
+
 		<!-- Get ProtoBuf Java libs from ProtoBuf class path. -->
 		<pathconvert pathsep=" " property="protobuf.libs" refid="protobuf.classpath">
 			<mapper type="flatten"/>
@@ -268,6 +280,7 @@
 
 		<path id="disl.classpath">
 			<pathelement location="${build.disl}"/>
+			<pathelement location="${build.disl.controller}"/>
 		</path>
 
 		<path id="disl.bypass.classpath">
@@ -318,6 +331,7 @@
 			<case value="x86_64"><property name="disl.agent.arch" value="x86_64"/></case>
 			<case value="amd64"><property name="disl.agent.arch" value="x86_64"/></case>
 			<case value="ppc64"><property name="disl.agent.arch" value="ppc64"/></case>
+			<case value="aarch64"><property name="disl.agent.arch" value="aarch64"/></case>
 			<default><property name="disl.agent.arch" value="x86"/></default>
 		</ac:switch>
 
@@ -479,7 +493,19 @@
 
 	<!-- DiSL -->
 
-	<target name="compile-disl" depends="compile-util,compile-disl-bypass">
+	<target name="compile-disl-controller">
+		<mkdir dir="${build.disl.controller}"/>
+		<javac destdir="${build.disl.controller}" srcdir="${src.disl.controller}" debug="true" release="24">
+			<compilerarg value="--enable-preview" />
+		</javac>
+	</target>
+
+
+	<target name="build-disl-controller" depends="compile-disl-controller">
+		<jar destfile="${out.lib}/${disl.controller.lib}" basedir="${build.disl.controller}"/>
+	</target>
+
+	<target name="compile-disl" depends="compile-util,compile-disl-bypass,compile-disl-controller">
 		<mkdir dir="${build.disl}"/>
 		<javac destdir="${build.disl}" srcdir="${src.disl}" debug="true" release="24" >
 			<compilerarg value="--enable-preview" />
@@ -493,7 +519,7 @@
 	</target>
 
 
-	<target name="build-disl" depends="compile-disl,build-disl-bypass">
+	<target name="build-disl" depends="compile-disl,build-disl-bypass,build-disl-controller">
 		<local name="server.class"/>
 		<find-class property="server.class" dir="${build.disl}" name="DiSLServer"/>
 
@@ -535,8 +561,8 @@
 	</target>
 
 	<target name="-generate-disl-agent-codeflags" depends="compile-disl">
-	    <delete dir="${build.disl.native}" />
-        <mkdir dir="${build.disl.native}" />
+		<delete dir="${build.disl.native}" />
+		<mkdir dir="${build.disl.native}" />
 
 		<javac srcdir="${src.disl}" destdir="${build.disl.native}" nativeheaderdir="${build.disl.native}" debug="false" includeantruntime="false" release="24">
 			<include name="**/DiSL.java"/>
@@ -719,6 +745,7 @@
 		<path refid="shvm.classpath"/>
 		<path refid="junit.classpath"/>
 		<path refid="asm.classpath"/>
+		<path refid="disl.bypass.classpath"/>
 	</path>
 
 	<target name="compile-test" depends="-init,compile-util,compile-disl,compile-shvm">
@@ -840,15 +867,15 @@
 					<include name="**/suite/${test.name}/junit/*Test.java"/>
 				</fileset>
 			</ac:then><ac:else>
-				<echo>Running all tests.</echo>
-				<fileset id="test.batch" dir="${src.test}">
-					<include name="**/junit/*Test.java"/>
-					<include name="**/disl/*Test.java"/>
-					<include name="**/disl/scope/*Test.java"/>
-					<include name="**/disl/util/cfg/*Test.java"/>
-					<include name="**/dislreserver/shadow/*Test.java"/>
-				</fileset>
-			</ac:else>
+			<echo>Running all tests.</echo>
+			<fileset id="test.batch" dir="${src.test}">
+				<include name="**/junit/*Test.java"/>
+				<include name="**/disl/*Test.java"/>
+				<include name="**/disl/scope/*Test.java"/>
+				<include name="**/disl/util/cfg/*Test.java"/>
+				<include name="**/dislreserver/shadow/*Test.java"/>
+			</fileset>
+		</ac:else>
 		</ac:if>
 
 		<!--
@@ -863,6 +890,7 @@
 			<classpath>
 				<path refid="asm.classpath"/>
 				<path refid="junit.classpath"/>
+				<path refid="disl.bypass.classpath"/>
 				<pathelement location="${build.test}"/>
 				<pathelement location="${build.util}"/>
 				<pathelement location="${build.disl}"/>
@@ -978,7 +1006,9 @@
 				<fileset dir="${src.disl.bypass}">
 					<include name="**/DynamicBypass.java"/>
 				</fileset>
-
+				<fileset dir="${src.disl.controller}">
+					<include name="**/DiSLController.java"/>
+				</fileset>
 				<fileset dir="${src.shvm}">
 					<include name="**/RemoteAnalysis.java"/>
 					<include name="**/ShadowObject.java"/>
@@ -1015,6 +1045,9 @@
 		<copy todir="${out.lib}" flatten="true">
 			<path refid="asm.classpath"/>
 			<path refid="protobuf.classpath"/>
+			<path refid="classgraph.classpath"/>
+			<path refid="args4j.classpath"/>
+			<path refid="narcissus.classpath"/>
 		</copy>
 	</target>
 
@@ -1023,6 +1056,7 @@
 		<zip destfile="${out.src}/src.zip">
 			<zipfileset dir="${src.disl}"/>
 			<zipfileset dir="${src.disl.bypass}/dynamic"/>
+			<zipfileset dir="${src.disl.controller}"/>
 			<zipfileset dir="${src.shvm}"/>
 			<zipfileset dir="${src.shvm.dispatch}"/>
 			<zipfileset dir="${src.util}"/>
@@ -1089,14 +1123,34 @@
 	</target>
 
 
+	<!-- Preprocessor -->
+	<target name="compile-preprocessor">
+		<mkdir dir="${build.preprocessor}"/>
+		<javac destdir="${build.preprocessor}" srcdir="${src.preprocessor}" debug="true" release="24">
+			<compilerarg value="--enable-preview" />
+			<classpath refid="classgraph.classpath"/>
+			<classpath refid="args4j.classpath"/>
+			<classpath refid="narcissus.classpath"/>
+		</javac>
+	</target>
+
+	<target name="build-preprocessor" depends="compile-preprocessor">
+		<jar destfile="${out.lib}/${disl.preprocessor.lib}" basedir="${build.preprocessor}">
+			<manifest>
+				<attribute name="Main-Class" value="ch.usi.dag.disl.preprocessor.Parser"/>
+			</manifest>
+		</jar>
+	</target>
+
+
 	<!-- Summary targets -->
-        <target name="properties" depends="-determine-lib-names">
+	<target name="properties" depends="-determine-lib-names">
 		<echoproperties/>
-        </target>
+	</target>
 
-	<target name="compile" depends="compile-disl,compile-disl-agent,compile-shvm,compile-shvm-agent" description="Compiles DiSL, Shadow VM, and the JVM agents for both."/>
+	<target name="compile" depends="compile-disl,compile-disl-agent,compile-shvm,compile-shvm-agent,compile-preprocessor" description="Compiles DiSL, Shadow VM, and the JVM agents for both."/>
 
-	<target name="build" depends="build-disl,build-disl-agent,build-shvm,build-shvm-agent,copy-libs" description="Builds DiSL and Shadow VM, without documentation."/>
+	<target name="build" depends="build-disl,build-disl-agent,build-shvm,build-shvm-agent,build-preprocessor,copy-libs" description="Builds DiSL and Shadow VM, without documentation."/>
 
 	<target name="eclipse" depends="download-sources,build-eclipse-agent,build-disl-bypass" description="Creates libraries for developing DiSL under Eclipse."/>
 

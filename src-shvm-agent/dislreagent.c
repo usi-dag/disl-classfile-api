@@ -25,7 +25,6 @@
 
 #include "dislreagent.h"
 
-
 // defaults - be sure that space in host_name is long enough
 static const char * DEFAULT_HOST = "localhost";
 static const char * DEFAULT_PORT = "11218";
@@ -65,11 +64,10 @@ static volatile int no_sending_work = FALSE;
 static blocking_queue utility_q;
 
 // number of all buffers - used for analysis with some exceptions
-#define BQ_BUFFERS 32
+#define BQ_BUFFERS 1024
 
 // number of analysis requests in one message
 #define ANALYSIS_COUNT 16384
-
 
 // queue with empty buffers
 static blocking_queue empty_q;
@@ -108,7 +106,7 @@ typedef struct {
 
 #define INVALID_BUFF_ID -1
 
-#define TO_BUFFER_MAX_ID 127 // byte is the holding type
+#define TO_BUFFER_MAX_ID 1023 // byte is the holding type
 #define TO_BUFFER_COUNT (TO_BUFFER_MAX_ID + 1) // +1 for buffer id 0
 
 static jrawMonitorID to_buff_lock;
@@ -1339,6 +1337,8 @@ void JNICALL jvmti_callback_class_file_load_hook(
 		jint class_data_len, const unsigned char* class_data,
 		jint* new_class_data_len, unsigned char** new_class_data
 ) {
+	struct tldata * tld = tld_get();
+
 	// TODO instrument analysis classes
 
 #ifdef DEBUG
@@ -1361,7 +1361,7 @@ void JNICALL jvmti_callback_class_file_load_hook(
 		jlong loader_id = NULL_NET_REF;
 
 		// obtain buffer
-		process_buffs * buffs = buffs_utility_get();
+		process_buffs * buffs = buffs_utility_get(tld->id);
 		buffer * buff = buffs->analysis_buff;
 
 		// this callback can be called before the jvm is started
@@ -1757,7 +1757,7 @@ void JNICALL jvmti_callback_thread_end_hook(
 
 // ******************* JVMTI entry method *******************
 
-#if defined(WHOLE) && __has_attribute(externally_visible)
+#ifdef WHOLE
 #define VISIBLE __attribute__((externally_visible))
 #else
 #define VISIBLE

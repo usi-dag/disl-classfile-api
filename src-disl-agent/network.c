@@ -51,8 +51,12 @@ __connection_close_hook (struct connection * conn) {
 	// Send an empty message to the server before closing the connection
 	// to indicate end of processing for that connection.
 	//
-	uint32_t message_size_data = htonl (0);
-	connection_send_full (conn, &message_size_data, sizeof (message_size_data));
+	size_t message_size = 1 + sizeof (uint32_t);
+
+	char data[message_size];
+	memset (data, 0, message_size);
+
+	connection_send_full (conn, data, message_size);
 }
 
 
@@ -109,7 +113,7 @@ network_fini () {
 
 struct connection *
 network_acquire_connection () {
-	ldebug ("acquiring connection ... ");
+	dlprintf ("acquiring connection ... ");
 
 	//
 	// The connection pool must be protected by a lock so that multiple threads
@@ -124,7 +128,7 @@ network_acquire_connection () {
 
 	//
 
-	debug ("done\n");
+	dprintf ("done\n");
 	return connection;
 }
 
@@ -135,7 +139,7 @@ network_acquire_connection () {
 void
 network_release_connection (struct connection * connection) {
 	assert (connection != NULL);
-	ldebug ("releasing connection ... ");
+	dlprintf ("releasing connection ... ");
 
 	//
 	// The connection pool must be protected by a lock so that multiple threads
@@ -149,5 +153,5 @@ network_release_connection (struct connection * connection) {
 
 	//
 
-	debug ("done\n");
+	dprintf ("done\n");
 }

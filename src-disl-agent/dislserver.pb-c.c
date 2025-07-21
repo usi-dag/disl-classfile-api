@@ -97,7 +97,97 @@ void   instrument_class_response__free_unpacked
   assert(message->base.descriptor == &instrument_class_response__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor instrument_class_request__field_descriptors[3] =
+void   controller_request__init
+                     (ControllerRequest         *message)
+{
+  static const ControllerRequest init_value = CONTROLLER_REQUEST__INIT;
+  *message = init_value;
+}
+size_t controller_request__get_packed_size
+                     (const ControllerRequest *message)
+{
+  assert(message->base.descriptor == &controller_request__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t controller_request__pack
+                     (const ControllerRequest *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &controller_request__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t controller_request__pack_to_buffer
+                     (const ControllerRequest *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &controller_request__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+ControllerRequest *
+       controller_request__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (ControllerRequest *)
+     protobuf_c_message_unpack (&controller_request__descriptor,
+                                allocator, len, data);
+}
+void   controller_request__free_unpacked
+                     (ControllerRequest *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &controller_request__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+void   controller_response__init
+                     (ControllerResponse         *message)
+{
+  static const ControllerResponse init_value = CONTROLLER_RESPONSE__INIT;
+  *message = init_value;
+}
+size_t controller_response__get_packed_size
+                     (const ControllerResponse *message)
+{
+  assert(message->base.descriptor == &controller_response__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t controller_response__pack
+                     (const ControllerResponse *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &controller_response__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t controller_response__pack_to_buffer
+                     (const ControllerResponse *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &controller_response__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+ControllerResponse *
+       controller_response__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (ControllerResponse *)
+     protobuf_c_message_unpack (&controller_response__descriptor,
+                                allocator, len, data);
+}
+void   controller_response__free_unpacked
+                     (ControllerResponse *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &controller_response__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+static const ProtobufCFieldDescriptor instrument_class_request__field_descriptors[6] =
 {
   {
     "flags",
@@ -135,16 +225,55 @@ static const ProtobufCFieldDescriptor instrument_class_request__field_descriptor
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "classLoaderTag",
+    4,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT32,
+    0,   /* quantifier_offset */
+    offsetof(InstrumentClassRequest, classloadertag),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "classLoaderBytes",
+    5,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(InstrumentClassRequest, classloaderbytes),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "superTypesBytes",
+    6,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(InstrumentClassRequest, supertypesbytes),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned instrument_class_request__field_indices_by_name[] = {
   2,   /* field[2] = classBytes */
+  4,   /* field[4] = classLoaderBytes */
+  3,   /* field[3] = classLoaderTag */
   1,   /* field[1] = className */
   0,   /* field[0] = flags */
+  5,   /* field[5] = superTypesBytes */
 };
 static const ProtobufCIntRange instrument_class_request__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 3 }
+  { 0, 6 }
 };
 const ProtobufCMessageDescriptor instrument_class_request__descriptor =
 {
@@ -154,7 +283,7 @@ const ProtobufCMessageDescriptor instrument_class_request__descriptor =
   "InstrumentClassRequest",
   "",
   sizeof(InstrumentClassRequest),
-  3,
+  6,
   instrument_class_request__field_descriptors,
   instrument_class_request__field_indices_by_name,
   1,  instrument_class_request__number_ranges,
@@ -225,6 +354,108 @@ const ProtobufCMessageDescriptor instrument_class_response__descriptor =
   (ProtobufCMessageInit) instrument_class_response__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
+static const ProtobufCFieldDescriptor controller_request__field_descriptors[2] =
+{
+  {
+    "action",
+    1,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_ENUM,
+    0,   /* quantifier_offset */
+    offsetof(ControllerRequest, action),
+    &controller_action__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "snippetName",
+    2,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(ControllerRequest, snippetname),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned controller_request__field_indices_by_name[] = {
+  0,   /* field[0] = action */
+  1,   /* field[1] = snippetName */
+};
+static const ProtobufCIntRange controller_request__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 2 }
+};
+const ProtobufCMessageDescriptor controller_request__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "ControllerRequest",
+  "ControllerRequest",
+  "ControllerRequest",
+  "",
+  sizeof(ControllerRequest),
+  2,
+  controller_request__field_descriptors,
+  controller_request__field_indices_by_name,
+  1,  controller_request__number_ranges,
+  (ProtobufCMessageInit) controller_request__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor controller_response__field_descriptors[2] =
+{
+  {
+    "result",
+    1,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_ENUM,
+    0,   /* quantifier_offset */
+    offsetof(ControllerResponse, result),
+    &controller_result__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "errorMessage",
+    2,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(ControllerResponse, errormessage),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned controller_response__field_indices_by_name[] = {
+  1,   /* field[1] = errorMessage */
+  0,   /* field[0] = result */
+};
+static const ProtobufCIntRange controller_response__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 2 }
+};
+const ProtobufCMessageDescriptor controller_response__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "ControllerResponse",
+  "ControllerResponse",
+  "ControllerResponse",
+  "",
+  sizeof(ControllerResponse),
+  2,
+  controller_response__field_descriptors,
+  controller_response__field_indices_by_name,
+  1,  controller_response__number_ranges,
+  (ProtobufCMessageInit) controller_response__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
 static const ProtobufCEnumValue instrument_class_result__enum_values_by_number[3] =
 {
   { "CLASS_UNMODIFIED", "INSTRUMENT_CLASS_RESULT__CLASS_UNMODIFIED", 0 },
@@ -253,5 +484,61 @@ const ProtobufCEnumDescriptor instrument_class_result__descriptor =
   instrument_class_result__enum_values_by_name,
   2,
   instrument_class_result__value_ranges,
+  NULL,NULL,NULL,NULL   /* reserved[1234] */
+};
+static const ProtobufCEnumValue controller_action__enum_values_by_number[2] =
+{
+  { "DEPLOY", "CONTROLLER_ACTION__DEPLOY", 0 },
+  { "UNDEPLOY", "CONTROLLER_ACTION__UNDEPLOY", 1 },
+};
+static const ProtobufCIntRange controller_action__value_ranges[] = {
+{0, 0},{0, 2}
+};
+static const ProtobufCEnumValueIndex controller_action__enum_values_by_name[2] =
+{
+  { "DEPLOY", 0 },
+  { "UNDEPLOY", 1 },
+};
+const ProtobufCEnumDescriptor controller_action__descriptor =
+{
+  PROTOBUF_C__ENUM_DESCRIPTOR_MAGIC,
+  "ControllerAction",
+  "ControllerAction",
+  "ControllerAction",
+  "",
+  2,
+  controller_action__enum_values_by_number,
+  2,
+  controller_action__enum_values_by_name,
+  1,
+  controller_action__value_ranges,
+  NULL,NULL,NULL,NULL   /* reserved[1234] */
+};
+static const ProtobufCEnumValue controller_result__enum_values_by_number[2] =
+{
+  { "OK", "CONTROLLER_RESULT__OK", 0 },
+  { "KO", "CONTROLLER_RESULT__KO", 1 },
+};
+static const ProtobufCIntRange controller_result__value_ranges[] = {
+{0, 0},{0, 2}
+};
+static const ProtobufCEnumValueIndex controller_result__enum_values_by_name[2] =
+{
+  { "KO", 1 },
+  { "OK", 0 },
+};
+const ProtobufCEnumDescriptor controller_result__descriptor =
+{
+  PROTOBUF_C__ENUM_DESCRIPTOR_MAGIC,
+  "ControllerResult",
+  "ControllerResult",
+  "ControllerResult",
+  "",
+  2,
+  controller_result__enum_values_by_number,
+  2,
+  controller_result__enum_values_by_name,
+  1,
+  controller_result__value_ranges,
   NULL,NULL,NULL,NULL   /* reserved[1234] */
 };

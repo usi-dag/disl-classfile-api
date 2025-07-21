@@ -29,7 +29,6 @@ struct connection {
 
 	/** Link in the connection pool list. */
 	struct list cp_link;
-
 #ifdef DEBUG
 	/** Number of bytes sent over the connection. */
 	uint64_t sent_bytes;

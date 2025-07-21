@@ -6,19 +6,13 @@ package ch.usi.dag.dislserver;
 public final class Protocol {
   private Protocol() {}
   public static void registerAllExtensions(
-      com.google.protobuf.ExtensionRegistryLite registry) {
-  }
-
-  public static void registerAllExtensions(
-      com.google.protobuf.ExtensionRegistry registry) {
-    registerAllExtensions(
-        (com.google.protobuf.ExtensionRegistryLite) registry);
+          com.google.protobuf.ExtensionRegistryLite registry) {
   }
   /**
    * Protobuf enum {@code InstrumentClassResult}
    */
   public enum InstrumentClassResult
-      implements com.google.protobuf.ProtocolMessageEnum {
+          implements com.google.protobuf.Internal.EnumLite {
     /**
      * <code>CLASS_UNMODIFIED = 0;</code>
      */
@@ -48,17 +42,18 @@ public final class Protocol {
     public static final int ERROR_VALUE = 3;
 
 
+    @java.lang.Override
     public final int getNumber() {
       if (this == UNRECOGNIZED) {
         throw new java.lang.IllegalArgumentException(
-            "Can't get the number of an unknown enum value.");
+                "Can't get the number of an unknown enum value.");
       }
       return value;
     }
 
     /**
-     * @param value The numeric wire value of the corresponding enum entry.
-     * @return The enum associated with the given numeric wire value.
+     * @param value The number of the enum to look for.
+     * @return The enum associated with the given number.
      * @deprecated Use {@link #forNumber(int)} instead.
      */
     @java.lang.Deprecated
@@ -66,10 +61,6 @@ public final class Protocol {
       return forNumber(value);
     }
 
-    /**
-     * @param value The numeric wire value of the corresponding enum entry.
-     * @return The enum associated with the given numeric wire value.
-     */
     public static InstrumentClassResult forNumber(int value) {
       switch (value) {
         case 0: return CLASS_UNMODIFIED;
@@ -80,43 +71,31 @@ public final class Protocol {
     }
 
     public static com.google.protobuf.Internal.EnumLiteMap<InstrumentClassResult>
-        internalGetValueMap() {
+    internalGetValueMap() {
       return internalValueMap;
     }
     private static final com.google.protobuf.Internal.EnumLiteMap<
-        InstrumentClassResult> internalValueMap =
-          new com.google.protobuf.Internal.EnumLiteMap<InstrumentClassResult>() {
-            public InstrumentClassResult findValueByNumber(int number) {
-              return InstrumentClassResult.forNumber(number);
-            }
-          };
+            InstrumentClassResult> internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<InstrumentClassResult>() {
+              @java.lang.Override
+              public InstrumentClassResult findValueByNumber(int number) {
+                return InstrumentClassResult.forNumber(number);
+              }
+            };
 
-    public final com.google.protobuf.Descriptors.EnumValueDescriptor
-        getValueDescriptor() {
-      return getDescriptor().getValues().get(ordinal());
-    }
-    public final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptorForType() {
-      return getDescriptor();
-    }
-    public static final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptor() {
-      return ch.usi.dag.dislserver.Protocol.getDescriptor().getEnumTypes().get(0);
+    public static com.google.protobuf.Internal.EnumVerifier
+    internalGetVerifier() {
+      return InstrumentClassResultVerifier.INSTANCE;
     }
 
-    private static final InstrumentClassResult[] VALUES = values();
-
-    public static InstrumentClassResult valueOf(
-        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
-      if (desc.getType() != getDescriptor()) {
-        throw new java.lang.IllegalArgumentException(
-          "EnumValueDescriptor is not for this type.");
+    private static final class InstrumentClassResultVerifier implements
+            com.google.protobuf.Internal.EnumVerifier {
+      static final com.google.protobuf.Internal.EnumVerifier           INSTANCE = new InstrumentClassResultVerifier();
+      @java.lang.Override
+      public boolean isInRange(int number) {
+        return InstrumentClassResult.forNumber(number) != null;
       }
-      if (desc.getIndex() == -1) {
-        return UNRECOGNIZED;
-      }
-      return VALUES[desc.getIndex()];
-    }
+    };
 
     private final int value;
 
@@ -127,9 +106,187 @@ public final class Protocol {
     // @@protoc_insertion_point(enum_scope:InstrumentClassResult)
   }
 
+  /**
+   * Protobuf enum {@code ControllerAction}
+   */
+  public enum ControllerAction
+          implements com.google.protobuf.Internal.EnumLite {
+    /**
+     * <code>DEPLOY = 0;</code>
+     */
+    DEPLOY(0),
+    /**
+     * <code>UNDEPLOY = 1;</code>
+     */
+    UNDEPLOY(1),
+    UNRECOGNIZED(-1),
+    ;
+
+    /**
+     * <code>DEPLOY = 0;</code>
+     */
+    public static final int DEPLOY_VALUE = 0;
+    /**
+     * <code>UNDEPLOY = 1;</code>
+     */
+    public static final int UNDEPLOY_VALUE = 1;
+
+
+    @java.lang.Override
+    public final int getNumber() {
+      if (this == UNRECOGNIZED) {
+        throw new java.lang.IllegalArgumentException(
+                "Can't get the number of an unknown enum value.");
+      }
+      return value;
+    }
+
+    /**
+     * @param value The number of the enum to look for.
+     * @return The enum associated with the given number.
+     * @deprecated Use {@link #forNumber(int)} instead.
+     */
+    @java.lang.Deprecated
+    public static ControllerAction valueOf(int value) {
+      return forNumber(value);
+    }
+
+    public static ControllerAction forNumber(int value) {
+      switch (value) {
+        case 0: return DEPLOY;
+        case 1: return UNDEPLOY;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<ControllerAction>
+    internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static final com.google.protobuf.Internal.EnumLiteMap<
+            ControllerAction> internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<ControllerAction>() {
+              @java.lang.Override
+              public ControllerAction findValueByNumber(int number) {
+                return ControllerAction.forNumber(number);
+              }
+            };
+
+    public static com.google.protobuf.Internal.EnumVerifier
+    internalGetVerifier() {
+      return ControllerActionVerifier.INSTANCE;
+    }
+
+    private static final class ControllerActionVerifier implements
+            com.google.protobuf.Internal.EnumVerifier {
+      static final com.google.protobuf.Internal.EnumVerifier           INSTANCE = new ControllerActionVerifier();
+      @java.lang.Override
+      public boolean isInRange(int number) {
+        return ControllerAction.forNumber(number) != null;
+      }
+    };
+
+    private final int value;
+
+    private ControllerAction(int value) {
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:ControllerAction)
+  }
+
+  /**
+   * Protobuf enum {@code ControllerResult}
+   */
+  public enum ControllerResult
+          implements com.google.protobuf.Internal.EnumLite {
+    /**
+     * <code>OK = 0;</code>
+     */
+    OK(0),
+    /**
+     * <code>KO = 1;</code>
+     */
+    KO(1),
+    UNRECOGNIZED(-1),
+    ;
+
+    /**
+     * <code>OK = 0;</code>
+     */
+    public static final int OK_VALUE = 0;
+    /**
+     * <code>KO = 1;</code>
+     */
+    public static final int KO_VALUE = 1;
+
+
+    @java.lang.Override
+    public final int getNumber() {
+      if (this == UNRECOGNIZED) {
+        throw new java.lang.IllegalArgumentException(
+                "Can't get the number of an unknown enum value.");
+      }
+      return value;
+    }
+
+    /**
+     * @param value The number of the enum to look for.
+     * @return The enum associated with the given number.
+     * @deprecated Use {@link #forNumber(int)} instead.
+     */
+    @java.lang.Deprecated
+    public static ControllerResult valueOf(int value) {
+      return forNumber(value);
+    }
+
+    public static ControllerResult forNumber(int value) {
+      switch (value) {
+        case 0: return OK;
+        case 1: return KO;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<ControllerResult>
+    internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static final com.google.protobuf.Internal.EnumLiteMap<
+            ControllerResult> internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<ControllerResult>() {
+              @java.lang.Override
+              public ControllerResult findValueByNumber(int number) {
+                return ControllerResult.forNumber(number);
+              }
+            };
+
+    public static com.google.protobuf.Internal.EnumVerifier
+    internalGetVerifier() {
+      return ControllerResultVerifier.INSTANCE;
+    }
+
+    private static final class ControllerResultVerifier implements
+            com.google.protobuf.Internal.EnumVerifier {
+      static final com.google.protobuf.Internal.EnumVerifier           INSTANCE = new ControllerResultVerifier();
+      @java.lang.Override
+      public boolean isInRange(int number) {
+        return ControllerResult.forNumber(number) != null;
+      }
+    };
+
+    private final int value;
+
+    private ControllerResult(int value) {
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:ControllerResult)
+  }
+
   public interface InstrumentClassRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:InstrumentClassRequest)
-      com.google.protobuf.MessageOrBuilder {
+          // @@protoc_insertion_point(interface_extends:InstrumentClassRequest)
+          com.google.protobuf.MessageLiteOrBuilder {
 
     /**
      * <code>int32 flags = 1;</code>
@@ -147,153 +304,117 @@ public final class Protocol {
      * @return The bytes for className.
      */
     com.google.protobuf.ByteString
-        getClassNameBytes();
+    getClassNameBytes();
 
     /**
      * <code>bytes classBytes = 3;</code>
      * @return The classBytes.
      */
     com.google.protobuf.ByteString getClassBytes();
+
+    /**
+     * <code>int32 classLoaderTag = 4;</code>
+     * @return The classLoaderTag.
+     */
+    int getClassLoaderTag();
+
+    /**
+     * <code>bytes classLoaderBytes = 5;</code>
+     * @return The classLoaderBytes.
+     */
+    com.google.protobuf.ByteString getClassLoaderBytes();
+
+    /**
+     * <code>bytes superTypesBytes = 6;</code>
+     * @return The superTypesBytes.
+     */
+    com.google.protobuf.ByteString getSuperTypesBytes();
   }
   /**
    * Protobuf type {@code InstrumentClassRequest}
    */
   public  static final class InstrumentClassRequest extends
-      com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:InstrumentClassRequest)
-      InstrumentClassRequestOrBuilder {
-  private static final long serialVersionUID = 0L;
-    // Use InstrumentClassRequest.newBuilder() to construct.
-    private InstrumentClassRequest(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
-      super(builder);
-    }
+          com.google.protobuf.GeneratedMessageLite<
+                  InstrumentClassRequest, InstrumentClassRequest.Builder> implements
+          // @@protoc_insertion_point(message_implements:InstrumentClassRequest)
+          InstrumentClassRequestOrBuilder {
     private InstrumentClassRequest() {
       className_ = "";
       classBytes_ = com.google.protobuf.ByteString.EMPTY;
+      classLoaderBytes_ = com.google.protobuf.ByteString.EMPTY;
+      superTypesBytes_ = com.google.protobuf.ByteString.EMPTY;
     }
-
-    @java.lang.Override
-    @SuppressWarnings({"unused"})
-    protected java.lang.Object newInstance(
-        UnusedPrivateParameter unused) {
-      return new InstrumentClassRequest();
-    }
-
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
-      return this.unknownFields;
-    }
-    private InstrumentClassRequest(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            case 8: {
-
-              flags_ = input.readInt32();
-              break;
-            }
-            case 18: {
-              java.lang.String s = input.readStringRequireUtf8();
-
-              className_ = s;
-              break;
-            }
-            case 26: {
-
-              classBytes_ = input.readBytes();
-              break;
-            }
-            default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return ch.usi.dag.dislserver.Protocol.internal_static_InstrumentClassRequest_descriptor;
-    }
-
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return ch.usi.dag.dislserver.Protocol.internal_static_InstrumentClassRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              ch.usi.dag.dislserver.Protocol.InstrumentClassRequest.class, ch.usi.dag.dislserver.Protocol.InstrumentClassRequest.Builder.class);
-    }
-
     public static final int FLAGS_FIELD_NUMBER = 1;
     private int flags_;
     /**
      * <code>int32 flags = 1;</code>
      * @return The flags.
      */
+    @java.lang.Override
     public int getFlags() {
       return flags_;
     }
+    /**
+     * <code>int32 flags = 1;</code>
+     * @param value The flags to set.
+     */
+    private void setFlags(int value) {
+
+      flags_ = value;
+    }
+    /**
+     * <code>int32 flags = 1;</code>
+     */
+    private void clearFlags() {
+
+      flags_ = 0;
+    }
 
     public static final int CLASSNAME_FIELD_NUMBER = 2;
-    private volatile java.lang.Object className_;
+    private java.lang.String className_;
     /**
      * <code>string className = 2;</code>
      * @return The className.
      */
+    @java.lang.Override
     public java.lang.String getClassName() {
-      java.lang.Object ref = className_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        className_ = s;
-        return s;
-      }
+      return className_;
     }
     /**
      * <code>string className = 2;</code>
      * @return The bytes for className.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
-        getClassNameBytes() {
-      java.lang.Object ref = className_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        className_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    getClassNameBytes() {
+      return com.google.protobuf.ByteString.copyFromUtf8(className_);
+    }
+    /**
+     * <code>string className = 2;</code>
+     * @param value The className to set.
+     */
+    private void setClassName(
+            java.lang.String value) {
+      value.getClass();
+
+      className_ = value;
+    }
+    /**
+     * <code>string className = 2;</code>
+     */
+    private void clearClassName() {
+
+      className_ = getDefaultInstance().getClassName();
+    }
+    /**
+     * <code>string className = 2;</code>
+     * @param value The bytes for className to set.
+     */
+    private void setClassNameBytes(
+            com.google.protobuf.ByteString value) {
+      checkByteStringIsUtf8(value);
+      className_ = value.toStringUtf8();
+
     }
 
     public static final int CLASSBYTES_FIELD_NUMBER = 3;
@@ -302,353 +423,209 @@ public final class Protocol {
      * <code>bytes classBytes = 3;</code>
      * @return The classBytes.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString getClassBytes() {
       return classBytes_;
     }
+    /**
+     * <code>bytes classBytes = 3;</code>
+     * @param value The classBytes to set.
+     */
+    private void setClassBytes(com.google.protobuf.ByteString value) {
+      value.getClass();
 
-    private byte memoizedIsInitialized = -1;
-    @java.lang.Override
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
+      classBytes_ = value;
+    }
+    /**
+     * <code>bytes classBytes = 3;</code>
+     */
+    private void clearClassBytes() {
 
-      memoizedIsInitialized = 1;
-      return true;
+      classBytes_ = getDefaultInstance().getClassBytes();
     }
 
+    public static final int CLASSLOADERTAG_FIELD_NUMBER = 4;
+    private int classLoaderTag_;
+    /**
+     * <code>int32 classLoaderTag = 4;</code>
+     * @return The classLoaderTag.
+     */
     @java.lang.Override
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (flags_ != 0) {
-        output.writeInt32(1, flags_);
-      }
-      if (!getClassNameBytes().isEmpty()) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, className_);
-      }
-      if (!classBytes_.isEmpty()) {
-        output.writeBytes(3, classBytes_);
-      }
-      unknownFields.writeTo(output);
+    public int getClassLoaderTag() {
+      return classLoaderTag_;
+    }
+    /**
+     * <code>int32 classLoaderTag = 4;</code>
+     * @param value The classLoaderTag to set.
+     */
+    private void setClassLoaderTag(int value) {
+
+      classLoaderTag_ = value;
+    }
+    /**
+     * <code>int32 classLoaderTag = 4;</code>
+     */
+    private void clearClassLoaderTag() {
+
+      classLoaderTag_ = 0;
     }
 
+    public static final int CLASSLOADERBYTES_FIELD_NUMBER = 5;
+    private com.google.protobuf.ByteString classLoaderBytes_;
+    /**
+     * <code>bytes classLoaderBytes = 5;</code>
+     * @return The classLoaderBytes.
+     */
     @java.lang.Override
-    public int getSerializedSize() {
-      int size = memoizedSize;
-      if (size != -1) return size;
+    public com.google.protobuf.ByteString getClassLoaderBytes() {
+      return classLoaderBytes_;
+    }
+    /**
+     * <code>bytes classLoaderBytes = 5;</code>
+     * @param value The classLoaderBytes to set.
+     */
+    private void setClassLoaderBytes(com.google.protobuf.ByteString value) {
+      value.getClass();
 
-      size = 0;
-      if (flags_ != 0) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(1, flags_);
-      }
-      if (!getClassNameBytes().isEmpty()) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, className_);
-      }
-      if (!classBytes_.isEmpty()) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, classBytes_);
-      }
-      size += unknownFields.getSerializedSize();
-      memoizedSize = size;
-      return size;
+      classLoaderBytes_ = value;
+    }
+    /**
+     * <code>bytes classLoaderBytes = 5;</code>
+     */
+    private void clearClassLoaderBytes() {
+
+      classLoaderBytes_ = getDefaultInstance().getClassLoaderBytes();
     }
 
+    public static final int SUPERTYPESBYTES_FIELD_NUMBER = 6;
+    private com.google.protobuf.ByteString superTypesBytes_;
+    /**
+     * <code>bytes superTypesBytes = 6;</code>
+     * @return The superTypesBytes.
+     */
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof ch.usi.dag.dislserver.Protocol.InstrumentClassRequest)) {
-        return super.equals(obj);
-      }
-      ch.usi.dag.dislserver.Protocol.InstrumentClassRequest other = (ch.usi.dag.dislserver.Protocol.InstrumentClassRequest) obj;
-
-      if (getFlags()
-          != other.getFlags()) return false;
-      if (!getClassName()
-          .equals(other.getClassName())) return false;
-      if (!getClassBytes()
-          .equals(other.getClassBytes())) return false;
-      if (!unknownFields.equals(other.unknownFields)) return false;
-      return true;
+    public com.google.protobuf.ByteString getSuperTypesBytes() {
+      return superTypesBytes_;
     }
+    /**
+     * <code>bytes superTypesBytes = 6;</code>
+     * @param value The superTypesBytes to set.
+     */
+    private void setSuperTypesBytes(com.google.protobuf.ByteString value) {
+      value.getClass();
 
-    @java.lang.Override
-    public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
-      int hash = 41;
-      hash = (19 * hash) + getDescriptor().hashCode();
-      hash = (37 * hash) + FLAGS_FIELD_NUMBER;
-      hash = (53 * hash) + getFlags();
-      hash = (37 * hash) + CLASSNAME_FIELD_NUMBER;
-      hash = (53 * hash) + getClassName().hashCode();
-      hash = (37 * hash) + CLASSBYTES_FIELD_NUMBER;
-      hash = (53 * hash) + getClassBytes().hashCode();
-      hash = (29 * hash) + unknownFields.hashCode();
-      memoizedHashCode = hash;
-      return hash;
+      superTypesBytes_ = value;
+    }
+    /**
+     * <code>bytes superTypesBytes = 6;</code>
+     */
+    private void clearSuperTypesBytes() {
+
+      superTypesBytes_ = getDefaultInstance().getSuperTypesBytes();
     }
 
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseFrom(
-        java.nio.ByteBuffer data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+            java.nio.ByteBuffer data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseFrom(
-        java.nio.ByteBuffer data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+            java.nio.ByteBuffer data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+            com.google.protobuf.ByteString data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+            com.google.protobuf.ByteString data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+            byte[] data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input);
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input, extensionRegistry);
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseDelimitedWithIOException(PARSER, input);
+            throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input);
+            com.google.protobuf.CodedInputStream input)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input, extensionRegistry);
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input, extensionRegistry);
     }
 
-    @java.lang.Override
-    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
-      return DEFAULT_INSTANCE.toBuilder();
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
     }
     public static Builder newBuilder(ch.usi.dag.dislserver.Protocol.InstrumentClassRequest prototype) {
-      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
-    }
-    @java.lang.Override
-    public Builder toBuilder() {
-      return this == DEFAULT_INSTANCE
-          ? new Builder() : new Builder().mergeFrom(this);
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
     }
 
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
     /**
      * Protobuf type {@code InstrumentClassRequest}
      */
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:InstrumentClassRequest)
-        ch.usi.dag.dislserver.Protocol.InstrumentClassRequestOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return ch.usi.dag.dislserver.Protocol.internal_static_InstrumentClassRequest_descriptor;
-      }
-
-      @java.lang.Override
-      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return ch.usi.dag.dislserver.Protocol.internal_static_InstrumentClassRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                ch.usi.dag.dislserver.Protocol.InstrumentClassRequest.class, ch.usi.dag.dislserver.Protocol.InstrumentClassRequest.Builder.class);
-      }
-
+            com.google.protobuf.GeneratedMessageLite.Builder<
+                    ch.usi.dag.dislserver.Protocol.InstrumentClassRequest, Builder> implements
+            // @@protoc_insertion_point(builder_implements:InstrumentClassRequest)
+            ch.usi.dag.dislserver.Protocol.InstrumentClassRequestOrBuilder {
       // Construct using ch.usi.dag.dislserver.Protocol.InstrumentClassRequest.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+        super(DEFAULT_INSTANCE);
       }
 
-      private Builder(
-          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
-        }
-      }
-      @java.lang.Override
-      public Builder clear() {
-        super.clear();
-        flags_ = 0;
 
-        className_ = "";
-
-        classBytes_ = com.google.protobuf.ByteString.EMPTY;
-
-        return this;
-      }
-
-      @java.lang.Override
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return ch.usi.dag.dislserver.Protocol.internal_static_InstrumentClassRequest_descriptor;
-      }
-
-      @java.lang.Override
-      public ch.usi.dag.dislserver.Protocol.InstrumentClassRequest getDefaultInstanceForType() {
-        return ch.usi.dag.dislserver.Protocol.InstrumentClassRequest.getDefaultInstance();
-      }
-
-      @java.lang.Override
-      public ch.usi.dag.dislserver.Protocol.InstrumentClassRequest build() {
-        ch.usi.dag.dislserver.Protocol.InstrumentClassRequest result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      @java.lang.Override
-      public ch.usi.dag.dislserver.Protocol.InstrumentClassRequest buildPartial() {
-        ch.usi.dag.dislserver.Protocol.InstrumentClassRequest result = new ch.usi.dag.dislserver.Protocol.InstrumentClassRequest(this);
-        result.flags_ = flags_;
-        result.className_ = className_;
-        result.classBytes_ = classBytes_;
-        onBuilt();
-        return result;
-      }
-
-      @java.lang.Override
-      public Builder clone() {
-        return super.clone();
-      }
-      @java.lang.Override
-      public Builder setField(
-          com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
-        return super.setField(field, value);
-      }
-      @java.lang.Override
-      public Builder clearField(
-          com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return super.clearField(field);
-      }
-      @java.lang.Override
-      public Builder clearOneof(
-          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return super.clearOneof(oneof);
-      }
-      @java.lang.Override
-      public Builder setRepeatedField(
-          com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
-        return super.setRepeatedField(field, index, value);
-      }
-      @java.lang.Override
-      public Builder addRepeatedField(
-          com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
-        return super.addRepeatedField(field, value);
-      }
-      @java.lang.Override
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof ch.usi.dag.dislserver.Protocol.InstrumentClassRequest) {
-          return mergeFrom((ch.usi.dag.dislserver.Protocol.InstrumentClassRequest)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(ch.usi.dag.dislserver.Protocol.InstrumentClassRequest other) {
-        if (other == ch.usi.dag.dislserver.Protocol.InstrumentClassRequest.getDefaultInstance()) return this;
-        if (other.getFlags() != 0) {
-          setFlags(other.getFlags());
-        }
-        if (!other.getClassName().isEmpty()) {
-          className_ = other.className_;
-          onChanged();
-        }
-        if (other.getClassBytes() != com.google.protobuf.ByteString.EMPTY) {
-          setClassBytes(other.getClassBytes());
-        }
-        this.mergeUnknownFields(other.unknownFields);
-        onChanged();
-        return this;
-      }
-
-      @java.lang.Override
-      public final boolean isInitialized() {
-        return true;
-      }
-
-      @java.lang.Override
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        ch.usi.dag.dislserver.Protocol.InstrumentClassRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (ch.usi.dag.dislserver.Protocol.InstrumentClassRequest) e.getUnfinishedMessage();
-          throw e.unwrapIOException();
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-
-      private int flags_ ;
       /**
        * <code>int32 flags = 1;</code>
        * @return The flags.
        */
+      @java.lang.Override
       public int getFlags() {
-        return flags_;
+        return instance.getFlags();
       }
       /**
        * <code>int32 flags = 1;</code>
@@ -656,9 +633,8 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder setFlags(int value) {
-        
-        flags_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setFlags(value);
         return this;
       }
       /**
@@ -666,45 +642,27 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder clearFlags() {
-        
-        flags_ = 0;
-        onChanged();
+        copyOnWrite();
+        instance.clearFlags();
         return this;
       }
 
-      private java.lang.Object className_ = "";
       /**
        * <code>string className = 2;</code>
        * @return The className.
        */
+      @java.lang.Override
       public java.lang.String getClassName() {
-        java.lang.Object ref = className_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          className_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+        return instance.getClassName();
       }
       /**
        * <code>string className = 2;</code>
        * @return The bytes for className.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString
-          getClassNameBytes() {
-        java.lang.Object ref = className_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          className_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
+      getClassNameBytes() {
+        return instance.getClassNameBytes();
       }
       /**
        * <code>string className = 2;</code>
@@ -712,13 +670,9 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder setClassName(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  
-        className_ = value;
-        onChanged();
+              java.lang.String value) {
+        copyOnWrite();
+        instance.setClassName(value);
         return this;
       }
       /**
@@ -726,9 +680,8 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder clearClassName() {
-        
-        className_ = getDefaultInstance().getClassName();
-        onChanged();
+        copyOnWrite();
+        instance.clearClassName();
         return this;
       }
       /**
@@ -737,24 +690,19 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder setClassNameBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        
-        className_ = value;
-        onChanged();
+              com.google.protobuf.ByteString value) {
+        copyOnWrite();
+        instance.setClassNameBytes(value);
         return this;
       }
 
-      private com.google.protobuf.ByteString classBytes_ = com.google.protobuf.ByteString.EMPTY;
       /**
        * <code>bytes classBytes = 3;</code>
        * @return The classBytes.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getClassBytes() {
-        return classBytes_;
+        return instance.getClassBytes();
       }
       /**
        * <code>bytes classBytes = 3;</code>
@@ -762,12 +710,8 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder setClassBytes(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  
-        classBytes_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setClassBytes(value);
         return this;
       }
       /**
@@ -775,67 +719,178 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder clearClassBytes() {
-        
-        classBytes_ = getDefaultInstance().getClassBytes();
-        onChanged();
+        copyOnWrite();
+        instance.clearClassBytes();
         return this;
       }
+
+      /**
+       * <code>int32 classLoaderTag = 4;</code>
+       * @return The classLoaderTag.
+       */
       @java.lang.Override
-      public final Builder setUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return super.setUnknownFields(unknownFields);
+      public int getClassLoaderTag() {
+        return instance.getClassLoaderTag();
+      }
+      /**
+       * <code>int32 classLoaderTag = 4;</code>
+       * @param value The classLoaderTag to set.
+       * @return This builder for chaining.
+       */
+      public Builder setClassLoaderTag(int value) {
+        copyOnWrite();
+        instance.setClassLoaderTag(value);
+        return this;
+      }
+      /**
+       * <code>int32 classLoaderTag = 4;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearClassLoaderTag() {
+        copyOnWrite();
+        instance.clearClassLoaderTag();
+        return this;
       }
 
+      /**
+       * <code>bytes classLoaderBytes = 5;</code>
+       * @return The classLoaderBytes.
+       */
       @java.lang.Override
-      public final Builder mergeUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return super.mergeUnknownFields(unknownFields);
+      public com.google.protobuf.ByteString getClassLoaderBytes() {
+        return instance.getClassLoaderBytes();
+      }
+      /**
+       * <code>bytes classLoaderBytes = 5;</code>
+       * @param value The classLoaderBytes to set.
+       * @return This builder for chaining.
+       */
+      public Builder setClassLoaderBytes(com.google.protobuf.ByteString value) {
+        copyOnWrite();
+        instance.setClassLoaderBytes(value);
+        return this;
+      }
+      /**
+       * <code>bytes classLoaderBytes = 5;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearClassLoaderBytes() {
+        copyOnWrite();
+        instance.clearClassLoaderBytes();
+        return this;
       }
 
+      /**
+       * <code>bytes superTypesBytes = 6;</code>
+       * @return The superTypesBytes.
+       */
+      @java.lang.Override
+      public com.google.protobuf.ByteString getSuperTypesBytes() {
+        return instance.getSuperTypesBytes();
+      }
+      /**
+       * <code>bytes superTypesBytes = 6;</code>
+       * @param value The superTypesBytes to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSuperTypesBytes(com.google.protobuf.ByteString value) {
+        copyOnWrite();
+        instance.setSuperTypesBytes(value);
+        return this;
+      }
+      /**
+       * <code>bytes superTypesBytes = 6;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearSuperTypesBytes() {
+        copyOnWrite();
+        instance.clearSuperTypesBytes();
+        return this;
+      }
 
       // @@protoc_insertion_point(builder_scope:InstrumentClassRequest)
     }
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+            com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+            java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new ch.usi.dag.dislserver.Protocol.InstrumentClassRequest();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+          java.lang.Object[] objects = new java.lang.Object[] {
+                  "flags_",
+                  "className_",
+                  "classBytes_",
+                  "classLoaderTag_",
+                  "classLoaderBytes_",
+                  "superTypesBytes_",
+          };
+          java.lang.String info =
+                  "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0004\u0002\u0208" +
+                          "\u0003\n\u0004\u0004\u0005\n\u0006\n";
+          return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<ch.usi.dag.dislserver.Protocol.InstrumentClassRequest> parser = PARSER;
+          if (parser == null) {
+            synchronized (ch.usi.dag.dislserver.Protocol.InstrumentClassRequest.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                        new DefaultInstanceBasedParser<ch.usi.dag.dislserver.Protocol.InstrumentClassRequest>(
+                                DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+        }
+        case GET_MEMOIZED_IS_INITIALIZED: {
+          return (byte) 1;
+        }
+        case SET_MEMOIZED_IS_INITIALIZED: {
+          return null;
+        }
+      }
+      throw new UnsupportedOperationException();
+    }
+
 
     // @@protoc_insertion_point(class_scope:InstrumentClassRequest)
     private static final ch.usi.dag.dislserver.Protocol.InstrumentClassRequest DEFAULT_INSTANCE;
     static {
-      DEFAULT_INSTANCE = new ch.usi.dag.dislserver.Protocol.InstrumentClassRequest();
+      InstrumentClassRequest defaultInstance = new InstrumentClassRequest();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+              InstrumentClassRequest.class, defaultInstance);
     }
 
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassRequest getDefaultInstance() {
       return DEFAULT_INSTANCE;
     }
 
-    private static final com.google.protobuf.Parser<InstrumentClassRequest>
-        PARSER = new com.google.protobuf.AbstractParser<InstrumentClassRequest>() {
-      @java.lang.Override
-      public InstrumentClassRequest parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new InstrumentClassRequest(input, extensionRegistry);
-      }
-    };
+    private static volatile com.google.protobuf.Parser<InstrumentClassRequest> PARSER;
 
     public static com.google.protobuf.Parser<InstrumentClassRequest> parser() {
-      return PARSER;
+      return DEFAULT_INSTANCE.getParserForType();
     }
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<InstrumentClassRequest> getParserForType() {
-      return PARSER;
-    }
-
-    @java.lang.Override
-    public ch.usi.dag.dislserver.Protocol.InstrumentClassRequest getDefaultInstanceForType() {
-      return DEFAULT_INSTANCE;
-    }
-
   }
 
   public interface InstrumentClassResponseOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:InstrumentClassResponse)
-      com.google.protobuf.MessageOrBuilder {
+          // @@protoc_insertion_point(interface_extends:InstrumentClassResponse)
+          com.google.protobuf.MessageLiteOrBuilder {
 
     /**
      * <code>.InstrumentClassResult result = 1;</code>
@@ -858,7 +913,7 @@ public final class Protocol {
      * @return The bytes for errorMessage.
      */
     com.google.protobuf.ByteString
-        getErrorMessageBytes();
+    getErrorMessageBytes();
 
     /**
      * <code>bytes classBytes = 3;</code>
@@ -870,105 +925,21 @@ public final class Protocol {
    * Protobuf type {@code InstrumentClassResponse}
    */
   public  static final class InstrumentClassResponse extends
-      com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:InstrumentClassResponse)
-      InstrumentClassResponseOrBuilder {
-  private static final long serialVersionUID = 0L;
-    // Use InstrumentClassResponse.newBuilder() to construct.
-    private InstrumentClassResponse(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
-      super(builder);
-    }
+          com.google.protobuf.GeneratedMessageLite<
+                  InstrumentClassResponse, InstrumentClassResponse.Builder> implements
+          // @@protoc_insertion_point(message_implements:InstrumentClassResponse)
+          InstrumentClassResponseOrBuilder {
     private InstrumentClassResponse() {
-      result_ = 0;
       errorMessage_ = "";
       classBytes_ = com.google.protobuf.ByteString.EMPTY;
     }
-
-    @java.lang.Override
-    @SuppressWarnings({"unused"})
-    protected java.lang.Object newInstance(
-        UnusedPrivateParameter unused) {
-      return new InstrumentClassResponse();
-    }
-
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
-      return this.unknownFields;
-    }
-    private InstrumentClassResponse(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            case 8: {
-              int rawValue = input.readEnum();
-
-              result_ = rawValue;
-              break;
-            }
-            case 18: {
-              java.lang.String s = input.readStringRequireUtf8();
-
-              errorMessage_ = s;
-              break;
-            }
-            case 26: {
-
-              classBytes_ = input.readBytes();
-              break;
-            }
-            default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return ch.usi.dag.dislserver.Protocol.internal_static_InstrumentClassResponse_descriptor;
-    }
-
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return ch.usi.dag.dislserver.Protocol.internal_static_InstrumentClassResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              ch.usi.dag.dislserver.Protocol.InstrumentClassResponse.class, ch.usi.dag.dislserver.Protocol.InstrumentClassResponse.Builder.class);
-    }
-
     public static final int RESULT_FIELD_NUMBER = 1;
     private int result_;
     /**
      * <code>.InstrumentClassResult result = 1;</code>
      * @return The enum numeric value on the wire for result.
      */
+    @java.lang.Override
     public int getResultValue() {
       return result_;
     }
@@ -976,46 +947,79 @@ public final class Protocol {
      * <code>.InstrumentClassResult result = 1;</code>
      * @return The result.
      */
+    @java.lang.Override
     public ch.usi.dag.dislserver.Protocol.InstrumentClassResult getResult() {
-      @SuppressWarnings("deprecation")
-      ch.usi.dag.dislserver.Protocol.InstrumentClassResult result = ch.usi.dag.dislserver.Protocol.InstrumentClassResult.valueOf(result_);
+      ch.usi.dag.dislserver.Protocol.InstrumentClassResult result = ch.usi.dag.dislserver.Protocol.InstrumentClassResult.forNumber(result_);
       return result == null ? ch.usi.dag.dislserver.Protocol.InstrumentClassResult.UNRECOGNIZED : result;
+    }
+    /**
+     * <code>.InstrumentClassResult result = 1;</code>
+     * @param value The enum numeric value on the wire for result to set.
+     */
+    private void setResultValue(int value) {
+      result_ = value;
+    }
+    /**
+     * <code>.InstrumentClassResult result = 1;</code>
+     * @param value The result to set.
+     */
+    private void setResult(ch.usi.dag.dislserver.Protocol.InstrumentClassResult value) {
+      result_ = value.getNumber();
+
+    }
+    /**
+     * <code>.InstrumentClassResult result = 1;</code>
+     */
+    private void clearResult() {
+
+      result_ = 0;
     }
 
     public static final int ERRORMESSAGE_FIELD_NUMBER = 2;
-    private volatile java.lang.Object errorMessage_;
+    private java.lang.String errorMessage_;
     /**
      * <code>string errorMessage = 2;</code>
      * @return The errorMessage.
      */
+    @java.lang.Override
     public java.lang.String getErrorMessage() {
-      java.lang.Object ref = errorMessage_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        errorMessage_ = s;
-        return s;
-      }
+      return errorMessage_;
     }
     /**
      * <code>string errorMessage = 2;</code>
      * @return The bytes for errorMessage.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString
-        getErrorMessageBytes() {
-      java.lang.Object ref = errorMessage_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        errorMessage_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    getErrorMessageBytes() {
+      return com.google.protobuf.ByteString.copyFromUtf8(errorMessage_);
+    }
+    /**
+     * <code>string errorMessage = 2;</code>
+     * @param value The errorMessage to set.
+     */
+    private void setErrorMessage(
+            java.lang.String value) {
+      value.getClass();
+
+      errorMessage_ = value;
+    }
+    /**
+     * <code>string errorMessage = 2;</code>
+     */
+    private void clearErrorMessage() {
+
+      errorMessage_ = getDefaultInstance().getErrorMessage();
+    }
+    /**
+     * <code>string errorMessage = 2;</code>
+     * @param value The bytes for errorMessage to set.
+     */
+    private void setErrorMessageBytes(
+            com.google.protobuf.ByteString value) {
+      checkByteStringIsUtf8(value);
+      errorMessage_ = value.toStringUtf8();
+
     }
 
     public static final int CLASSBYTES_FIELD_NUMBER = 3;
@@ -1024,384 +1028,156 @@ public final class Protocol {
      * <code>bytes classBytes = 3;</code>
      * @return The classBytes.
      */
+    @java.lang.Override
     public com.google.protobuf.ByteString getClassBytes() {
       return classBytes_;
     }
+    /**
+     * <code>bytes classBytes = 3;</code>
+     * @param value The classBytes to set.
+     */
+    private void setClassBytes(com.google.protobuf.ByteString value) {
+      value.getClass();
 
-    private byte memoizedIsInitialized = -1;
-    @java.lang.Override
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
-
-      memoizedIsInitialized = 1;
-      return true;
+      classBytes_ = value;
     }
+    /**
+     * <code>bytes classBytes = 3;</code>
+     */
+    private void clearClassBytes() {
 
-    @java.lang.Override
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (result_ != ch.usi.dag.dislserver.Protocol.InstrumentClassResult.CLASS_UNMODIFIED.getNumber()) {
-        output.writeEnum(1, result_);
-      }
-      if (!getErrorMessageBytes().isEmpty()) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, errorMessage_);
-      }
-      if (!classBytes_.isEmpty()) {
-        output.writeBytes(3, classBytes_);
-      }
-      unknownFields.writeTo(output);
-    }
-
-    @java.lang.Override
-    public int getSerializedSize() {
-      int size = memoizedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      if (result_ != ch.usi.dag.dislserver.Protocol.InstrumentClassResult.CLASS_UNMODIFIED.getNumber()) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(1, result_);
-      }
-      if (!getErrorMessageBytes().isEmpty()) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, errorMessage_);
-      }
-      if (!classBytes_.isEmpty()) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, classBytes_);
-      }
-      size += unknownFields.getSerializedSize();
-      memoizedSize = size;
-      return size;
-    }
-
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof ch.usi.dag.dislserver.Protocol.InstrumentClassResponse)) {
-        return super.equals(obj);
-      }
-      ch.usi.dag.dislserver.Protocol.InstrumentClassResponse other = (ch.usi.dag.dislserver.Protocol.InstrumentClassResponse) obj;
-
-      if (result_ != other.result_) return false;
-      if (!getErrorMessage()
-          .equals(other.getErrorMessage())) return false;
-      if (!getClassBytes()
-          .equals(other.getClassBytes())) return false;
-      if (!unknownFields.equals(other.unknownFields)) return false;
-      return true;
-    }
-
-    @java.lang.Override
-    public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
-      int hash = 41;
-      hash = (19 * hash) + getDescriptor().hashCode();
-      hash = (37 * hash) + RESULT_FIELD_NUMBER;
-      hash = (53 * hash) + result_;
-      hash = (37 * hash) + ERRORMESSAGE_FIELD_NUMBER;
-      hash = (53 * hash) + getErrorMessage().hashCode();
-      hash = (37 * hash) + CLASSBYTES_FIELD_NUMBER;
-      hash = (53 * hash) + getClassBytes().hashCode();
-      hash = (29 * hash) + unknownFields.hashCode();
-      memoizedHashCode = hash;
-      return hash;
+      classBytes_ = getDefaultInstance().getClassBytes();
     }
 
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseFrom(
-        java.nio.ByteBuffer data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+            java.nio.ByteBuffer data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseFrom(
-        java.nio.ByteBuffer data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+            java.nio.ByteBuffer data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+            com.google.protobuf.ByteString data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+            com.google.protobuf.ByteString data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+            byte[] data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input);
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input, extensionRegistry);
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseDelimitedWithIOException(PARSER, input);
+            throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input);
+            com.google.protobuf.CodedInputStream input)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input);
     }
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input, extensionRegistry);
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input, extensionRegistry);
     }
 
-    @java.lang.Override
-    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
-      return DEFAULT_INSTANCE.toBuilder();
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
     }
     public static Builder newBuilder(ch.usi.dag.dislserver.Protocol.InstrumentClassResponse prototype) {
-      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
-    }
-    @java.lang.Override
-    public Builder toBuilder() {
-      return this == DEFAULT_INSTANCE
-          ? new Builder() : new Builder().mergeFrom(this);
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
     }
 
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
     /**
      * Protobuf type {@code InstrumentClassResponse}
      */
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:InstrumentClassResponse)
-        ch.usi.dag.dislserver.Protocol.InstrumentClassResponseOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return ch.usi.dag.dislserver.Protocol.internal_static_InstrumentClassResponse_descriptor;
-      }
-
-      @java.lang.Override
-      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return ch.usi.dag.dislserver.Protocol.internal_static_InstrumentClassResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                ch.usi.dag.dislserver.Protocol.InstrumentClassResponse.class, ch.usi.dag.dislserver.Protocol.InstrumentClassResponse.Builder.class);
-      }
-
+            com.google.protobuf.GeneratedMessageLite.Builder<
+                    ch.usi.dag.dislserver.Protocol.InstrumentClassResponse, Builder> implements
+            // @@protoc_insertion_point(builder_implements:InstrumentClassResponse)
+            ch.usi.dag.dislserver.Protocol.InstrumentClassResponseOrBuilder {
       // Construct using ch.usi.dag.dislserver.Protocol.InstrumentClassResponse.newBuilder()
       private Builder() {
-        maybeForceBuilderInitialization();
+        super(DEFAULT_INSTANCE);
       }
 
-      private Builder(
-          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
-        }
-      }
-      @java.lang.Override
-      public Builder clear() {
-        super.clear();
-        result_ = 0;
 
-        errorMessage_ = "";
-
-        classBytes_ = com.google.protobuf.ByteString.EMPTY;
-
-        return this;
-      }
-
-      @java.lang.Override
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return ch.usi.dag.dislserver.Protocol.internal_static_InstrumentClassResponse_descriptor;
-      }
-
-      @java.lang.Override
-      public ch.usi.dag.dislserver.Protocol.InstrumentClassResponse getDefaultInstanceForType() {
-        return ch.usi.dag.dislserver.Protocol.InstrumentClassResponse.getDefaultInstance();
-      }
-
-      @java.lang.Override
-      public ch.usi.dag.dislserver.Protocol.InstrumentClassResponse build() {
-        ch.usi.dag.dislserver.Protocol.InstrumentClassResponse result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      @java.lang.Override
-      public ch.usi.dag.dislserver.Protocol.InstrumentClassResponse buildPartial() {
-        ch.usi.dag.dislserver.Protocol.InstrumentClassResponse result = new ch.usi.dag.dislserver.Protocol.InstrumentClassResponse(this);
-        result.result_ = result_;
-        result.errorMessage_ = errorMessage_;
-        result.classBytes_ = classBytes_;
-        onBuilt();
-        return result;
-      }
-
-      @java.lang.Override
-      public Builder clone() {
-        return super.clone();
-      }
-      @java.lang.Override
-      public Builder setField(
-          com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
-        return super.setField(field, value);
-      }
-      @java.lang.Override
-      public Builder clearField(
-          com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return super.clearField(field);
-      }
-      @java.lang.Override
-      public Builder clearOneof(
-          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return super.clearOneof(oneof);
-      }
-      @java.lang.Override
-      public Builder setRepeatedField(
-          com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
-        return super.setRepeatedField(field, index, value);
-      }
-      @java.lang.Override
-      public Builder addRepeatedField(
-          com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
-        return super.addRepeatedField(field, value);
-      }
-      @java.lang.Override
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof ch.usi.dag.dislserver.Protocol.InstrumentClassResponse) {
-          return mergeFrom((ch.usi.dag.dislserver.Protocol.InstrumentClassResponse)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(ch.usi.dag.dislserver.Protocol.InstrumentClassResponse other) {
-        if (other == ch.usi.dag.dislserver.Protocol.InstrumentClassResponse.getDefaultInstance()) return this;
-        if (other.result_ != 0) {
-          setResultValue(other.getResultValue());
-        }
-        if (!other.getErrorMessage().isEmpty()) {
-          errorMessage_ = other.errorMessage_;
-          onChanged();
-        }
-        if (other.getClassBytes() != com.google.protobuf.ByteString.EMPTY) {
-          setClassBytes(other.getClassBytes());
-        }
-        this.mergeUnknownFields(other.unknownFields);
-        onChanged();
-        return this;
-      }
-
-      @java.lang.Override
-      public final boolean isInitialized() {
-        return true;
-      }
-
-      @java.lang.Override
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        ch.usi.dag.dislserver.Protocol.InstrumentClassResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (ch.usi.dag.dislserver.Protocol.InstrumentClassResponse) e.getUnfinishedMessage();
-          throw e.unwrapIOException();
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-
-      private int result_ = 0;
       /**
        * <code>.InstrumentClassResult result = 1;</code>
        * @return The enum numeric value on the wire for result.
        */
+      @java.lang.Override
       public int getResultValue() {
-        return result_;
-      }
-      /**
-       * <code>.InstrumentClassResult result = 1;</code>
-       * @param value The enum numeric value on the wire for result to set.
-       * @return This builder for chaining.
-       */
-      public Builder setResultValue(int value) {
-        result_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>.InstrumentClassResult result = 1;</code>
-       * @return The result.
-       */
-      public ch.usi.dag.dislserver.Protocol.InstrumentClassResult getResult() {
-        @SuppressWarnings("deprecation")
-        ch.usi.dag.dislserver.Protocol.InstrumentClassResult result = ch.usi.dag.dislserver.Protocol.InstrumentClassResult.valueOf(result_);
-        return result == null ? ch.usi.dag.dislserver.Protocol.InstrumentClassResult.UNRECOGNIZED : result;
+        return instance.getResultValue();
       }
       /**
        * <code>.InstrumentClassResult result = 1;</code>
        * @param value The result to set.
        * @return This builder for chaining.
        */
+      public Builder setResultValue(int value) {
+        copyOnWrite();
+        instance.setResultValue(value);
+        return this;
+      }
+      /**
+       * <code>.InstrumentClassResult result = 1;</code>
+       * @return The result.
+       */
+      @java.lang.Override
+      public ch.usi.dag.dislserver.Protocol.InstrumentClassResult getResult() {
+        return instance.getResult();
+      }
+      /**
+       * <code>.InstrumentClassResult result = 1;</code>
+       * @param value The enum numeric value on the wire for result to set.
+       * @return This builder for chaining.
+       */
       public Builder setResult(ch.usi.dag.dislserver.Protocol.InstrumentClassResult value) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        
-        result_ = value.getNumber();
-        onChanged();
+        copyOnWrite();
+        instance.setResult(value);
         return this;
       }
       /**
@@ -1409,45 +1185,27 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder clearResult() {
-        
-        result_ = 0;
-        onChanged();
+        copyOnWrite();
+        instance.clearResult();
         return this;
       }
 
-      private java.lang.Object errorMessage_ = "";
       /**
        * <code>string errorMessage = 2;</code>
        * @return The errorMessage.
        */
+      @java.lang.Override
       public java.lang.String getErrorMessage() {
-        java.lang.Object ref = errorMessage_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          errorMessage_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+        return instance.getErrorMessage();
       }
       /**
        * <code>string errorMessage = 2;</code>
        * @return The bytes for errorMessage.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString
-          getErrorMessageBytes() {
-        java.lang.Object ref = errorMessage_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          errorMessage_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
+      getErrorMessageBytes() {
+        return instance.getErrorMessageBytes();
       }
       /**
        * <code>string errorMessage = 2;</code>
@@ -1455,13 +1213,9 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder setErrorMessage(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  
-        errorMessage_ = value;
-        onChanged();
+              java.lang.String value) {
+        copyOnWrite();
+        instance.setErrorMessage(value);
         return this;
       }
       /**
@@ -1469,9 +1223,8 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder clearErrorMessage() {
-        
-        errorMessage_ = getDefaultInstance().getErrorMessage();
-        onChanged();
+        copyOnWrite();
+        instance.clearErrorMessage();
         return this;
       }
       /**
@@ -1480,24 +1233,19 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder setErrorMessageBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-        
-        errorMessage_ = value;
-        onChanged();
+              com.google.protobuf.ByteString value) {
+        copyOnWrite();
+        instance.setErrorMessageBytes(value);
         return this;
       }
 
-      private com.google.protobuf.ByteString classBytes_ = com.google.protobuf.ByteString.EMPTY;
       /**
        * <code>bytes classBytes = 3;</code>
        * @return The classBytes.
        */
+      @java.lang.Override
       public com.google.protobuf.ByteString getClassBytes() {
-        return classBytes_;
+        return instance.getClassBytes();
       }
       /**
        * <code>bytes classBytes = 3;</code>
@@ -1505,12 +1253,8 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder setClassBytes(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  
-        classBytes_ = value;
-        onChanged();
+        copyOnWrite();
+        instance.setClassBytes(value);
         return this;
       }
       /**
@@ -1518,109 +1262,876 @@ public final class Protocol {
        * @return This builder for chaining.
        */
       public Builder clearClassBytes() {
-        
-        classBytes_ = getDefaultInstance().getClassBytes();
-        onChanged();
+        copyOnWrite();
+        instance.clearClassBytes();
         return this;
       }
-      @java.lang.Override
-      public final Builder setUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return super.setUnknownFields(unknownFields);
-      }
-
-      @java.lang.Override
-      public final Builder mergeUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return super.mergeUnknownFields(unknownFields);
-      }
-
 
       // @@protoc_insertion_point(builder_scope:InstrumentClassResponse)
     }
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+            com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+            java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new ch.usi.dag.dislserver.Protocol.InstrumentClassResponse();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+          java.lang.Object[] objects = new java.lang.Object[] {
+                  "result_",
+                  "errorMessage_",
+                  "classBytes_",
+          };
+          java.lang.String info =
+                  "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\f\u0002\u0208" +
+                          "\u0003\n";
+          return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<ch.usi.dag.dislserver.Protocol.InstrumentClassResponse> parser = PARSER;
+          if (parser == null) {
+            synchronized (ch.usi.dag.dislserver.Protocol.InstrumentClassResponse.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                        new DefaultInstanceBasedParser<ch.usi.dag.dislserver.Protocol.InstrumentClassResponse>(
+                                DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+        }
+        case GET_MEMOIZED_IS_INITIALIZED: {
+          return (byte) 1;
+        }
+        case SET_MEMOIZED_IS_INITIALIZED: {
+          return null;
+        }
+      }
+      throw new UnsupportedOperationException();
+    }
+
 
     // @@protoc_insertion_point(class_scope:InstrumentClassResponse)
     private static final ch.usi.dag.dislserver.Protocol.InstrumentClassResponse DEFAULT_INSTANCE;
     static {
-      DEFAULT_INSTANCE = new ch.usi.dag.dislserver.Protocol.InstrumentClassResponse();
+      InstrumentClassResponse defaultInstance = new InstrumentClassResponse();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+              InstrumentClassResponse.class, defaultInstance);
     }
 
     public static ch.usi.dag.dislserver.Protocol.InstrumentClassResponse getDefaultInstance() {
       return DEFAULT_INSTANCE;
     }
 
-    private static final com.google.protobuf.Parser<InstrumentClassResponse>
-        PARSER = new com.google.protobuf.AbstractParser<InstrumentClassResponse>() {
-      @java.lang.Override
-      public InstrumentClassResponse parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new InstrumentClassResponse(input, extensionRegistry);
-      }
-    };
+    private static volatile com.google.protobuf.Parser<InstrumentClassResponse> PARSER;
 
     public static com.google.protobuf.Parser<InstrumentClassResponse> parser() {
-      return PARSER;
+      return DEFAULT_INSTANCE.getParserForType();
+    }
+  }
+
+  public interface ControllerRequestOrBuilder extends
+          // @@protoc_insertion_point(interface_extends:ControllerRequest)
+          com.google.protobuf.MessageLiteOrBuilder {
+
+    /**
+     * <code>.ControllerAction action = 1;</code>
+     * @return The enum numeric value on the wire for action.
+     */
+    int getActionValue();
+    /**
+     * <code>.ControllerAction action = 1;</code>
+     * @return The action.
+     */
+    ch.usi.dag.dislserver.Protocol.ControllerAction getAction();
+
+    /**
+     * <code>string snippetName = 2;</code>
+     * @return The snippetName.
+     */
+    java.lang.String getSnippetName();
+    /**
+     * <code>string snippetName = 2;</code>
+     * @return The bytes for snippetName.
+     */
+    com.google.protobuf.ByteString
+    getSnippetNameBytes();
+  }
+  /**
+   * Protobuf type {@code ControllerRequest}
+   */
+  public  static final class ControllerRequest extends
+          com.google.protobuf.GeneratedMessageLite<
+                  ControllerRequest, ControllerRequest.Builder> implements
+          // @@protoc_insertion_point(message_implements:ControllerRequest)
+          ControllerRequestOrBuilder {
+    private ControllerRequest() {
+      snippetName_ = "";
+    }
+    public static final int ACTION_FIELD_NUMBER = 1;
+    private int action_;
+    /**
+     * <code>.ControllerAction action = 1;</code>
+     * @return The enum numeric value on the wire for action.
+     */
+    @java.lang.Override
+    public int getActionValue() {
+      return action_;
+    }
+    /**
+     * <code>.ControllerAction action = 1;</code>
+     * @return The action.
+     */
+    @java.lang.Override
+    public ch.usi.dag.dislserver.Protocol.ControllerAction getAction() {
+      ch.usi.dag.dislserver.Protocol.ControllerAction result = ch.usi.dag.dislserver.Protocol.ControllerAction.forNumber(action_);
+      return result == null ? ch.usi.dag.dislserver.Protocol.ControllerAction.UNRECOGNIZED : result;
+    }
+    /**
+     * <code>.ControllerAction action = 1;</code>
+     * @param value The enum numeric value on the wire for action to set.
+     */
+    private void setActionValue(int value) {
+      action_ = value;
+    }
+    /**
+     * <code>.ControllerAction action = 1;</code>
+     * @param value The action to set.
+     */
+    private void setAction(ch.usi.dag.dislserver.Protocol.ControllerAction value) {
+      action_ = value.getNumber();
+
+    }
+    /**
+     * <code>.ControllerAction action = 1;</code>
+     */
+    private void clearAction() {
+
+      action_ = 0;
     }
 
+    public static final int SNIPPETNAME_FIELD_NUMBER = 2;
+    private java.lang.String snippetName_;
+    /**
+     * <code>string snippetName = 2;</code>
+     * @return The snippetName.
+     */
     @java.lang.Override
-    public com.google.protobuf.Parser<InstrumentClassResponse> getParserForType() {
-      return PARSER;
+    public java.lang.String getSnippetName() {
+      return snippetName_;
+    }
+    /**
+     * <code>string snippetName = 2;</code>
+     * @return The bytes for snippetName.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+    getSnippetNameBytes() {
+      return com.google.protobuf.ByteString.copyFromUtf8(snippetName_);
+    }
+    /**
+     * <code>string snippetName = 2;</code>
+     * @param value The snippetName to set.
+     */
+    private void setSnippetName(
+            java.lang.String value) {
+      value.getClass();
+
+      snippetName_ = value;
+    }
+    /**
+     * <code>string snippetName = 2;</code>
+     */
+    private void clearSnippetName() {
+
+      snippetName_ = getDefaultInstance().getSnippetName();
+    }
+    /**
+     * <code>string snippetName = 2;</code>
+     * @param value The bytes for snippetName to set.
+     */
+    private void setSnippetNameBytes(
+            com.google.protobuf.ByteString value) {
+      checkByteStringIsUtf8(value);
+      snippetName_ = value.toStringUtf8();
+
     }
 
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseFrom(
+            java.nio.ByteBuffer data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseFrom(
+            java.nio.ByteBuffer data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseFrom(
+            com.google.protobuf.ByteString data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseFrom(
+            com.google.protobuf.ByteString data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseFrom(byte[] data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseFrom(
+            byte[] data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseFrom(java.io.InputStream input)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseFrom(
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseDelimitedFrom(java.io.InputStream input)
+            throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseDelimitedFrom(
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseFrom(
+            com.google.protobuf.CodedInputStream input)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest parseFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() {
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
+    }
+    public static Builder newBuilder(ch.usi.dag.dislserver.Protocol.ControllerRequest prototype) {
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
+    }
+
+    /**
+     * Protobuf type {@code ControllerRequest}
+     */
+    public static final class Builder extends
+            com.google.protobuf.GeneratedMessageLite.Builder<
+                    ch.usi.dag.dislserver.Protocol.ControllerRequest, Builder> implements
+            // @@protoc_insertion_point(builder_implements:ControllerRequest)
+            ch.usi.dag.dislserver.Protocol.ControllerRequestOrBuilder {
+      // Construct using ch.usi.dag.dislserver.Protocol.ControllerRequest.newBuilder()
+      private Builder() {
+        super(DEFAULT_INSTANCE);
+      }
+
+
+      /**
+       * <code>.ControllerAction action = 1;</code>
+       * @return The enum numeric value on the wire for action.
+       */
+      @java.lang.Override
+      public int getActionValue() {
+        return instance.getActionValue();
+      }
+      /**
+       * <code>.ControllerAction action = 1;</code>
+       * @param value The action to set.
+       * @return This builder for chaining.
+       */
+      public Builder setActionValue(int value) {
+        copyOnWrite();
+        instance.setActionValue(value);
+        return this;
+      }
+      /**
+       * <code>.ControllerAction action = 1;</code>
+       * @return The action.
+       */
+      @java.lang.Override
+      public ch.usi.dag.dislserver.Protocol.ControllerAction getAction() {
+        return instance.getAction();
+      }
+      /**
+       * <code>.ControllerAction action = 1;</code>
+       * @param value The enum numeric value on the wire for action to set.
+       * @return This builder for chaining.
+       */
+      public Builder setAction(ch.usi.dag.dislserver.Protocol.ControllerAction value) {
+        copyOnWrite();
+        instance.setAction(value);
+        return this;
+      }
+      /**
+       * <code>.ControllerAction action = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearAction() {
+        copyOnWrite();
+        instance.clearAction();
+        return this;
+      }
+
+      /**
+       * <code>string snippetName = 2;</code>
+       * @return The snippetName.
+       */
+      @java.lang.Override
+      public java.lang.String getSnippetName() {
+        return instance.getSnippetName();
+      }
+      /**
+       * <code>string snippetName = 2;</code>
+       * @return The bytes for snippetName.
+       */
+      @java.lang.Override
+      public com.google.protobuf.ByteString
+      getSnippetNameBytes() {
+        return instance.getSnippetNameBytes();
+      }
+      /**
+       * <code>string snippetName = 2;</code>
+       * @param value The snippetName to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSnippetName(
+              java.lang.String value) {
+        copyOnWrite();
+        instance.setSnippetName(value);
+        return this;
+      }
+      /**
+       * <code>string snippetName = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearSnippetName() {
+        copyOnWrite();
+        instance.clearSnippetName();
+        return this;
+      }
+      /**
+       * <code>string snippetName = 2;</code>
+       * @param value The bytes for snippetName to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSnippetNameBytes(
+              com.google.protobuf.ByteString value) {
+        copyOnWrite();
+        instance.setSnippetNameBytes(value);
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:ControllerRequest)
+    }
     @java.lang.Override
-    public ch.usi.dag.dislserver.Protocol.InstrumentClassResponse getDefaultInstanceForType() {
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+            com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+            java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new ch.usi.dag.dislserver.Protocol.ControllerRequest();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+          java.lang.Object[] objects = new java.lang.Object[] {
+                  "action_",
+                  "snippetName_",
+          };
+          java.lang.String info =
+                  "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\f\u0002\u0208" +
+                          "";
+          return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<ch.usi.dag.dislserver.Protocol.ControllerRequest> parser = PARSER;
+          if (parser == null) {
+            synchronized (ch.usi.dag.dislserver.Protocol.ControllerRequest.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                        new DefaultInstanceBasedParser<ch.usi.dag.dislserver.Protocol.ControllerRequest>(
+                                DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+        }
+        case GET_MEMOIZED_IS_INITIALIZED: {
+          return (byte) 1;
+        }
+        case SET_MEMOIZED_IS_INITIALIZED: {
+          return null;
+        }
+      }
+      throw new UnsupportedOperationException();
+    }
+
+
+    // @@protoc_insertion_point(class_scope:ControllerRequest)
+    private static final ch.usi.dag.dislserver.Protocol.ControllerRequest DEFAULT_INSTANCE;
+    static {
+      ControllerRequest defaultInstance = new ControllerRequest();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+              ControllerRequest.class, defaultInstance);
+    }
+
+    public static ch.usi.dag.dislserver.Protocol.ControllerRequest getDefaultInstance() {
       return DEFAULT_INSTANCE;
     }
 
+    private static volatile com.google.protobuf.Parser<ControllerRequest> PARSER;
+
+    public static com.google.protobuf.Parser<ControllerRequest> parser() {
+      return DEFAULT_INSTANCE.getParserForType();
+    }
   }
 
-  private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_InstrumentClassRequest_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_InstrumentClassRequest_fieldAccessorTable;
-  private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_InstrumentClassResponse_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_InstrumentClassResponse_fieldAccessorTable;
+  public interface ControllerResponseOrBuilder extends
+          // @@protoc_insertion_point(interface_extends:ControllerResponse)
+          com.google.protobuf.MessageLiteOrBuilder {
 
-  public static com.google.protobuf.Descriptors.FileDescriptor
-      getDescriptor() {
-    return descriptor;
+    /**
+     * <code>.ControllerResult result = 1;</code>
+     * @return The enum numeric value on the wire for result.
+     */
+    int getResultValue();
+    /**
+     * <code>.ControllerResult result = 1;</code>
+     * @return The result.
+     */
+    ch.usi.dag.dislserver.Protocol.ControllerResult getResult();
+
+    /**
+     * <code>string errorMessage = 2;</code>
+     * @return The errorMessage.
+     */
+    java.lang.String getErrorMessage();
+    /**
+     * <code>string errorMessage = 2;</code>
+     * @return The bytes for errorMessage.
+     */
+    com.google.protobuf.ByteString
+    getErrorMessageBytes();
   }
-  private static  com.google.protobuf.Descriptors.FileDescriptor
-      descriptor;
+  /**
+   * Protobuf type {@code ControllerResponse}
+   */
+  public  static final class ControllerResponse extends
+          com.google.protobuf.GeneratedMessageLite<
+                  ControllerResponse, ControllerResponse.Builder> implements
+          // @@protoc_insertion_point(message_implements:ControllerResponse)
+          ControllerResponseOrBuilder {
+    private ControllerResponse() {
+      errorMessage_ = "";
+    }
+    public static final int RESULT_FIELD_NUMBER = 1;
+    private int result_;
+    /**
+     * <code>.ControllerResult result = 1;</code>
+     * @return The enum numeric value on the wire for result.
+     */
+    @java.lang.Override
+    public int getResultValue() {
+      return result_;
+    }
+    /**
+     * <code>.ControllerResult result = 1;</code>
+     * @return The result.
+     */
+    @java.lang.Override
+    public ch.usi.dag.dislserver.Protocol.ControllerResult getResult() {
+      ch.usi.dag.dislserver.Protocol.ControllerResult result = ch.usi.dag.dislserver.Protocol.ControllerResult.forNumber(result_);
+      return result == null ? ch.usi.dag.dislserver.Protocol.ControllerResult.UNRECOGNIZED : result;
+    }
+    /**
+     * <code>.ControllerResult result = 1;</code>
+     * @param value The enum numeric value on the wire for result to set.
+     */
+    private void setResultValue(int value) {
+      result_ = value;
+    }
+    /**
+     * <code>.ControllerResult result = 1;</code>
+     * @param value The result to set.
+     */
+    private void setResult(ch.usi.dag.dislserver.Protocol.ControllerResult value) {
+      result_ = value.getNumber();
+
+    }
+    /**
+     * <code>.ControllerResult result = 1;</code>
+     */
+    private void clearResult() {
+
+      result_ = 0;
+    }
+
+    public static final int ERRORMESSAGE_FIELD_NUMBER = 2;
+    private java.lang.String errorMessage_;
+    /**
+     * <code>string errorMessage = 2;</code>
+     * @return The errorMessage.
+     */
+    @java.lang.Override
+    public java.lang.String getErrorMessage() {
+      return errorMessage_;
+    }
+    /**
+     * <code>string errorMessage = 2;</code>
+     * @return The bytes for errorMessage.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+    getErrorMessageBytes() {
+      return com.google.protobuf.ByteString.copyFromUtf8(errorMessage_);
+    }
+    /**
+     * <code>string errorMessage = 2;</code>
+     * @param value The errorMessage to set.
+     */
+    private void setErrorMessage(
+            java.lang.String value) {
+      value.getClass();
+
+      errorMessage_ = value;
+    }
+    /**
+     * <code>string errorMessage = 2;</code>
+     */
+    private void clearErrorMessage() {
+
+      errorMessage_ = getDefaultInstance().getErrorMessage();
+    }
+    /**
+     * <code>string errorMessage = 2;</code>
+     * @param value The bytes for errorMessage to set.
+     */
+    private void setErrorMessageBytes(
+            com.google.protobuf.ByteString value) {
+      checkByteStringIsUtf8(value);
+      errorMessage_ = value.toStringUtf8();
+
+    }
+
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseFrom(
+            java.nio.ByteBuffer data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseFrom(
+            java.nio.ByteBuffer data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseFrom(
+            com.google.protobuf.ByteString data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseFrom(
+            com.google.protobuf.ByteString data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseFrom(byte[] data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseFrom(
+            byte[] data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, data, extensionRegistry);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseFrom(java.io.InputStream input)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseFrom(
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseDelimitedFrom(java.io.InputStream input)
+            throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseDelimitedFrom(
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseFrom(
+            com.google.protobuf.CodedInputStream input)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input);
+    }
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse parseFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageLite.parseFrom(
+              DEFAULT_INSTANCE, input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() {
+      return (Builder) DEFAULT_INSTANCE.createBuilder();
+    }
+    public static Builder newBuilder(ch.usi.dag.dislserver.Protocol.ControllerResponse prototype) {
+      return (Builder) DEFAULT_INSTANCE.createBuilder(prototype);
+    }
+
+    /**
+     * Protobuf type {@code ControllerResponse}
+     */
+    public static final class Builder extends
+            com.google.protobuf.GeneratedMessageLite.Builder<
+                    ch.usi.dag.dislserver.Protocol.ControllerResponse, Builder> implements
+            // @@protoc_insertion_point(builder_implements:ControllerResponse)
+            ch.usi.dag.dislserver.Protocol.ControllerResponseOrBuilder {
+      // Construct using ch.usi.dag.dislserver.Protocol.ControllerResponse.newBuilder()
+      private Builder() {
+        super(DEFAULT_INSTANCE);
+      }
+
+
+      /**
+       * <code>.ControllerResult result = 1;</code>
+       * @return The enum numeric value on the wire for result.
+       */
+      @java.lang.Override
+      public int getResultValue() {
+        return instance.getResultValue();
+      }
+      /**
+       * <code>.ControllerResult result = 1;</code>
+       * @param value The result to set.
+       * @return This builder for chaining.
+       */
+      public Builder setResultValue(int value) {
+        copyOnWrite();
+        instance.setResultValue(value);
+        return this;
+      }
+      /**
+       * <code>.ControllerResult result = 1;</code>
+       * @return The result.
+       */
+      @java.lang.Override
+      public ch.usi.dag.dislserver.Protocol.ControllerResult getResult() {
+        return instance.getResult();
+      }
+      /**
+       * <code>.ControllerResult result = 1;</code>
+       * @param value The enum numeric value on the wire for result to set.
+       * @return This builder for chaining.
+       */
+      public Builder setResult(ch.usi.dag.dislserver.Protocol.ControllerResult value) {
+        copyOnWrite();
+        instance.setResult(value);
+        return this;
+      }
+      /**
+       * <code>.ControllerResult result = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearResult() {
+        copyOnWrite();
+        instance.clearResult();
+        return this;
+      }
+
+      /**
+       * <code>string errorMessage = 2;</code>
+       * @return The errorMessage.
+       */
+      @java.lang.Override
+      public java.lang.String getErrorMessage() {
+        return instance.getErrorMessage();
+      }
+      /**
+       * <code>string errorMessage = 2;</code>
+       * @return The bytes for errorMessage.
+       */
+      @java.lang.Override
+      public com.google.protobuf.ByteString
+      getErrorMessageBytes() {
+        return instance.getErrorMessageBytes();
+      }
+      /**
+       * <code>string errorMessage = 2;</code>
+       * @param value The errorMessage to set.
+       * @return This builder for chaining.
+       */
+      public Builder setErrorMessage(
+              java.lang.String value) {
+        copyOnWrite();
+        instance.setErrorMessage(value);
+        return this;
+      }
+      /**
+       * <code>string errorMessage = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearErrorMessage() {
+        copyOnWrite();
+        instance.clearErrorMessage();
+        return this;
+      }
+      /**
+       * <code>string errorMessage = 2;</code>
+       * @param value The bytes for errorMessage to set.
+       * @return This builder for chaining.
+       */
+      public Builder setErrorMessageBytes(
+              com.google.protobuf.ByteString value) {
+        copyOnWrite();
+        instance.setErrorMessageBytes(value);
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:ControllerResponse)
+    }
+    @java.lang.Override
+    @java.lang.SuppressWarnings({"unchecked", "fallthrough"})
+    protected final java.lang.Object dynamicMethod(
+            com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+            java.lang.Object arg0, java.lang.Object arg1) {
+      switch (method) {
+        case NEW_MUTABLE_INSTANCE: {
+          return new ch.usi.dag.dislserver.Protocol.ControllerResponse();
+        }
+        case NEW_BUILDER: {
+          return new Builder();
+        }
+        case BUILD_MESSAGE_INFO: {
+          java.lang.Object[] objects = new java.lang.Object[] {
+                  "result_",
+                  "errorMessage_",
+          };
+          java.lang.String info =
+                  "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\f\u0002\u0208" +
+                          "";
+          return newMessageInfo(DEFAULT_INSTANCE, info, objects);
+        }
+        // fall through
+        case GET_DEFAULT_INSTANCE: {
+          return DEFAULT_INSTANCE;
+        }
+        case GET_PARSER: {
+          com.google.protobuf.Parser<ch.usi.dag.dislserver.Protocol.ControllerResponse> parser = PARSER;
+          if (parser == null) {
+            synchronized (ch.usi.dag.dislserver.Protocol.ControllerResponse.class) {
+              parser = PARSER;
+              if (parser == null) {
+                parser =
+                        new DefaultInstanceBasedParser<ch.usi.dag.dislserver.Protocol.ControllerResponse>(
+                                DEFAULT_INSTANCE);
+                PARSER = parser;
+              }
+            }
+          }
+          return parser;
+        }
+        case GET_MEMOIZED_IS_INITIALIZED: {
+          return (byte) 1;
+        }
+        case SET_MEMOIZED_IS_INITIALIZED: {
+          return null;
+        }
+      }
+      throw new UnsupportedOperationException();
+    }
+
+
+    // @@protoc_insertion_point(class_scope:ControllerResponse)
+    private static final ch.usi.dag.dislserver.Protocol.ControllerResponse DEFAULT_INSTANCE;
+    static {
+      ControllerResponse defaultInstance = new ControllerResponse();
+      // New instances are implicitly immutable so no need to make
+      // immutable.
+      DEFAULT_INSTANCE = defaultInstance;
+      com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
+              ControllerResponse.class, defaultInstance);
+    }
+
+    public static ch.usi.dag.dislserver.Protocol.ControllerResponse getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static volatile com.google.protobuf.Parser<ControllerResponse> PARSER;
+
+    public static com.google.protobuf.Parser<ControllerResponse> parser() {
+      return DEFAULT_INSTANCE.getParserForType();
+    }
+  }
+
+
   static {
-    java.lang.String[] descriptorData = {
-      "\n\020dislserver.proto\"N\n\026InstrumentClassReq" +
-      "uest\022\r\n\005flags\030\001 \001(\005\022\021\n\tclassName\030\002 \001(\t\022\022" +
-      "\n\nclassBytes\030\003 \001(\014\"k\n\027InstrumentClassRes" +
-      "ponse\022&\n\006result\030\001 \001(\0162\026.InstrumentClassR" +
-      "esult\022\024\n\014errorMessage\030\002 \001(\t\022\022\n\nclassByte" +
-      "s\030\003 \001(\014*L\n\025InstrumentClassResult\022\024\n\020CLAS" +
-      "S_UNMODIFIED\020\000\022\022\n\016CLASS_MODIFIED\020\001\022\t\n\005ER" +
-      "ROR\020\003B#\n\025ch.usi.dag.dislserverB\010Protocol" +
-      "H\003b\006proto3"
-    };
-    descriptor = com.google.protobuf.Descriptors.FileDescriptor
-      .internalBuildGeneratedFileFrom(descriptorData,
-        new com.google.protobuf.Descriptors.FileDescriptor[] {
-        });
-    internal_static_InstrumentClassRequest_descriptor =
-      getDescriptor().getMessageTypes().get(0);
-    internal_static_InstrumentClassRequest_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_InstrumentClassRequest_descriptor,
-        new java.lang.String[] { "Flags", "ClassName", "ClassBytes", });
-    internal_static_InstrumentClassResponse_descriptor =
-      getDescriptor().getMessageTypes().get(1);
-    internal_static_InstrumentClassResponse_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_InstrumentClassResponse_descriptor,
-        new java.lang.String[] { "Result", "ErrorMessage", "ClassBytes", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

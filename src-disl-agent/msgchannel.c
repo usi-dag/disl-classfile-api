@@ -37,27 +37,36 @@ __send (struct connection * conn, void * header, const size_t header_size, void 
 #endif /* !MINGW */
 
 
+
 /**
  * Sends the given message to the remote instrumentation server
  * via the given connection. Returns the number of bytes sent.
  */
 ssize_t
-message_send (struct connection * conn, void * message, const size_t message_size) {
+message_send (struct connection * conn, unsigned const char message_type, void * message, const size_t message_size) {
 	assert (conn != NULL);
 	assert (message != NULL);
 
-	ldebug ("sending message: %lu bytes", message_size);
+	dlprintf ("sending message: %lu bytes", message_size);
 
 	//
 
+	size_t message_type_size = sizeof (message_type);
+	
 	uint32_t message_size_data = htonl (message_size);
-	size_t header_size = sizeof (message_size_data);
-	ssize_t sent = __send (conn, &message_size_data, header_size, message, message_size);
+	size_t body_length_size = sizeof (message_size_data);
+	
+	size_t header_size = message_type_size + body_length_size;
+	char header[header_size];
+	memcpy(header, &message_type, message_type_size);
+	memcpy(header + message_type_size, &message_size_data, body_length_size);
+	
+	ssize_t sent = __send (conn, header, header_size, message, message_size);
 	assert (sent == (ssize_t) (header_size + message_size));
 
 	//
 
-	debug (", sent %ld bytes\n", sent);
+	dprintf (", sent %ld bytes\n", sent);
 	return sent;
 }
 
@@ -91,7 +100,7 @@ message_recv (struct connection * conn, void ** message_ptr) {
 	assert (conn != NULL);
 	assert (message_ptr != NULL);
 
-	ldebug ("receiving message: ");
+	dlprintf ("receiving message: ");
 
 	//
 	// First receive the size of the message.
@@ -100,7 +109,7 @@ message_recv (struct connection * conn, void ** message_ptr) {
 	uint32_t message_size_data;
 	connection_recv_full (conn, &message_size_data, sizeof (message_size_data));
 	size_t message_size = ntohl (message_size_data);
-	debug ("expecting %ld bytes", message_size);
+	dprintf ("expecting %ld bytes", message_size);
 
 	//
 	// The message body can be completely empty. In this case,
@@ -114,7 +123,7 @@ message_recv (struct connection * conn, void ** message_ptr) {
 	//
 	// Return the message only after the whole message was read.
 	//
-	debug ("... done\n");
+	dprintf ("... done\n");
 	* message_ptr = (void *) message;
 	return message_size;
 }
