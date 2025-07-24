@@ -60,6 +60,7 @@ public abstract class ClassFileHelper {
     }
 
     public static ConstantInstruction loadConst(final Object value) {
+        ConstantPoolBuilder constantPoolBuilder = ConstantPoolBuilder.of();
         switch (value) {
             case Boolean b -> {
                 return ConstantInstruction.ofIntrinsic(
@@ -78,17 +79,41 @@ public abstract class ClassFileHelper {
                 } else if (Short.MIN_VALUE <= intValue && intValue <= Short.MAX_VALUE) {
                     return ConstantInstruction.ofArgument(Opcode.SIPUSH, intValue);
                 } else {
-                    ConstantPoolBuilder constantPoolBuilder = ConstantPoolBuilder.of();
                     LoadableConstantEntry constantEntry = constantPoolBuilder.loadableConstantEntry(intValue);
                     return ConstantInstruction.ofLoad(Opcode.LDC, constantEntry);
                 }
             }
+            // TODO what about char????? is fine if it is handled by the default LDC ???
+            case Float f -> {
+                if (f == 0) {
+                    return ConstantInstruction.ofIntrinsic(Opcode.FCONST_0);
+                } else if (f == 1) {
+                    return ConstantInstruction.ofIntrinsic(Opcode.FCONST_1);
+                } else if (f == 2) {
+                    return ConstantInstruction.ofIntrinsic(Opcode.FCONST_2);
+                }
+                return ConstantInstruction.ofLoad(Opcode.LDC, constantPoolBuilder.floatEntry(f));
+            }
+            case Long l-> {
+                if (l == 0) {
+                    return ConstantInstruction.ofIntrinsic(Opcode.LCONST_0);
+                } else if (l == 1) {
+                    return ConstantInstruction.ofIntrinsic(Opcode.LCONST_1);
+                }
+                return ConstantInstruction.ofLoad(Opcode.LDC, constantPoolBuilder.longEntry(l));
+            }
+            case Double d -> {
+                if (d == 0) {
+                    return ConstantInstruction.ofIntrinsic(Opcode.DCONST_0);
+                } else if (d == 1) {
+                    return ConstantInstruction.ofIntrinsic(Opcode.DCONST_1);
+                }
+                return ConstantInstruction.ofLoad(Opcode.LDC, constantPoolBuilder.doubleEntry(d));
+            }
             case String s -> {
-                ConstantPoolBuilder constantPoolBuilder = ConstantPoolBuilder.of();
                 return ConstantInstruction.ofLoad(Opcode.LDC, constantPoolBuilder.stringEntry(s));
             }
             default -> {
-                ConstantPoolBuilder constantPoolBuilder = ConstantPoolBuilder.of();
                 ClassDesc classDesc = ClassDesc.ofDescriptor(value.getClass().descriptorString());
                 LoadableConstantEntry constantEntry = constantPoolBuilder.loadableConstantEntry(classDesc);
                 return ConstantInstruction.ofLoad(Opcode.LDC, constantEntry);
