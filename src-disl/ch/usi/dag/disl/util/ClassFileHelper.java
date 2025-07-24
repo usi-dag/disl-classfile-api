@@ -100,7 +100,7 @@ public abstract class ClassFileHelper {
                 } else if (l == 1) {
                     return ConstantInstruction.ofIntrinsic(Opcode.LCONST_1);
                 }
-                return ConstantInstruction.ofLoad(Opcode.LDC, constantPoolBuilder.longEntry(l));
+                return ConstantInstruction.ofLoad(Opcode.LDC2_W, constantPoolBuilder.longEntry(l));
             }
             case Double d -> {
                 if (d == 0) {
@@ -108,7 +108,7 @@ public abstract class ClassFileHelper {
                 } else if (d == 1) {
                     return ConstantInstruction.ofIntrinsic(Opcode.DCONST_1);
                 }
-                return ConstantInstruction.ofLoad(Opcode.LDC, constantPoolBuilder.doubleEntry(d));
+                return ConstantInstruction.ofLoad(Opcode.LDC2_W, constantPoolBuilder.doubleEntry(d));
             }
             case String s -> {
                 return ConstantInstruction.ofLoad(Opcode.LDC, constantPoolBuilder.stringEntry(s));
