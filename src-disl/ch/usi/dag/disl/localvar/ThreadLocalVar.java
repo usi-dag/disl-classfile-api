@@ -8,7 +8,6 @@ import java.util.List;
 
 public final class ThreadLocalVar extends AbstractLocalVar {
 
-    private Object __initialValue; // TODO remove this field if is not going to be used
     private final boolean __inheritable;
     private List<CodeElement> __initializerInstructions = new ArrayList<>(); // TODO pass here the instructions that initialize the variable
 
@@ -17,23 +16,6 @@ public final class ThreadLocalVar extends AbstractLocalVar {
             ) {
         super(className, fieldName, typeDesc);
         __inheritable = inheritable;
-    }
-
-
-    /**
-     * @return the initial value of this thread local variable.
-     */
-    public Object getInitialValue() {
-        return __initialValue;
-    }
-
-    /**
-     * Sets the initial value of this thread local variable.
-     *
-     * @param value the value to initialize the variable to
-     */
-    public void setInitialValue (final Object value) {
-        __initialValue = value;
     }
 
 

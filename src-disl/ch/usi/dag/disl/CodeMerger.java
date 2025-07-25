@@ -51,13 +51,14 @@ public abstract class CodeMerger {
                         throw new RuntimeException("Error while merging code, cannot find matching names for method " + instrumentedMethod.methodName());
                     }
 
-                    if (instrumentedClass.thisClass().asSymbol().descriptorString().equals(Thread.class.descriptorString()) &&
-                            JavaNames.isConstructorName(instrumentedMethod.methodName().stringValue())
-                    ) {
-                        // if the class is Thread and the method is a constructor we don't add a dynamic bypass
-                        classBuilder.with(instrumentedMethod);
-                        continue;
-                    }
+                    // this might not be needed, I need to ask
+//                    if (instrumentedClass.thisClass().asSymbol().descriptorString().equals(Thread.class.descriptorString()) &&
+//                            JavaNames.isConstructorName(instrumentedMethod.methodName().stringValue())
+//                    ) {
+//                        // if the class is Thread and the method is a constructor we don't add a dynamic bypass
+//                        classBuilder.with(instrumentedMethod);
+//                        continue;
+//                    }
 
                     // if there is no code there is no need to merge
                     if (originalMethod.code().isEmpty()) {
@@ -76,7 +77,7 @@ public abstract class CodeMerger {
                     //     } else {
                     //         <original code>
                     //     }
-                    classBuilder.transformMethod(originalMethod, (methodBuilder, methodElement) -> {
+                    classBuilder.transformMethod(instrumentedMethod, (methodBuilder, methodElement) -> {
                         if (methodElement instanceof CodeModel codeModel &&
                                 changedMethods.contains(ClassFileHelper.nameAndDescriptor(instrumentedMethod))) {
                             methodBuilder.withCode(codeBuilder -> {

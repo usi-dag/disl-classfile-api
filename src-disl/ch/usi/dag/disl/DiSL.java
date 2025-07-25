@@ -132,6 +132,8 @@ public final class DiSL {
         final Set <Scope> excludedScopes = ExclusionSet.prepare (resources.instrumentationResources ());
         final DislClasses dislClasses = DislClasses.load (codeOptions, resources.dislClasses ());
 
+        //resources.serialize("serialized.txt");
+
         // TODO put checker here
         // like After should catch normal and abnormal execution
         // but if you are using After (AfterThrowing) with BasicBlockMarker
@@ -410,6 +412,18 @@ public final class DiSL {
 
             return classChanged? new InstrumentedClass(classModel, changedMethods, instrumentedClass): null;
         } catch (Exception e) {
+//            WriteInfo info = WriteInfo.getInstance();
+//            if (e.getMessage() == null) {
+//                info.writeLine("An exception occurred: somehow the message from the exception is null ");
+//                throw new RuntimeException(e);
+//            }
+//            info.writeLine(">>>>>> Exception in instrumentClass for class: " + classModel.thisClass().name());
+//            info.writeLine("Message: " + e.getMessage());
+//            info.writeLine(String.valueOf(e.getClass()));
+//            for ( StackTraceElement element: e.getStackTrace()) {
+//                info.writeLine(element.toString());
+//            }
+//            info.writeLine("<<< Exception end");
             throw new RuntimeException(e);
         }
     }
@@ -417,12 +431,10 @@ public final class DiSL {
 
     private ThreadLocalVar __createBypassTlv () {
         // prepare dynamic bypass thread local variable
-        final ThreadLocalVar result = new ThreadLocalVar (
+
+        return new ThreadLocalVar (
             null, "bypass", CD_boolean, false
         );
-
-        result.setInitialValue (false);
-        return result;
     }
 
 
