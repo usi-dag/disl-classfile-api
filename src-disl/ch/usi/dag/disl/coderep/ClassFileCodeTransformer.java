@@ -361,8 +361,6 @@ public class ClassFileCodeTransformer {
                     instructions.remove(fieldInstruction);
                 }
 
-                // the ClassFile Api should recompute the max local
-
                 methodBuilder.withCode(codeBuilder -> {
                     for (CodeElement codeElement: instructions) {
                         codeBuilder.with(codeElement);

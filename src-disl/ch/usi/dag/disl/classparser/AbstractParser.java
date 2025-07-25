@@ -8,6 +8,7 @@ import java.lang.reflect.AccessFlag;
 import java.lang.reflect.Field;
 import java.util.*;
 
+import ch.usi.dag.disl.localvar.AbstractLocalVar;
 import ch.usi.dag.disl.util.*;
 
 
@@ -240,7 +241,8 @@ abstract class AbstractParser {
                 }
 
                 String tlvName = storeInstruction.name().stringValue();
-                if (!tlvs.containsKey(tlvName)) {
+                String tlvKey = AbstractLocalVar.fqFieldNameFor(className, storeInstruction.name().stringValue());
+                if (!tlvs.containsKey(tlvKey)) {
                     continue;  // check that the variable is declared as thread local
                 }
 
@@ -296,7 +298,9 @@ abstract class AbstractParser {
                          Opcode.DCONST_1,
                          Opcode.BIPUSH,
                          Opcode.SIPUSH,
-                         Opcode.LDC -> // if is a constant we just need to copy 1 instruction, the ins that load the instruction on the stack
+                         Opcode.LDC,
+                         Opcode.LDC2_W,
+                         Opcode.LDC_W -> // if is a constant we just need to copy 1 instruction, the ins that load the instruction on the stack
                             initializationInstructions.add(previousInstruction);
                     case Opcode.NEWARRAY,
                          Opcode.ANEWARRAY-> {
@@ -339,7 +343,7 @@ abstract class AbstractParser {
                     ));
                 }
                 // finally set the tlv initialization instructions
-                tlvs.get(ThreadLocalVar.fqFieldNameFor(className, tlvName)).setInitializerInstructions(initializationInstructions);
+                tlvs.get(tlvKey).setInitializerInstructions(initializationInstructions);
             }
         }
     }
