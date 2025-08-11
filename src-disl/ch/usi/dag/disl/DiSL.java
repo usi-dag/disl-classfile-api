@@ -49,6 +49,11 @@ public final class DiSL {
 
     private final DislClasses __dislClasses;
 
+    // TODO make these variables set by a config or a parameter passed at application launch
+    private boolean verifyClass = false;
+    private boolean loadExtraClasses = false;
+    private boolean dropStackMap = false;
+
 
     /**
      * Initializes a DiSL instance by loading transformers, exclusion lists, and
@@ -346,11 +351,18 @@ public final class DiSL {
      * @return instrumented class
      */
     private InstrumentedClass instrumentClass(ClassModel classModel) throws DiSLException {
-
+        Set<ClassFile.Option> options = new HashSet<>();
+        if (loadExtraClasses) {
+            // TODO for now the path to extra classes are hard-coded, need to change so that they can be loaded at start-up with some arguments
+            options.add(ClassLoaderFromJar.getTestResOption());
+        }
+        if (dropStackMap) {
+            options.add(ClassFile.StackMapsOption.DROP_STACK_MAPS);
+        }
         final Set <String> changedMethods = new HashSet<>();
         // TODO also here might use ClassModelHelper to pass some options
         try {
-            byte[] instrumentedClass = ClassFile.of().build(classModel.thisClass().asSymbol(), classBuilder -> {
+            byte[] instrumentedClass = ClassFile.of(options.toArray(ClassFile.Option[]::new)).build(classModel.thisClass().asSymbol(), classBuilder -> {
                 for (ClassElement classElement: classModel) {
                     if (Objects.requireNonNull(classElement) instanceof MethodModel methodModel) {
                         boolean methodChanged;
@@ -417,17 +429,23 @@ public final class DiSL {
 //                info.writeLine("An exception occurred: somehow the message from the exception is null ");
 //                throw new RuntimeException(e);
 //            }
-//            info.writeLine(">>>>>> Exception in instrumentClass for class: " + classModel.thisClass().name());
+//            List<VerifyError> errors = ClassFile.of().verify(classModel);
+//            info.writeLine(">>>>>> Exception in instrumentClass for class: " + classModel.thisClass().name() + " the class has: " + errors.size() + " verifyError");
 //            info.writeLine("Message: " + e.getMessage());
-//            info.writeLine(String.valueOf(e.getClass()));
+////            info.writeLine(String.valueOf(e.getClass()));
 //            for ( StackTraceElement element: e.getStackTrace()) {
 //                info.writeLine(element.toString());
 //            }
 //            info.writeLine("<<< Exception end");
+
+//            info.writeLine(">>> Verify Errors for class: " + classModel.thisClass().name());
+//            for (VerifyError error: errors) {
+//                info.writeLine(error.getMessage());
+//            }
+//            info.writeLine("<<< End list of VerifyErrors");
             throw new RuntimeException(e);
         }
     }
-
 
     private ThreadLocalVar __createBypassTlv () {
         // prepare dynamic bypass thread local variable
@@ -464,9 +482,24 @@ public final class DiSL {
         // TODO might use ClassModelHelper to pass some options instead of this
         //  also for now the lines will need to be dropped since there can be cases where
         //  there can be multiples lines represented by the same object
-        final ClassModel classModel = ClassFile.of(ClassFile.LineNumbersOption.DROP_LINE_NUMBERS).parse(transformedBytes);
+        final ClassModel classModel = ClassFile.of(ClassFile.LineNumbersOption.DROP_LINE_NUMBERS, ClassLoaderFromJar.getTestResOption()).parse(transformedBytes);
+
+        //WriteInfo info = WriteInfo.getInstance();
 
         Reflection.systemClassLoader ().notifyClassLoaded(classModel);
+
+        if (verifyClass) {
+            List<VerifyError> verifyErrors = ClassFile.of().verify(classModel);
+            if (!verifyErrors.isEmpty()) {
+//                info.writeLine("Class: " + classModel.thisClass().name() + " has " + verifyErrors.size() + " verify error/s");
+//                for (VerifyError verifyError: verifyErrors) {
+//                    info.writeLine("    err: " + verifyError.getMessage());
+//                }
+//                info.writeLine(">>>>>>> Excluded class " + classModel.thisClass().name());
+                __log.debug ("excluded class: %s because of verifyErrors", classModel.thisClass().name().stringValue());
+                return null;
+            }
+        }
 
         // Instrument the class. If the class is modified neither by DiSL,
         // nor by any of the transformers, bail out early and return NULL
